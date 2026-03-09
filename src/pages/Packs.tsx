@@ -89,24 +89,6 @@ export function Packs() {
         useProfileStore.getState().setProfile(profileData);
       }
       
-      // Update quest progress for pack opening
-      await supabase.rpc('update_quest_progress', {
-        p_user_id: profile.id,
-        p_quest_type: 'open_packs',
-        p_increment: 1
-      });
-
-      // Also update collect_type and collect_set based on cards
-      if (data.cards && data.cards.length > 0) {
-        // We could iterate through cards and update specific quests, 
-        // but for now we'll just increment the general collection quests
-        await supabase.rpc('update_quest_progress', {
-          p_user_id: profile.id,
-          p_quest_type: 'total_cards',
-          p_increment: data.cards.length
-        });
-      }
-      
       setTimeout(() => {
         setOpenedCards(data.cards);
         setOpening(false);
@@ -129,17 +111,6 @@ export function Packs() {
       if (error) throw error;
       
       alert('Pack added to inventory!');
-      
-      // Refresh profile to update balances
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile.id)
-        .single();
-        
-      if (profileData) {
-        useProfileStore.getState().setProfile(profileData);
-      }
     } catch (err: any) {
       alert(err.message || 'Failed to buy pack');
     }
@@ -159,22 +130,6 @@ export function Packs() {
       
       // Refresh inventory
       fetchInventory();
-      
-      // Update quest progress for pack opening
-      await supabase.rpc('update_quest_progress', {
-        p_user_id: profile.id,
-        p_quest_type: 'open_packs',
-        p_increment: 1
-      });
-
-      // Also update collect_type and collect_set based on cards
-      if (data.cards && data.cards.length > 0) {
-        await supabase.rpc('update_quest_progress', {
-          p_user_id: profile.id,
-          p_quest_type: 'total_cards',
-          p_increment: data.cards.length
-        });
-      }
       
       setTimeout(() => {
         setOpenedCards(data.cards);
@@ -222,7 +177,7 @@ export function Packs() {
                   src={pack.image_url} 
                   alt={pack.name}
                   className="w-full h-full object-cover"
-                  onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/fallback-card.png'; }}
                   referrerPolicy="no-referrer"
                 />
               </div>
@@ -295,7 +250,7 @@ export function Packs() {
                       src={item.pack_types.image_url} 
                       alt={item.pack_types.name}
                       className="w-full h-full object-cover"
-                      onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
+                      onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/fallback-card.png'; }}
                       referrerPolicy="no-referrer"
                     />
                   </div>
@@ -387,7 +342,7 @@ export function Packs() {
                             src={card.image_url} 
                             alt={card.name}
                             className="w-full h-full object-cover"
-                            onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
+                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/fallback-card.png'; }}
                             referrerPolicy="no-referrer"
                           />
                         </div>

@@ -29,8 +29,9 @@ export function Collection() {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_user_collection', {
         p_user_id: profile?.id,
+        p_rarity: filter === 'all' ? null : filter.charAt(0).toUpperCase() + filter.slice(1),
         p_sort_by: 'rarity',
-        p_limit: 100,
+        p_limit: 1000,
         p_offset: 0
       });
       if (error) throw error;
@@ -127,17 +128,6 @@ export function Collection() {
       if (error) throw error;
       
       fetchCollection(); // Refresh
-      
-      // Also refresh profile to update gold balance in header
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile?.id)
-        .single();
-        
-      if (profileData) {
-        useProfileStore.getState().setProfile(profileData);
-      }
       alert(`Successfully milled ${data.quantity_milled} cards for ${data.gold_earned} Gold!`);
     } catch (err: any) {
       alert(err.message || 'Failed to mill');
@@ -152,17 +142,6 @@ export function Collection() {
       if (error) throw error;
       
       fetchCollection(); // Refresh
-      
-      // Also refresh profile to update gold balance in header
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile?.id)
-        .single();
-        
-      if (profileData) {
-        useProfileStore.getState().setProfile(profileData);
-      }
       
       alert(`Successfully milled ${data.cards_milled} cards for ${data.gold_earned} Gold!`);
     } catch (err: any) {
@@ -253,7 +232,7 @@ export function Collection() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
         {filteredCards.map((card) => (
           <motion.div 
             key={card.id}
@@ -301,7 +280,7 @@ export function Collection() {
                   src={card.image_url} 
                   alt={card.name}
                   className="w-full h-full object-cover"
-                  onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
+                  onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/fallback-card.png'; }}
                   referrerPolicy="no-referrer"
                 />
               </div>

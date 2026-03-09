@@ -9,7 +9,6 @@ export function NeoCard({
   handleToggleLock, 
   handleMill 
 }: any) {
-  // Determine layout style based on rarity
   const isHighTier = card.rarity === 'Mythic' || card.rarity === 'Divine';
   const isMidTier = card.rarity === 'Rare' || card.rarity === 'Super-Rare';
 
@@ -20,7 +19,8 @@ export function NeoCard({
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ y: -8, rotate: -1, scale: 1.02 }}
       className={cn(
-        "aspect-[63/88] w-full max-w-[280px] mx-auto rounded-xl relative overflow-hidden group cursor-pointer transition-all duration-300",
+        // Increased max-width for larger cards
+        "aspect-[63/88] w-full max-w-[340px] mx-auto rounded-xl relative overflow-hidden group cursor-pointer transition-all duration-300",
         // Brutalist borders and shadows
         "border-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]",
         card.rarity === 'Divine' ? 'border-red-500 shadow-[8px_8px_0px_0px_rgba(239,68,68,1)]' :
@@ -30,33 +30,15 @@ export function NeoCard({
         'border-black bg-white'
       )}
     >
-      {/* BACKGROUND / ARTWORK */}
-      {isHighTier ? (
-        /* Divine/Mythic: Full bleed artwork */
-        <img 
-          src={card.image_url} 
-          alt={card.name}
-          className="absolute inset-0 w-full h-full object-cover z-0"
-          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://picsum.photos/seed/card-back/280/400'; }}
-        />
-      ) : (
-        /* Common/Uncommon/Rare: Contained artwork with background color */
-        <div className={cn("absolute inset-0 z-0", isMidTier ? "bg-slate-900" : "bg-white")}>
-          <div className={cn(
-            "w-full overflow-hidden border-black",
-            isMidTier ? "h-[65%] border-b-4" : "h-[55%] border-b-4 m-2 rounded-lg w-[calc(100%-16px)]"
-          )}>
-            <img 
-              src={card.image_url} 
-              alt={card.name}
-              className="w-full h-full object-cover"
-              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://picsum.photos/seed/card-back/280/400'; }}
-            />
-          </div>
-        </div>
-      )}
+      {/* FULL BLEED ARTWORK FOR ALL RARITIES */}
+      <img 
+        src={card.image_url} 
+        alt={card.name}
+        className="absolute inset-0 w-full h-full object-cover z-0 bg-slate-200"
+        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://picsum.photos/seed/card-back/400/560'; }}
+      />
 
-      {/* SHIMMER EFFECT - Uses the exact animation from your index.css */}
+      {/* SHIMMER EFFECT */}
       {card.is_foil && (
         <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent animate-[shimmer_2s_infinite] pointer-events-none z-10" />
       )}
@@ -64,7 +46,7 @@ export function NeoCard({
       {/* CARD CONTENT LAYER */}
       <div className="relative z-20 h-full flex flex-col justify-between p-3 pointer-events-none">
         
-        {/* Top Header Row - Utilizing JetBrains Mono for stats */}
+        {/* Top Header Row */}
         <div className="flex justify-between items-start font-mono">
           <div className={cn(
             "text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
@@ -85,26 +67,22 @@ export function NeoCard({
           </div>
         </div>
 
-        {/* Bottom Info Area */}
-        <div className={cn(
-          "mt-auto flex flex-col justify-end",
-          isHighTier ? "h-1/3" : ""
-        )}>
-          {isHighTier ? (
-            /* Neo-brutalist floating blocks for high rarities */
-            <div className="bg-black/90 backdrop-blur-md border-t-4 border-l-4 border-r-4 border-black rounded-t-xl p-3 -mx-3 -mb-3 text-white">
-              <h3 className="font-sans font-black text-xl leading-tight uppercase truncate">{card.name}</h3>
-              <p className="font-mono text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{card.card_type}</p>
-            </div>
-          ) : (
-            /* Standard brutalist text box */
-            <div className={cn("p-2 text-center", isMidTier ? "text-white" : "text-black")}>
-              <h3 className="font-sans font-black text-lg leading-tight uppercase line-clamp-2">{card.name}</h3>
-              <p className={cn("font-mono text-[10px] font-bold uppercase tracking-wide mt-1", isMidTier ? "text-slate-300" : "text-slate-500")}>
-                {card.card_type}
-              </p>
-            </div>
-          )}
+        {/* Bottom Info Placard (Adapts colors based on rarity but keeps structure) */}
+        <div className="mt-auto flex flex-col justify-end h-1/3">
+          <div className={cn(
+            "backdrop-blur-md border-t-4 border-l-4 border-r-4 border-black rounded-t-xl p-3 -mx-3 -mb-3",
+            isHighTier ? "bg-black/95 text-white" :
+            isMidTier ? "bg-slate-900/95 text-white" :
+            "bg-white/95 text-black"
+          )}>
+            <h3 className="font-sans font-black text-xl leading-tight uppercase truncate">{card.name}</h3>
+            <p className={cn(
+              "font-mono text-[10px] font-bold uppercase tracking-widest mt-1",
+              isHighTier || isMidTier ? "text-gray-400" : "text-slate-500"
+            )}>
+              {card.card_type}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -115,10 +93,8 @@ export function NeoCard({
         </div>
       )}
 
-      {/* HOVER ACTIONS MENU (Only visible on hover) */}
+      {/* HOVER ACTIONS MENU */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4 z-30">
-        
-        {/* Info Text on Hover */}
         <div className="text-white text-center px-4 mb-2">
            <h3 className="font-sans text-xl font-black uppercase mb-1">{card.name}</h3>
            <p className="font-mono text-xs italic text-gray-400 line-clamp-3">"{card.flavor_text}"</p>
