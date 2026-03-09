@@ -22,10 +22,16 @@ export function Home() {
   });
   const [nextRegen, setNextRegen] = useState<number | null>(null);
 
+  const [stats, setStats] = useState<{ unique_cards: number; total_possible: number } | null>(null);
+
   useEffect(() => {
     if (profile) {
       fetchQuests();
       fetchEnergy();
+      
+      supabase.rpc('get_my_collection_stats').then(({ data }) => {
+        if (data) setStats(data);
+      });
       
       const interval = setInterval(fetchEnergy, 5 * 60 * 1000); // Poll every 5 mins
       return () => clearInterval(interval);
@@ -171,7 +177,7 @@ export function Home() {
           </div>
           <div>
             <p className="text-sm text-slate-600 font-bold uppercase">Unique Cards</p>
-            <p className="text-3xl font-black text-black font-mono">142 / 500</p>
+            <p className="text-3xl font-black text-black font-mono">{stats?.unique_cards ?? 0} / {stats?.total_possible ?? '?'}</p>
           </div>
         </div>
 

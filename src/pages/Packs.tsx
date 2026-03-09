@@ -32,17 +32,18 @@ export function Packs() {
     if (!profile) return;
     try {
       const { data, error } = await supabase
-        .from('user_packs')
+        .from('user_pack_inventory')
         .select(`
           id,
           pack_type_id,
+          quantity,
           pack_types (
             name,
             image_url
           )
         `)
         .eq('user_id', profile.id)
-        .eq('is_opened', false);
+        .gt('quantity', 0);
         
       if (error) throw error;
       setInventory(data || []);
@@ -144,14 +145,14 @@ export function Packs() {
     }
   };
 
-  const handleOpenFromInventory = async (userPackId: string) => {
+  const handleOpenFromInventory = async (packTypeId: string) => {
     if (opening || !profile) return;
     setOpening(true);
     setOpenedCards(null);
 
     try {
       const { data, error } = await supabase.rpc('open_pack_from_inventory', {
-        p_user_pack_id: userPackId
+        p_pack_type_id: packTypeId
       });
 
       if (error) throw error;
@@ -300,9 +301,16 @@ export function Packs() {
                   </div>
                 </div>
                 <div className="p-3 flex flex-col flex-1">
-                  <h3 className="text-sm font-black text-black mb-2 uppercase truncate" title={item.pack_types.name}>{item.pack_types.name}</h3>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-black text-black uppercase truncate" title={item.pack_types.name}>{item.pack_types.name}</h3>
+                    {item.quantity > 1 && (
+                      <span className="text-xs font-black bg-black text-white px-2 py-0.5 rounded-full border-2 border-white shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                        ×{item.quantity}
+                      </span>
+                    )}
+                  </div>
                   <button 
-                    onClick={() => handleOpenFromInventory(item.id)}
+                    onClick={() => handleOpenFromInventory(item.pack_type_id)}
                     disabled={opening}
                     className="mt-auto w-full bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-2 rounded-lg border-2 border-black transition-transform active:translate-y-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center text-sm"
                   >

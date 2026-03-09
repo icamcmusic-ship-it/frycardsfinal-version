@@ -9,6 +9,7 @@ import { Packs } from './pages/Packs';
 import { Collection } from './pages/Collection';
 import { Marketplace } from './pages/Marketplace';
 import { Profile } from './pages/Profile';
+import { Notifications } from './pages/Notifications';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/collection" element={<Collection />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         )}

@@ -28,8 +28,8 @@ export function Marketplace() {
     try {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_active_listings', {
-        limit: 50,
-        offset: 0
+        p_limit: 50,
+        p_offset: 0
       });
       if (error) throw error;
       setListings(data || []);
@@ -127,6 +127,14 @@ export function Marketplace() {
       setBuying(null);
     }
   };
+
+  function timeLeft(expiresAt: string): string {
+    const diff = new Date(expiresAt).getTime() - Date.now();
+    if (diff <= 0) return 'Expired';
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
 
   const filteredListings = (activeTab === 'all' ? listings : watchlist).filter(listing => {
     if (filter !== 'all' && listing.type !== filter) return false;
@@ -297,7 +305,7 @@ export function Marketplace() {
                     <p className="text-xs text-slate-500 font-bold uppercase">Ends In</p>
                     <div className="flex items-center gap-1 text-red-500 font-black">
                       <Clock className="w-4 h-4" />
-                      2h 15m
+                      <span>{listing.expires_at ? timeLeft(listing.expires_at) : '—'}</span>
                     </div>
                   </div>
                 )}

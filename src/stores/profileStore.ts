@@ -15,6 +15,15 @@ export interface Profile {
   energy: number;
   energy_last_regen: string;
   created_at: string;
+  max_energy: number;
+  last_daily_claim: string | null;
+  daily_streak: number;
+  packs_opened: number;
+  total_trades: number;
+  total_quicksells: number;
+  card_back_url: string | null;
+  is_public: boolean;
+  is_admin: boolean;
 }
 
 interface ProfileState {

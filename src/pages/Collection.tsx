@@ -41,7 +41,7 @@ export function Collection() {
       // Mark unseen cards as seen
       const unseenCardIds = fetchedCards.filter((c: any) => c.is_new === true).map((c: any) => c.id);
       if (unseenCardIds.length > 0) {
-        await supabase.rpc('mark_cards_seen', { card_ids: unseenCardIds });
+        await supabase.rpc('mark_cards_seen', { p_card_ids: unseenCardIds });
       }
     } catch (err) {
       console.error('Error fetching collection:', err);
