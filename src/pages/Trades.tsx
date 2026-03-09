@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader2, ArrowRightLeft, Check, X, Trash2, Plus } from 'lucide-react';
+import { Loader2, ArrowRightLeft, Check, X, Trash2, Plus, Handshake } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
+import { EmptyState } from '../components/EmptyState';
 
 export function Trades() {
   const [trades, setTrades] = useState<any[]>([]);
@@ -35,18 +37,28 @@ export function Trades() {
   };
 
   const respondTrade = async (offerId: string, accept: boolean) => {
-    await supabase.rpc('respond_to_trade_offer', { p_offer_id: offerId, p_accept: accept });
-    fetchTrades();
+    try {
+      await supabase.rpc('respond_to_trade_offer', { p_offer_id: offerId, p_accept: accept });
+      fetchTrades();
+      toast.success(accept ? 'Trade accepted!' : 'Trade declined!');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to respond to trade');
+    }
   };
 
   const cancelTrade = async (offerId: string) => {
-    await supabase.rpc('cancel_trade', { p_offer_id: offerId });
-    fetchTrades();
+    try {
+      await supabase.rpc('cancel_trade', { p_offer_id: offerId });
+      fetchTrades();
+      toast.success('Trade cancelled');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel trade');
+    }
   };
 
   const submitTrade = async () => {
-    if (!receiverId) { alert('Select a friend to trade with'); return; }
-    if (offeredIds.length === 0 && offeredGold === 0) { alert('Offer at least one card or gold'); return; }
+    if (!receiverId) { toast.error('Select a friend to trade with'); return; }
+    if (offeredIds.length === 0 && offeredGold === 0) { toast.error('Offer at least one card or gold'); return; }
     setSubmitting(true);
     try {
       const { error } = await supabase.rpc('create_trade_rpc', {
@@ -57,7 +69,7 @@ export function Trades() {
         p_requested_gold: 0,
       });
       if (error) throw error;
-      alert('Trade offer sent!');
+      toast.success('Trade offer sent!');
       setShowCreate(false);
       setOfferedIds([]);
       setRequestedIds([]);
@@ -65,7 +77,7 @@ export function Trades() {
       setReceiverId('');
       fetchTrades();
     } catch (err: any) {
-      alert(err.message || 'Failed to create trade');
+      toast.error(err.message || 'Failed to create trade');
     } finally {
       setSubmitting(false);
     }
@@ -121,9 +133,13 @@ export function Trades() {
 
       <div className="grid gap-6">
         {trades.length === 0 && (
-          <div className="text-center py-16 bg-white border-4 border-black rounded-2xl font-bold text-slate-500">
-            No active trades. Create one above!
-          </div>
+          <EmptyState 
+            icon={Handshake}
+            title="No active trades"
+            description="Create a trade offer to start swapping cards with friends!"
+            ctaText="Create Trade"
+            ctaAction={() => setShowCreate(true)}
+          />
         )}
         {trades.map(trade => (
           <div key={trade.id} className="bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">

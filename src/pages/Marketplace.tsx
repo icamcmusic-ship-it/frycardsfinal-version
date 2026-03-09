@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
 import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { CreateListingModal } from '../components/CreateListingModal';
+import { CardSkeleton } from '../components/CardSkeleton';
 
 export function Marketplace() {
   const { profile } = useProfileStore();
@@ -17,6 +19,7 @@ export function Marketplace() {
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'price' | 'newest'>('newest');
 
   useEffect(() => {
     if (activeTab === 'all') {
@@ -65,10 +68,11 @@ export function Marketplace() {
       if (activeTab === 'watchlist') {
         fetchWatchlist();
       } else {
-        alert('Watchlist updated!');
+        toast.success('Watchlist updated!');
       }
     } catch (err) {
       console.error('Error toggling watchlist:', err);
+      toast.error('Failed to update watchlist');
     }
   };
 
@@ -81,10 +85,11 @@ export function Marketplace() {
       });
       if (error) throw error;
       
-      alert(`Blocked ${username}`);
+      toast.success(`Blocked ${username}`);
       fetchListings(); // Refresh to hide their listings
     } catch (err) {
       console.error('Error blocking user:', err);
+      toast.error('Failed to block user');
     }
   };
 
@@ -96,7 +101,7 @@ export function Marketplace() {
       : profile.gold_balance >= listing.price;
 
     if (!canAfford) {
-      alert(`Not enough ${listing.currency}!`);
+      toast.error(`Not enough ${listing.currency}!`);
       return;
     }
 
@@ -110,7 +115,7 @@ export function Marketplace() {
 
       if (error) throw error;
       
-      alert('Purchase successful!');
+      toast.success(`Successfully bought ${listing.card_name}!`);
       fetchListings();
       
       // Refresh profile to update gold balance
@@ -124,7 +129,7 @@ export function Marketplace() {
         useProfileStore.getState().setProfile(profileData);
       }
     } catch (err: any) {
-      alert(err.message || 'Failed to buy card');
+      toast.error(err.message || 'Failed to buy card');
     } finally {
       setBuying(null);
     }
@@ -138,22 +143,63 @@ export function Marketplace() {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
-  const filteredListings = (activeTab === 'all' ? listings : watchlist).filter(listing => {
-    if (filter !== 'all' && listing.type !== filter) return false;
-    if (search && !listing.card_name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const filteredListings = (activeTab === 'all' ? listings : watchlist)
+    .filter(listing => {
+      if (filter !== 'all' && listing.type !== filter) return false;
+      if (search && !listing.card_name.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return a.price - b.price;
+    });
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <CardSkeleton key={i} />
+        ))}
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
+      <div className="sticky top-16 z-40 bg-yellow-50/90 backdrop-blur-sm py-4 border-b-2 border-black -mx-4 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-4">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-4 py-2 bg-white border-4 border-black rounded-xl text-black font-bold focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+            >
+              <option value="newest">Sort by Newest</option>
+              <option value="price">Sort by Price</option>
+            </select>
+          </div>
+          
+          <div className="flex flex-wrap gap-4">
+            <input 
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search marketplace..."
+              className="px-4 py-2 bg-white border-4 border-black rounded-xl text-black font-bold placeholder-slate-400 focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+            />
+            <select 
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="px-4 py-2 bg-white border-4 border-black rounded-xl text-black font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+            >
+              <option value="all">All Types</option>
+              <option value="fixed_price">Buy Now</option>
+              <option value="auction">Auctions</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-black tracking-tight uppercase">Marketplace</h1>
@@ -173,50 +219,25 @@ export function Marketplace() {
       
       <CreateListingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchListings} />
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex bg-white border-4 border-black rounded-xl p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={cn(
-              "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
-              activeTab === 'all' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
-            )}
-          >
-            All Listings
-          </button>
-          <button
-            onClick={() => setActiveTab('watchlist')}
-            className={cn(
-              "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
-              activeTab === 'watchlist' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
-            )}
-          >
-            Watchlist
-          </button>
-        </div>
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <input 
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search marketplace..."
-            className="w-full pl-10 pr-4 py-3 bg-white border-4 border-black rounded-xl text-black font-bold placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-          />
-        </div>
-        
-        <div className="relative">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <select 
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="w-full sm:w-48 pl-10 pr-4 py-3 bg-white border-4 border-black rounded-xl text-black font-bold appearance-none focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-          >
-            <option value="all">All Types</option>
-            <option value="fixed_price">Buy Now</option>
-            <option value="auction">Auctions</option>
-          </select>
-        </div>
+      <div className="flex bg-white border-4 border-black rounded-xl p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] w-fit">
+        <button
+          onClick={() => setActiveTab('all')}
+          className={cn(
+            "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+            activeTab === 'all' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
+          )}
+        >
+          All Listings
+        </button>
+        <button
+          onClick={() => setActiveTab('watchlist')}
+          className={cn(
+            "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+            activeTab === 'watchlist' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
+          )}
+        >
+          Watchlist
+        </button>
       </div>
 
       {filteredListings.length === 0 ? (
@@ -296,6 +317,7 @@ export function Marketplace() {
                     className="w-full h-full object-cover"
                     onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
                     referrerPolicy="no-referrer"
+                    loading="lazy"
                   />
                 </div>
               </div>

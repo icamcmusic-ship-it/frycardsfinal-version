@@ -22,8 +22,14 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
 
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
       fetchCollection();
+    } else {
+      document.body.style.overflow = 'unset';
     }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, [isOpen]);
 
   const fetchCollection = async () => {

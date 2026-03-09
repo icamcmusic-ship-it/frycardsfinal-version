@@ -2,13 +2,13 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { useAuthStore } from './stores/authStore';
+import { Toaster } from 'react-hot-toast';
 import { Layout } from './components/Layout';
 import { Auth } from './pages/Auth';
 import { Home } from './pages/Home';
-import { Packs } from './pages/Packs';
+import { Store } from './pages/Store';
 import { Collection } from './pages/Collection';
 import { Marketplace } from './pages/Marketplace';
-import { Shop } from './pages/Shop';
 import { Social } from './pages/Social';
 import { Trades } from './pages/Trades';
 import { Leaderboard } from './pages/Leaderboard';
@@ -49,6 +49,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="bottom-right" />
       <Routes>
         {!user ? (
           <>
@@ -58,10 +59,9 @@ export default function App() {
         ) : (
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
-            <Route path="/packs" element={<Packs />} />
+            <Route path="/store" element={<Store />} />
             <Route path="/collection" element={<Collection />} />
             <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/shop" element={<Shop />} />
             <Route path="/social" element={<Social />} />
             <Route path="/trades" element={<Trades />} />
             <Route path="/leaderboard" element={<Leaderboard />} />

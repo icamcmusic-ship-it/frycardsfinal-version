@@ -1,133 +1,44 @@
-import { motion } from 'motion/react';
-import { cn } from '../lib/utils';
-import { Lock, Unlock, Sparkles, Coins, Star } from 'lucide-react';
+import React from 'react';
 
-export function NeoCard({ 
-  card, 
-  activeTab, 
-  handleToggleWishlist, 
-  handleToggleLock, 
-  handleMill 
-}: any) {
-  const isHighTier = card.rarity === 'Mythic' || card.rarity === 'Divine';
-  const isMidTier = card.rarity === 'Rare' || card.rarity === 'Super-Rare';
+interface NeoCardProps {
+  name: string;
+  imageUrl: string;
+  quicksellValue: number;
+  onQuickSell: () => void;
+  onClick?: () => void; // Optional: if you want clicking the card (not the button) to do something
+}
 
+export const NeoCard: React.FC<NeoCardProps> = ({ name, imageUrl, quicksellValue, onQuickSell, onClick }) => {
   return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ y: -8, rotate: -1, scale: 1.02 }}
-      className={cn(
-        // Increased max-width for larger cards
-        "aspect-[63/88] w-full max-w-[340px] mx-auto rounded-xl relative overflow-hidden group cursor-pointer transition-all duration-300",
-        // Brutalist borders and shadows
-        "border-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]",
-        card.rarity === 'Divine' ? 'border-red-500 shadow-[8px_8px_0px_0px_rgba(239,68,68,1)]' :
-        card.rarity === 'Mythic' ? 'border-yellow-400 shadow-[8px_8px_0px_0px_rgba(250,204,21,1)]' :
-        card.rarity === 'Super-Rare' ? 'border-purple-500' :
-        card.rarity === 'Rare' ? 'border-blue-500' :
-        'border-black bg-white'
-      )}
+    /* 1. aspect-[63/88] maintains standard trading card proportions. 
+      2. overflow-hidden ensures the image doesn't bleed past the rounded corners.
+      3. 'group' allows us to trigger the child overlay on hover.
+    */
+    <div 
+      onClick={onClick}
+      className="group relative w-full aspect-[63/88] rounded-xl overflow-hidden border-2 border-gray-700/50 shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl hover:border-blue-500 cursor-pointer bg-gray-900"
     >
-      {/* FULL BLEED ARTWORK FOR ALL RARITIES */}
+      {/* Card Art - Fills entirely to the border */}
       <img 
-        src={card.image_url} 
-        alt={card.name}
-        className="absolute inset-0 w-full h-full object-cover z-0 bg-slate-200"
-        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'https://picsum.photos/seed/card-back/400/560'; }}
+        src={imageUrl} 
+        alt={name} 
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+        loading="lazy" 
       />
 
-      {/* SHIMMER EFFECT */}
-      {card.is_foil && (
-        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent animate-[shimmer_2s_infinite] pointer-events-none z-10" />
-      )}
-      
-      {/* CARD CONTENT LAYER */}
-      <div className="relative z-20 h-full flex flex-col justify-between p-3 pointer-events-none">
-        
-        {/* Top Header Row */}
-        <div className="flex justify-between items-start font-mono">
-          <div className={cn(
-            "text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
-            card.rarity === 'Divine' ? "bg-red-500 text-white" :
-            card.rarity === 'Mythic' ? "bg-yellow-400 text-black" :
-            card.rarity === 'Super-Rare' ? "bg-purple-500 text-white" :
-            "bg-white text-black"
-          )}>
-            {card.rarity}
-          </div>
-          
-          <div className="flex gap-1">
-            {card.quantity > 1 && (
-              <div className="bg-black text-white text-sm font-bold px-2 py-0.5 border-2 border-white rounded-sm shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
-                x{card.quantity}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom Info Placard (Adapts colors based on rarity but keeps structure) */}
-        <div className="mt-auto flex flex-col justify-end h-1/3">
-          <div className={cn(
-            "backdrop-blur-md border-t-4 border-l-4 border-r-4 border-black rounded-t-xl p-3 -mx-3 -mb-3",
-            isHighTier ? "bg-black/95 text-white" :
-            isMidTier ? "bg-slate-900/95 text-white" :
-            "bg-white/95 text-black"
-          )}>
-            <h3 className="font-sans font-black text-xl leading-tight uppercase truncate">{card.name}</h3>
-            <p className={cn(
-              "font-mono text-[10px] font-bold uppercase tracking-widest mt-1",
-              isHighTier || isMidTier ? "text-gray-400" : "text-slate-500"
-            )}>
-              {card.card_type}
-            </p>
-          </div>
-        </div>
+      {/* Hover Overlay - Only shows Quicksell */}
+      <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation(); // Prevents triggering the card's main onClick event
+            onQuickSell();
+          }}
+          className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-transform active:scale-95 w-full max-w-[160px] shadow-lg flex items-center justify-center gap-2"
+        >
+          <span>Quick Sell</span>
+          <span className="text-red-200 font-mono text-sm">${quicksellValue}</span>
+        </button>
       </div>
-
-      {/* Foil Sparkles */}
-      {card.is_foil && (
-        <div className="absolute top-3 right-12 z-20">
-          <Sparkles className="w-6 h-6 text-yellow-300 fill-yellow-400 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]" />
-        </div>
-      )}
-
-      {/* HOVER ACTIONS MENU */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4 z-30">
-        <div className="text-white text-center px-4 mb-2">
-           <h3 className="font-sans text-xl font-black uppercase mb-1">{card.name}</h3>
-           <p className="font-mono text-xs italic text-gray-400 line-clamp-3">"{card.flavor_text}"</p>
-        </div>
-
-        <div className="flex gap-3">
-          <button 
-            onClick={(e) => { e.stopPropagation(); handleToggleWishlist(card.id); }}
-            className="p-3 bg-white hover:bg-gray-200 text-black rounded-sm border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-          >
-            <Star className={cn("w-6 h-6", activeTab === 'wishlist' ? "fill-yellow-400 text-yellow-500" : "text-slate-400")} />
-          </button>
-
-          {activeTab === 'collection' && (
-            <button 
-              onClick={(e) => { e.stopPropagation(); handleToggleLock(card.user_card_id); }}
-              className="p-3 bg-white hover:bg-gray-200 text-black rounded-sm border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-            >
-              {card.is_locked ? <Lock className="w-6 h-6" /> : <Unlock className="w-6 h-6" />}
-            </button>
-          )}
-        </div>
-        
-        {activeTab === 'collection' && !card.is_locked && card.quantity > 1 && (
-          <button 
-            onClick={(e) => { e.stopPropagation(); handleMill(card); }}
-            className="px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-sans font-black uppercase tracking-wider rounded-sm border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 mt-2"
-          >
-            <Coins className="w-5 h-5" />
-            Mill Extras
-          </button>
-        )}
-      </div>
-    </motion.div>
+    </div>
   );
-}
+};
