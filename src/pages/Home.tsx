@@ -9,7 +9,17 @@ export function Home() {
   const { profile } = useProfileStore();
   const [quests, setQuests] = useState<any[]>([]);
   const [loadingQuests, setLoadingQuests] = useState(true);
-  const [currentEnergy, setCurrentEnergy] = useState(profile?.energy || 0);
+  const [currentEnergy, setCurrentEnergy] = useState(() => {
+    const energy = profile?.energy;
+    if (energy === null || energy === undefined) return 0;
+    
+    // If it's an object, check for 'energy' property
+    if (typeof energy === 'object') {
+        return Number((energy as any)?.energy || 0);
+    }
+    
+    return Number(energy);
+  });
   const [nextRegen, setNextRegen] = useState<number | null>(null);
 
   useEffect(() => {
@@ -45,7 +55,11 @@ export function Home() {
     try {
       const { data, error } = await supabase.rpc('get_current_energy', { p_user_id: profile.id });
       if (!error && data !== null) {
-        setCurrentEnergy(data);
+        // If data is an object, extract the energy property, otherwise assume it's the energy value
+        const energyValue = (typeof data === 'object' && data !== null && 'energy' in data) 
+          ? (data as any).energy 
+          : data;
+        setCurrentEnergy(energyValue);
       }
     } catch (err) {
       console.error('Error fetching energy:', err);
@@ -55,10 +69,15 @@ export function Home() {
   const fetchQuests = async () => {
     try {
       const { data, error } = await supabase.rpc('ensure_and_get_daily_missions', { p_user_id: profile?.id });
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching quests:', error);
+        setQuests([]); // Set empty array on error
+        return;
+      }
       setQuests(data || []);
     } catch (err) {
       console.error('Error fetching quests:', err);
+      setQuests([]);
     } finally {
       setLoadingQuests(false);
     }
