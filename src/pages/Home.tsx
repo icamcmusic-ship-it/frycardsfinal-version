@@ -53,7 +53,7 @@ export function Home() {
   const fetchEnergy = async () => {
     if (!profile) return;
     try {
-      const { data, error } = await supabase.rpc('get_current_energy', { p_user_id: profile.id });
+      const { data, error } = await supabase.rpc('get_current_energy', { user_id: profile.id });
       if (!error && data !== null) {
         // If data is an object, extract the energy property, otherwise assume it's the energy value
         const energyValue = (typeof data === 'object' && data !== null && 'energy' in data) 
@@ -68,7 +68,7 @@ export function Home() {
 
   const fetchQuests = async () => {
     try {
-      const { data, error } = await supabase.rpc('ensure_and_get_daily_missions', { p_user_id: profile?.id });
+      const { data, error } = await supabase.rpc('ensure_and_get_daily_missions', { user_id: profile?.id });
       if (error) {
         console.error('Error fetching quests:', error);
         setQuests([]); // Set empty array on error
@@ -224,7 +224,7 @@ export function Home() {
                   <p className="text-lg font-black text-black">{quest.progress} / {quest.target_value}</p>
                   {quest.is_completed && !quest.is_claimed ? (
                     <button 
-                      onClick={() => handleClaimQuest(quest.id)}
+                      onClick={() => { console.log('Claim clicked'); handleClaimQuest(quest.id); }}
                       className="px-4 py-1 bg-green-400 hover:bg-green-500 text-black font-black text-sm rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
                     >
                       Claim Reward
