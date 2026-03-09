@@ -7,7 +7,7 @@ import { cn } from '../lib/utils';
 
 export function Profile() {
   const { profile, setProfile } = useProfileStore();
-  const { signOut } = useAuthStore();
+  const { user, signOut } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [username, setUsername] = useState(profile?.username || '');
@@ -18,6 +18,8 @@ export function Profile() {
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
   const [achievements, setAchievements] = useState<any[]>([]);
+
+  const discordAvatar = user?.user_metadata?.avatar_url;
 
   useEffect(() => {
     fetchAchievements();
@@ -123,8 +125,8 @@ export function Profile() {
             {/* Avatar */}
             <div className="-mt-16 relative">
               <div className="w-32 h-32 bg-yellow-300 rounded-2xl border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-3 overflow-hidden">
-                {avatarUrl || profile.avatar_url ? (
-                  <img src={avatarUrl || profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                {avatarUrl || profile.avatar_url || discordAvatar ? (
+                  <img src={avatarUrl || profile.avatar_url || discordAvatar} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <UserIcon className="w-16 h-16 text-black" />
                 )}
