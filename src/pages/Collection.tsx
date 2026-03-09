@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Search, Filter, Lock, Unlock, Zap, LayoutGrid, Coins, Sparkles } from 'lucide-react';
+import { Loader2, Search, Filter, Lock, Unlock, Zap, LayoutGrid, Coins, Sparkles, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -11,15 +11,22 @@ export function Collection() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<'collection' | 'wishlist'>('collection');
+  const [wishlist, setWishlist] = useState<any[]>([]);
 
   useEffect(() => {
     if (profile) {
-      fetchCollection();
+      if (activeTab === 'collection') {
+        fetchCollection();
+      } else {
+        fetchWishlist();
+      }
     }
-  }, [profile]);
+  }, [profile, activeTab]);
 
   const fetchCollection = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.rpc('get_user_collection', {
         p_user_id: profile?.id,
         p_sort_by: 'rarity',
@@ -40,6 +47,36 @@ export function Collection() {
       console.error('Error fetching collection:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWishlist = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc('get_wishlist');
+      if (error) throw error;
+      setWishlist(data || []);
+    } catch (err) {
+      console.error('Error fetching wishlist:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleWishlist = async (cardId: string) => {
+    try {
+      const { error } = await supabase.rpc('toggle_wishlist', {
+        p_card_id: cardId
+      });
+      if (error) throw error;
+      
+      if (activeTab === 'wishlist') {
+        fetchWishlist();
+      } else {
+        alert('Wishlist updated!');
+      }
+    } catch (err) {
+      console.error('Error toggling wishlist:', err);
     }
   };
 
@@ -112,7 +149,7 @@ export function Collection() {
     }
   };
 
-  const filteredCards = cards.filter(c => {
+  const filteredCards = (activeTab === 'collection' ? cards : wishlist).filter(c => {
     if (filter !== 'all' && c.rarity.toLowerCase() !== filter) return false;
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -135,13 +172,36 @@ export function Collection() {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4">
-          <button
-            onClick={handleBulkMill}
-            className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
-          >
-            <Coins className="w-5 h-5" />
-            Sell All Dupes
-          </button>
+          <div className="flex bg-white border-4 border-black rounded-xl p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <button
+              onClick={() => setActiveTab('collection')}
+              className={cn(
+                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+                activeTab === 'collection' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              Collection
+            </button>
+            <button
+              onClick={() => setActiveTab('wishlist')}
+              className={cn(
+                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+                activeTab === 'wishlist' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              Wishlist
+            </button>
+          </div>
+
+          {activeTab === 'collection' && (
+            <button
+              onClick={handleBulkMill}
+              className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+            >
+              <Coins className="w-5 h-5" />
+              Sell All Dupes
+            </button>
+          )}
           
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -227,21 +287,33 @@ export function Collection() {
             {/* Hover Actions */}
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 z-30">
               <button 
-                onClick={(e) => { e.stopPropagation(); handleToggleLock(card.id); }}
+                onClick={(e) => { e.stopPropagation(); handleToggleWishlist(activeTab === 'collection' ? card.card_id : card.id); }}
                 className="p-3 bg-white hover:bg-gray-200 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                title={card.is_locked ? "Unlock" : "Lock"}
+                title={activeTab === 'wishlist' ? "Remove from Wishlist" : "Add to Wishlist"}
               >
-                {card.is_locked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                <Star className={cn("w-5 h-5", activeTab === 'wishlist' ? "fill-yellow-400 text-yellow-500" : "text-slate-400")} />
               </button>
-              
-              {!card.is_locked && card.quantity > 1 && (
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleQuicksell(card.card_id, card.is_foil); }}
-                  className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black text-sm rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
-                >
-                  <Coins className="w-4 h-4" />
-                  Sell Dupes
-                </button>
+
+              {activeTab === 'collection' && (
+                <>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleToggleLock(card.id); }}
+                    className="p-3 bg-white hover:bg-gray-200 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                    title={card.is_locked ? "Unlock" : "Lock"}
+                  >
+                    {card.is_locked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                  </button>
+                  
+                  {!card.is_locked && card.quantity > 1 && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleQuicksell(card.card_id, card.is_foil); }}
+                      className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black text-sm rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+                    >
+                      <Coins className="w-4 h-4" />
+                      Sell Dupes
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </motion.div>

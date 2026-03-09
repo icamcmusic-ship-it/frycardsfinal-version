@@ -88,6 +88,24 @@ export function Packs() {
         useProfileStore.getState().setProfile(profileData);
       }
       
+      // Update quest progress for pack opening
+      await supabase.rpc('update_quest_progress', {
+        p_user_id: profile.id,
+        p_quest_type: 'open_packs',
+        p_increment: 1
+      });
+
+      // Also update collect_type and collect_set based on cards
+      if (data.cards && data.cards.length > 0) {
+        // We could iterate through cards and update specific quests, 
+        // but for now we'll just increment the general collection quests
+        await supabase.rpc('update_quest_progress', {
+          p_user_id: profile.id,
+          p_quest_type: 'total_cards',
+          p_increment: data.cards.length
+        });
+      }
+      
       setTimeout(() => {
         setOpenedCards(data.cards);
         setOpening(false);
@@ -140,6 +158,22 @@ export function Packs() {
       
       // Refresh inventory
       fetchInventory();
+      
+      // Update quest progress for pack opening
+      await supabase.rpc('update_quest_progress', {
+        p_user_id: profile.id,
+        p_quest_type: 'open_packs',
+        p_increment: 1
+      });
+
+      // Also update collect_type and collect_set based on cards
+      if (data.cards && data.cards.length > 0) {
+        await supabase.rpc('update_quest_progress', {
+          p_user_id: profile.id,
+          p_quest_type: 'total_cards',
+          p_increment: data.cards.length
+        });
+      }
       
       setTimeout(() => {
         setOpenedCards(data.cards);

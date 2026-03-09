@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter } from 'lucide-react';
+import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -11,12 +11,20 @@ export function Marketplace() {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = useState<'all' | 'watchlist'>('all');
+  const [watchlist, setWatchlist] = useState<any[]>([]);
+
   useEffect(() => {
-    fetchListings();
-  }, []);
+    if (activeTab === 'all') {
+      fetchListings();
+    } else {
+      fetchWatchlist();
+    }
+  }, [activeTab]);
 
   const fetchListings = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.rpc('get_active_listings', {
         limit: 50,
         offset: 0
@@ -27,6 +35,52 @@ export function Marketplace() {
       console.error('Error fetching listings:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWatchlist = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc('get_watchlist');
+      if (error) throw error;
+      setWatchlist(data || []);
+    } catch (err) {
+      console.error('Error fetching watchlist:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleWatchlist = async (listingId: string) => {
+    try {
+      const { error } = await supabase.rpc('toggle_watchlist', {
+        p_listing_id: listingId
+      });
+      if (error) throw error;
+      
+      if (activeTab === 'watchlist') {
+        fetchWatchlist();
+      } else {
+        alert('Watchlist updated!');
+      }
+    } catch (err) {
+      console.error('Error toggling watchlist:', err);
+    }
+  };
+
+  const handleBlockUser = async (userId: string, username: string) => {
+    if (!confirm(`Are you sure you want to block ${username}? You won't see their listings anymore.`)) return;
+    
+    try {
+      const { error } = await supabase.rpc('block_user', {
+        p_blocked_user_id: userId
+      });
+      if (error) throw error;
+      
+      alert(`Blocked ${username}`);
+      fetchListings(); // Refresh to hide their listings
+    } catch (err) {
+      console.error('Error blocking user:', err);
     }
   };
 
@@ -94,6 +148,26 @@ export function Marketplace() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex bg-white border-4 border-black rounded-xl p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={cn(
+              "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+              activeTab === 'all' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
+            )}
+          >
+            All Listings
+          </button>
+          <button
+            onClick={() => setActiveTab('watchlist')}
+            className={cn(
+              "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+              activeTab === 'watchlist' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
+            )}
+          >
+            Watchlist
+          </button>
+        </div>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input 
@@ -113,17 +187,21 @@ export function Marketplace() {
         </div>
       </div>
 
-      {listings.length === 0 ? (
+      {(activeTab === 'all' ? listings : watchlist).length === 0 ? (
         <div className="text-center py-20 bg-white border-4 border-black rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
           <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4 border-4 border-black">
             <Store className="w-10 h-10 text-slate-400" />
           </div>
-          <h3 className="text-2xl font-black text-black mb-2 uppercase">Market is empty</h3>
-          <p className="text-slate-600 font-bold">Check back later for new listings</p>
+          <h3 className="text-2xl font-black text-black mb-2 uppercase">
+            {activeTab === 'all' ? 'Market is empty' : 'Watchlist is empty'}
+          </h3>
+          <p className="text-slate-600 font-bold">
+            {activeTab === 'all' ? 'Check back later for new listings' : 'Add items to your watchlist to track them'}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {listings.map((listing) => (
+          {(activeTab === 'all' ? listings : watchlist).map((listing) => (
             <motion.div 
               key={listing.id}
               whileHover={{ y: -4, rotate: -1 }}
@@ -141,13 +219,33 @@ export function Marketplace() {
                     {listing.card_rarity}
                   </div>
                   <h3 className="font-black text-black text-lg leading-tight uppercase">{listing.card_name}</h3>
-                  <p className="text-sm text-slate-500 font-bold mt-1">Seller: {listing.seller_name}</p>
-                </div>
-                {listing.is_foil && (
-                  <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-700 text-xs font-black px-2 py-1 rounded-lg">
-                    FOIL
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-sm text-slate-500 font-bold">Seller: {listing.seller_name}</p>
+                    {profile?.id !== listing.seller_id && (
+                      <button 
+                        onClick={() => handleBlockUser(listing.seller_id, listing.seller_name)}
+                        className="text-xs text-red-500 hover:text-red-700 font-bold underline"
+                        title="Block Seller"
+                      >
+                        Block
+                      </button>
+                    )}
                   </div>
-                )}
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <button 
+                    onClick={() => handleToggleWatchlist(listing.id)}
+                    className="p-1 hover:bg-gray-100 rounded-full transition-colors border-2 border-transparent hover:border-black"
+                    title={activeTab === 'watchlist' ? "Remove from Watchlist" : "Add to Watchlist"}
+                  >
+                    <Star className={cn("w-5 h-5", activeTab === 'watchlist' ? "fill-yellow-400 text-yellow-500" : "text-slate-400")} />
+                  </button>
+                  {listing.is_foil && (
+                    <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-700 text-xs font-black px-2 py-1 rounded-lg">
+                      FOIL
+                    </div>
+                  )}
+                </div>
               </div>
               
               <div className="flex-1 flex items-center justify-center py-4">

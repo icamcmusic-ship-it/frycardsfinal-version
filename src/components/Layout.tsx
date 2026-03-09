@@ -1,21 +1,35 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, User as UserIcon, LogOut } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, User as UserIcon, LogOut, Bell } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function Layout() {
   const { user, setSession, setUser } = useAuthStore();
   const { profile, fetchProfile, setProfile } = useProfileStore();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase.rpc('get_unread_notification_count');
+      if (!error && data !== null) {
+        setUnreadCount(data);
+      }
+    } catch (err) {
+      console.error('Error fetching unread count:', err);
+    }
+  };
 
   useEffect(() => {
     if (user) {
       fetchProfile(user.id);
+      fetchUnreadCount();
 
-      const channel = supabase
+      const profileChannel = supabase
         .channel('profile-updates')
         .on('postgres_changes', {
           event: 'UPDATE',
@@ -27,8 +41,21 @@ export function Layout() {
         })
         .subscribe();
 
+      const notifChannel = supabase
+        .channel('notifications')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          fetchUnreadCount();
+        })
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(profileChannel);
+        supabase.removeChannel(notifChannel);
       };
     }
   }, [user, fetchProfile, setProfile]);
@@ -70,6 +97,18 @@ export function Layout() {
                 <Gem className="w-4 h-4 text-emerald-600" />
                 <span className="text-sm font-bold font-mono">{profile.gem_balance?.toLocaleString() || 0}</span>
               </div>
+              <Link 
+                to="/notifications"
+                className="relative p-2 hover:bg-blue-100 rounded-full transition-colors text-slate-700 border-2 border-transparent hover:border-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                title="Notifications"
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Link>
               <button 
                 onClick={handleSignOut}
                 className="p-2 hover:bg-red-100 rounded-full transition-colors text-slate-700 border-2 border-transparent hover:border-black hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"

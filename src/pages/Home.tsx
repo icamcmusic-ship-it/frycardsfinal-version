@@ -9,19 +9,52 @@ export function Home() {
   const { profile } = useProfileStore();
   const [quests, setQuests] = useState<any[]>([]);
   const [loadingQuests, setLoadingQuests] = useState(true);
+  const [currentEnergy, setCurrentEnergy] = useState(profile?.energy || 0);
+  const [nextRegen, setNextRegen] = useState<number | null>(null);
 
   useEffect(() => {
     if (profile) {
       fetchQuests();
+      fetchEnergy();
+      
+      const interval = setInterval(fetchEnergy, 5 * 60 * 1000); // Poll every 5 mins
+      return () => clearInterval(interval);
     }
   }, [profile]);
 
+  useEffect(() => {
+    if (currentEnergy < 20 && profile?.energy_last_regen) {
+      const regenTime = new Date(profile.energy_last_regen).getTime() + 15 * 60 * 1000;
+      setNextRegen(regenTime);
+      
+      const timer = setInterval(() => {
+        if (Date.now() >= regenTime) {
+          fetchEnergy();
+        } else {
+          setNextRegen(regenTime); // Force re-render for countdown
+        }
+      }, 1000);
+      return () => clearInterval(timer);
+    } else {
+      setNextRegen(null);
+    }
+  }, [currentEnergy, profile?.energy_last_regen]);
+
+  const fetchEnergy = async () => {
+    if (!profile) return;
+    try {
+      const { data, error } = await supabase.rpc('get_current_energy', { p_user_id: profile.id });
+      if (!error && data !== null) {
+        setCurrentEnergy(data);
+      }
+    } catch (err) {
+      console.error('Error fetching energy:', err);
+    }
+  };
+
   const fetchQuests = async () => {
     try {
-      // First try to assign daily quests (will do nothing if already assigned today)
-      await supabase.rpc('assign_daily_quests', { p_user_id: profile?.id });
-      
-      const { data, error } = await supabase.rpc('get_user_quests', { p_user_id: profile?.id });
+      const { data, error } = await supabase.rpc('ensure_and_get_daily_missions', { p_user_id: profile?.id });
       if (error) throw error;
       setQuests(data || []);
     } catch (err) {
@@ -114,7 +147,14 @@ export function Home() {
           </div>
           <div>
             <p className="text-sm text-slate-600 font-bold uppercase">Energy</p>
-            <p className="text-3xl font-black text-black font-mono">20 / 20</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-black text-black font-mono">{currentEnergy} / 20</p>
+              {currentEnergy < 20 && nextRegen && (
+                <span className="text-xs font-bold text-slate-500">
+                  +1 in {Math.max(0, Math.ceil((nextRegen - Date.now()) / 60000))}m
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

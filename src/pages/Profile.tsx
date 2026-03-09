@@ -10,6 +10,41 @@ export function Profile() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [username, setUsername] = useState(profile?.username || '');
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
+  const [showBlocked, setShowBlocked] = useState(false);
+
+  const fetchBlockedUsers = async () => {
+    try {
+      setLoadingBlocked(true);
+      const { data, error } = await supabase.rpc('get_blocked_users');
+      if (error) throw error;
+      setBlockedUsers(data || []);
+    } catch (err) {
+      console.error('Error fetching blocked users:', err);
+    } finally {
+      setLoadingBlocked(false);
+    }
+  };
+
+  const handleUnblock = async (blockedUserId: string) => {
+    try {
+      const { error } = await supabase.rpc('unblock_user', {
+        p_blocked_user_id: blockedUserId
+      });
+      if (error) throw error;
+      fetchBlockedUsers();
+    } catch (err) {
+      console.error('Error unblocking user:', err);
+    }
+  };
+
+  const toggleBlockedSection = () => {
+    if (!showBlocked) {
+      fetchBlockedUsers();
+    }
+    setShowBlocked(!showBlocked);
+  };
 
   const handleSave = async () => {
     if (!profile) return;
@@ -178,16 +213,46 @@ export function Profile() {
         </div>
 
         <div className="bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <h2 className="text-2xl font-black text-black mb-6 flex items-center gap-2 uppercase">
-            <Zap className="w-6 h-6 text-purple-500 fill-purple-500" />
-            Favorite Cards
-          </h2>
-          <div className="grid grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="aspect-[2.5/3.5] bg-gray-100 border-4 border-black rounded-xl border-dashed flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
-                <Plus className="w-8 h-8 text-slate-400" />
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-black flex items-center gap-2 uppercase">
+              <Settings className="w-6 h-6 text-slate-500" />
+              Settings
+            </h2>
+          </div>
+          <div className="space-y-4">
+            <button 
+              onClick={toggleBlockedSection}
+              className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 border-2 border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-colors"
+            >
+              <span className="font-black text-black uppercase">Blocked Users</span>
+              <span className="text-sm font-bold text-slate-500">{showBlocked ? 'Hide' : 'Show'}</span>
+            </button>
+
+            {showBlocked && (
+              <div className="p-4 bg-gray-50 border-2 border-black rounded-xl shadow-[inset_0_0_10px_rgba(0,0,0,0.1)]">
+                {loadingBlocked ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                  </div>
+                ) : blockedUsers.length === 0 ? (
+                  <p className="text-center text-slate-500 font-bold py-4">No blocked users</p>
+                ) : (
+                  <div className="space-y-2">
+                    {blockedUsers.map((user) => (
+                      <div key={user.blocked_user_id} className="flex items-center justify-between p-3 bg-white border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                        <span className="font-bold text-black">{user.blocked_username || 'Unknown User'}</span>
+                        <button 
+                          onClick={() => handleUnblock(user.blocked_user_id)}
+                          className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-600 font-black text-xs uppercase rounded-md border-2 border-red-200 hover:border-red-300 transition-colors"
+                        >
+                          Unblock
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>

@@ -12,6 +12,8 @@ export interface Profile {
   level: number;
   xp: number;
   pity_counter: number;
+  energy: number;
+  energy_last_regen: string;
   created_at: string;
 }
 
