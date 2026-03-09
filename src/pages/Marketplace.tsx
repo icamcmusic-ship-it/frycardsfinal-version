@@ -11,6 +11,7 @@ export function Marketplace() {
   const [listings, setListings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'all' | 'watchlist'>('all');
   const [watchlist, setWatchlist] = useState<any[]>([]);
@@ -150,8 +151,6 @@ export function Marketplace() {
       </div>
     );
   }
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <div className="space-y-8">
