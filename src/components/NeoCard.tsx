@@ -1,42 +1,49 @@
 import React from 'react';
 
 interface NeoCardProps {
-  name: string;
-  imageUrl: string;
-  quicksellValue: number;
+  card: any;
   onQuickSell: () => void;
-  onClick?: () => void; // Optional: if you want clicking the card (not the button) to do something
+  onClick?: () => void;
 }
 
-export const NeoCard: React.FC<NeoCardProps> = ({ name, imageUrl, quicksellValue, onQuickSell, onClick }) => {
+export const NeoCard: React.FC<NeoCardProps> = ({ card, onQuickSell, onClick }) => {
   return (
-    /* 1. aspect-[63/88] maintains standard trading card proportions. 
-      2. overflow-hidden ensures the image doesn't bleed past the rounded corners.
-      3. 'group' allows us to trigger the child overlay on hover.
-    */
     <div 
       onClick={onClick}
-      className="group relative w-full aspect-[63/88] rounded-xl overflow-hidden border-2 border-gray-700/50 shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl hover:border-blue-500 cursor-pointer bg-gray-900"
+      className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:scale-105 cursor-pointer bg-white"
     >
-      {/* Card Art - Fills entirely to the border */}
+      {/* Card Art */}
       <img 
-        src={imageUrl} 
-        alt={name} 
-        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+        src={card.image_url} 
+        alt={card.name} 
+        className="absolute inset-0 w-full h-full object-cover"
         loading="lazy" 
       />
 
-      {/* Hover Overlay - Only shows Quicksell */}
-      <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+      {/* Rarity Badge */}
+      <div className="absolute top-2 left-2 z-20 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 border border-black px-1.5 py-0.5 rounded-full shadow-sm">
+        {card.rarity}
+      </div>
+
+      {/* Hover Overlay */}
+      <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 p-4 flex flex-col justify-center items-center text-white text-center">
+        <div className="text-center mb-4">
+          <p className="text-white font-black text-sm uppercase">{card.name}</p>
+          <p className="text-gray-300 text-xs font-bold">{card.rarity} · {card.card_type}</p>
+          {card.flavor_text && (
+            <div className="mt-2 p-2 bg-black/40 border border-white/20 rounded-lg">
+              <p className="text-gray-200 text-[11px] italic leading-snug">"{card.flavor_text}"</p>
+            </div>
+          )}
+        </div>
         <button 
           onClick={(e) => {
-            e.stopPropagation(); // Prevents triggering the card's main onClick event
+            e.stopPropagation();
             onQuickSell();
           }}
-          className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg transition-transform active:scale-95 w-full max-w-[160px] shadow-lg flex items-center justify-center gap-2"
+          className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-lg border-2 border-black transition-transform active:scale-95 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
         >
-          <span>Quick Sell</span>
-          <span className="text-red-200 font-mono text-sm">${quicksellValue}</span>
+          Quick Sell
         </button>
       </div>
     </div>

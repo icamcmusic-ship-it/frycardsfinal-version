@@ -363,22 +363,33 @@ export function Store() {
             </motion.div>
           )}
           {packOpeningStep === 'revealing' && openedCards && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full max-w-6xl">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 w-full max-w-6xl">
               {openedCards.map((card: any, i: number) => (
                 <motion.div
                   key={i}
-                  initial={{ rotateY: 0 }}
-                  animate={{ rotateY: flippedCards[i] ? 180 : 0 }}
+                  initial={{ opacity: 0, scale: 0.5, rotateY: 180 }}
+                  animate={{ opacity: 1, scale: 1, rotateY: flippedCards[i] ? 0 : 180 }}
+                  transition={{ duration: 0.6, delay: i * 0.1 }}
                   onClick={() => setFlippedCards(prev => prev.map((f, idx) => idx === i ? true : f))}
-                  className="w-full aspect-[3/4] cursor-pointer"
+                  className="w-full aspect-[3/4] cursor-pointer relative"
                   style={{ transformStyle: 'preserve-3d' }}
                 >
-                  <div className="w-full h-full bg-slate-800 border-4 border-white rounded-lg flex items-center justify-center text-white font-black" style={{ backfaceVisibility: 'hidden' }}>
+                  {/* Card Back */}
+                  <div className="absolute inset-0 bg-indigo-900 border-4 border-white rounded-xl flex items-center justify-center text-white font-black text-4xl shadow-2xl" style={{ backfaceVisibility: 'hidden' }}>
                     ?
                   </div>
-                  <div className="w-full h-full bg-white border-4 border-black rounded-lg p-2 absolute inset-0" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                    <img src={card.image_url} alt={card.name} className="w-full aspect-[3/4] object-cover rounded-lg mb-2" />
-                    <p className="text-xs font-black text-center uppercase">{card.name}</p>
+                  {/* Card Front */}
+                  <div className="absolute inset-0 bg-white border-4 border-black rounded-xl p-3 flex flex-col items-center shadow-2xl" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
+                    <div className="w-full aspect-[3/4] object-cover rounded-lg mb-3 border-2 border-black overflow-hidden relative">
+                      <img src={card.image_url} alt={card.name} className="w-full h-full object-cover" />
+                      <div className="absolute top-2 left-2 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 border border-black px-1.5 py-0.5 rounded-full shadow-sm">
+                        {card.rarity}
+                      </div>
+                    </div>
+                    <p className="text-xs font-black text-center uppercase leading-tight">{card.name}</p>
+                    {card.flavor_text && (
+                      <p className="text-[9px] italic text-gray-500 mt-1 text-center line-clamp-2">"{card.flavor_text}"</p>
+                    )}
                   </div>
                 </motion.div>
               ))}

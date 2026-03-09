@@ -194,7 +194,7 @@ export function Collection() {
   }
 
   return (
-    <div className="space-y-8">
+    <>
       <div className="sticky top-16 z-40 bg-yellow-50/90 backdrop-blur-sm py-4 border-b-2 border-black -mx-4 px-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap gap-4">
@@ -241,6 +241,8 @@ export function Collection() {
           </div>
         </div>
       </div>
+
+      <div className="space-y-8 pt-8">
       
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -316,29 +318,12 @@ export function Collection() {
                 {selectedCardIds.includes(card.id) && <Check className="w-4 h-4" />}
               </div>
             )}
-            {card.is_foil && (
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/60 to-transparent animate-[shimmer_2s_infinite] pointer-events-none z-20" />
-            )}
             
-            {card.foil_quantity > 0 && (
-              <div className="absolute inset-0 pointer-events-none z-10 rounded-xl"
-                style={{
-                  background: 'linear-gradient(135deg, transparent 40%, rgba(255,215,0,0.3) 50%, transparent 60%)',
-                  backgroundSize: '200% 200%',
-                  animation: 'foilShimmer 2s ease-in-out infinite',
-                }} />
-            )}
-            
-            <div className="flex justify-between items-start z-10">
-              <div className="text-xs font-black uppercase tracking-wider text-black bg-white border-2 border-black px-2 py-0.5 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex justify-between items-start z-10 p-4">
+              <div className="text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 border-2 border-black px-2 py-0.5 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                 {card.rarity}
               </div>
               <div className="flex gap-1">
-                {card.foil_quantity > 0 && (
-                  <div className="absolute top-2 left-2 z-20 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded border border-black flex items-center gap-1">
-                    ✨ x{card.foil_quantity}
-                  </div>
-                )}
                 {card.quantity > 1 && (
                   <div className="bg-black text-white text-xs font-black px-2 py-1 rounded-lg border-2 border-white shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
                     x{card.quantity}
@@ -346,7 +331,7 @@ export function Collection() {
                 )}
               </div>
             </div>
-            
+
             {/* Card Art - Fills container */}
             <div className="absolute inset-0 z-0">
               <img 
@@ -359,14 +344,16 @@ export function Collection() {
               />
             </div>
 
-            {card.is_foil && (
-              <div className="absolute top-2 right-12 z-10">
-                <Sparkles className="w-5 h-5 text-yellow-500 fill-yellow-500 drop-shadow-[1px_1px_0px_rgba(0,0,0,1)]" />
-              </div>
-            )}
-
             {/* Hover Actions - Strictly Quick Sell */}
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-end p-4 z-30">
+              <div className="text-center mb-4">
+                <p className="text-white font-black text-sm uppercase">{card.name}</p>
+                {card.flavor_text && (
+                  <div className="mt-2 p-2 bg-black/40 border border-white/20 rounded-lg">
+                    <p className="text-gray-200 text-[11px] italic leading-snug">"{card.flavor_text}"</p>
+                  </div>
+                )}
+              </div>
               {activeTab === 'collection' && !card.is_locked && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleQuicksell(card); }}
@@ -469,6 +456,7 @@ export function Collection() {
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

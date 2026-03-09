@@ -165,7 +165,7 @@ export function Marketplace() {
   }
 
   return (
-    <div className="space-y-8">
+    <>
       <div className="sticky top-16 z-40 bg-yellow-50/90 backdrop-blur-sm py-4 border-b-2 border-black -mx-4 px-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-wrap gap-4">
@@ -199,6 +199,8 @@ export function Marketplace() {
           </div>
         </div>
       </div>
+      
+      <div className="space-y-8 pt-8">
       
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -269,14 +271,20 @@ export function Marketplace() {
               )}
             >
               {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 p-6 flex flex-col justify-center items-center text-white text-center">
-                <h3 className="text-xl font-black uppercase mb-2">{listing.card_name}</h3>
-                <p className="text-sm font-bold text-blue-300 mb-4">{listing.card.card_type}</p>
-                <p className="text-sm italic text-slate-300">"{listing.card.flavor_text}"</p>
+              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 p-6 flex flex-col justify-center items-center text-white text-center">
+                <div className="text-center mb-4">
+                  <p className="text-white font-black text-sm uppercase">{listing.card_name}</p>
+                  <p className="text-gray-300 text-xs font-bold">{listing.card_rarity} · {listing.card.card_type}</p>
+                  {listing.card.flavor_text && (
+                    <div className="mt-2 p-2 bg-black/40 border border-white/20 rounded-lg">
+                      <p className="text-gray-200 text-[11px] italic leading-snug">"{listing.card.flavor_text}"</p>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="text-xs font-black uppercase tracking-wider text-black bg-gray-100 border-2 border-black px-2 py-0.5 rounded-full inline-block mb-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  <div className="text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 border-2 border-black px-2 py-0.5 rounded-full inline-block mb-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                     {listing.card_rarity}
                   </div>
                   <h3 className="font-black text-black text-lg leading-tight uppercase">{listing.card_name}</h3>
@@ -363,6 +371,7 @@ export function Marketplace() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
