@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Search, Filter, Lock, Unlock, Zap, LayoutGrid, Coins, Sparkles, Star, PackageOpen, Check } from 'lucide-react';
+import { Loader2, Search, Filter, Lock, Unlock, Zap, LayoutGrid, Coins, Star, PackageOpen, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
-import { cn } from '../lib/utils';
+import { cn, getRarityStyles } from '../lib/utils';
 import { EmptyState } from '../components/EmptyState';
 
 export function Collection() {
@@ -320,7 +320,10 @@ export function Collection() {
             )}
             
             <div className="flex justify-between items-start z-10 p-4">
-              <div className="text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 border-2 border-black px-2 py-0.5 rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <div className={cn(
+                "text-xs font-black uppercase tracking-wider px-2 py-1 rounded-full border-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
+                getRarityStyles(card.rarity, card.is_foil)
+              )}>
                 {card.rarity}
               </div>
               <div className="flex gap-1">
@@ -345,11 +348,12 @@ export function Collection() {
             </div>
 
             {/* Hover Actions - Strictly Quick Sell */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-end p-4 z-30">
+            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center p-4 z-30">
               <div className="text-center mb-4">
-                <p className="text-white font-black text-sm uppercase">{card.name}</p>
+                <p className="text-white font-black text-sm uppercase tracking-widest">{card.name}</p>
+                <p className="text-gray-300 text-xs font-bold mt-1">{card.rarity} · {card.card_type}</p>
                 {card.flavor_text && (
-                  <div className="mt-2 p-2 bg-black/40 border border-white/20 rounded-lg">
+                  <div className="mt-4 p-3 bg-white/10 border border-white/20 rounded-lg backdrop-blur-sm">
                     <p className="text-gray-200 text-[11px] italic leading-snug">"{card.flavor_text}"</p>
                   </div>
                 )}
@@ -357,7 +361,7 @@ export function Collection() {
               {activeTab === 'collection' && !card.is_locked && (
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleQuicksell(card); }}
-                  className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
+                  className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-lg border-2 border-black transition-transform active:scale-95 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
                 >
                   <Coins className="w-4 h-4" /> Quick Sell
                 </button>

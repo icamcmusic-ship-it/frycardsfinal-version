@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
 import { PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn } from '../lib/utils';
+import { cn, getRarityStyles } from '../lib/utils';
 
 const PACK_ODDS = [
   { rarity: 'Common',     pct: '55%', color: 'text-slate-500' },
@@ -382,13 +382,18 @@ export function Store() {
                   <div className="absolute inset-0 bg-white border-4 border-black rounded-xl p-3 flex flex-col items-center shadow-2xl" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                     <div className="w-full aspect-[3/4] object-cover rounded-lg mb-3 border-2 border-black overflow-hidden relative">
                       <img src={card.image_url} alt={card.name} className="w-full h-full object-cover" />
-                      <div className="absolute top-2 left-2 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 border border-black px-1.5 py-0.5 rounded-full shadow-sm">
+                      <div className={cn(
+                        "absolute top-2 left-2 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full border-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
+                        getRarityStyles(card.rarity, card.is_foil)
+                      )}>
                         {card.rarity}
                       </div>
                     </div>
-                    <p className="text-xs font-black text-center uppercase leading-tight">{card.name}</p>
+                    <p className="text-xs font-black text-center uppercase leading-tight tracking-widest">{card.name}</p>
                     {card.flavor_text && (
-                      <p className="text-[9px] italic text-gray-500 mt-1 text-center line-clamp-2">"{card.flavor_text}"</p>
+                      <div className="mt-4 p-3 bg-white/10 border border-white/20 rounded-lg backdrop-blur-sm">
+                        <p className="text-gray-500 text-[9px] italic leading-snug">"{card.flavor_text}"</p>
+                      </div>
                     )}
                   </div>
                 </motion.div>
