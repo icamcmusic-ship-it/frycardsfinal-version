@@ -96,7 +96,10 @@ export function Profile() {
         {/* Banner */}
         <div className="h-48 bg-blue-400 relative border-b-4 border-black">
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
-          <button className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <button 
+            onClick={() => alert('Coming soon!')}
+            className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+          >
             <ImageIcon className="w-5 h-5" />
           </button>
         </div>
@@ -109,7 +112,10 @@ export function Profile() {
               <div className="w-32 h-32 bg-yellow-300 rounded-2xl border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-3">
                 <UserIcon className="w-16 h-16 text-black" />
               </div>
-              <button className="absolute -bottom-2 -right-2 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <button 
+                onClick={() => alert('Coming soon!')}
+                className="absolute -bottom-2 -right-2 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              >
                 <Edit2 className="w-4 h-4" />
               </button>
             </div>

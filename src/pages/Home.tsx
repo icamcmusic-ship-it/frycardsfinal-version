@@ -85,10 +85,19 @@ export function Home() {
 
   const handleClaimQuest = async (questId: string) => {
     try {
-      const { error } = await supabase.rpc('claim_quest_reward', { p_user_quest_id: questId });
+      const { data, error } = await supabase.rpc('claim_daily_mission', { p_mission_id: questId });
       if (error) throw error;
       
-      alert('Quest reward claimed!');
+      if (data?.success) {
+        const rewards = [];
+        if (data.gold_earned) rewards.push(`${data.gold_earned} Gold`);
+        if (data.gems_earned) rewards.push(`${data.gems_earned} Gems`);
+        if (data.xp_earned) rewards.push(`${data.xp_earned} XP`);
+        alert(`Quest reward claimed! You earned: ${rewards.join(', ')}`);
+      } else {
+        alert('Quest reward claimed!');
+      }
+      
       fetchQuests();
       
       // Refresh profile to update gold/gems
@@ -191,9 +200,6 @@ export function Home() {
             <Zap className="w-6 h-6 text-yellow-500 fill-yellow-500" />
             Daily Missions
           </h2>
-          <button className="text-sm text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 uppercase">
-            View All <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
         
         <div className="space-y-4">

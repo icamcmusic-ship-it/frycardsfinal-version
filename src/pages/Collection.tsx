@@ -39,7 +39,7 @@ export function Collection() {
       setCards(fetchedCards);
 
       // Mark unseen cards as seen
-      const unseenCardIds = fetchedCards.filter((c: any) => !c.is_seen).map((c: any) => c.id);
+      const unseenCardIds = fetchedCards.filter((c: any) => c.is_new === true).map((c: any) => c.id);
       if (unseenCardIds.length > 0) {
         await supabase.rpc('mark_cards_seen', { card_ids: unseenCardIds });
       }
@@ -287,7 +287,7 @@ export function Collection() {
             {/* Hover Actions */}
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 z-30">
               <button 
-                onClick={(e) => { e.stopPropagation(); handleToggleWishlist(activeTab === 'collection' ? card.card_id : card.id); }}
+                onClick={(e) => { e.stopPropagation(); handleToggleWishlist(card.id); }}
                 className="p-3 bg-white hover:bg-gray-200 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 title={activeTab === 'wishlist' ? "Remove from Wishlist" : "Add to Wishlist"}
               >
@@ -297,7 +297,7 @@ export function Collection() {
               {activeTab === 'collection' && (
                 <>
                   <button 
-                    onClick={(e) => { e.stopPropagation(); handleToggleLock(card.id); }}
+                    onClick={(e) => { e.stopPropagation(); handleToggleLock(card.user_card_id); }}
                     className="p-3 bg-white hover:bg-gray-200 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                     title={card.is_locked ? "Unlock" : "Lock"}
                   >
@@ -306,7 +306,7 @@ export function Collection() {
                   
                   {!card.is_locked && card.quantity > 1 && (
                     <button 
-                      onClick={(e) => { e.stopPropagation(); handleQuicksell(card.card_id, card.is_foil); }}
+                      onClick={(e) => { e.stopPropagation(); handleQuicksell(card.id, card.is_foil); }}
                       className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black text-sm rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
                     >
                       <Coins className="w-4 h-4" />

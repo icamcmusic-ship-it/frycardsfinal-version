@@ -54,8 +54,8 @@ export function Layout() {
         .subscribe();
 
       return () => {
-        supabase.removeChannel(profileChannel);
-        supabase.removeChannel(notifChannel);
+        profileChannel.unsubscribe();
+        notifChannel.unsubscribe();
       };
     }
   }, [user, fetchProfile, setProfile]);

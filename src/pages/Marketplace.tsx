@@ -13,6 +13,8 @@ export function Marketplace() {
 
   const [activeTab, setActiveTab] = useState<'all' | 'watchlist'>('all');
   const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     if (activeTab === 'all') {
@@ -87,13 +89,16 @@ export function Marketplace() {
   const handleBuy = async (listing: any) => {
     if (buying || !profile) return;
     
-    // Check if user has enough currency (assuming gold for now based on RPC)
-    if (profile.gold_balance < listing.price) {
-      alert('Not enough gold!');
+    const canAfford = listing.currency === 'gems'
+      ? profile.gem_balance >= listing.price
+      : profile.gold_balance >= listing.price;
+
+    if (!canAfford) {
+      alert(`Not enough ${listing.currency}!`);
       return;
     }
 
-    if (!confirm(`Buy ${listing.card.name} for ${listing.price} gold?`)) return;
+    if (!confirm(`Buy ${listing.card_name} for ${listing.price} ${listing.currency}?`)) return;
 
     setBuying(listing.id);
     try {
@@ -123,6 +128,12 @@ export function Marketplace() {
     }
   };
 
+  const filteredListings = (activeTab === 'all' ? listings : watchlist).filter(listing => {
+    if (filter !== 'all' && listing.type !== filter) return false;
+    if (search && !listing.card_name.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -140,7 +151,10 @@ export function Marketplace() {
         </div>
         
         <div className="flex gap-4">
-          <button className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2">
+          <button 
+            onClick={() => alert('Coming soon!')}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+          >
             <Plus className="w-5 h-5" />
             Create Listing
           </button>
@@ -172,6 +186,8 @@ export function Marketplace() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input 
             type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search marketplace..."
             className="w-full pl-10 pr-4 py-3 bg-white border-4 border-black rounded-xl text-black font-bold placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
           />
@@ -179,7 +195,11 @@ export function Marketplace() {
         
         <div className="relative">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          <select className="w-full sm:w-48 pl-10 pr-4 py-3 bg-white border-4 border-black rounded-xl text-black font-bold appearance-none focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <select 
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="w-full sm:w-48 pl-10 pr-4 py-3 bg-white border-4 border-black rounded-xl text-black font-bold appearance-none focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+          >
             <option value="all">All Types</option>
             <option value="fixed">Buy Now</option>
             <option value="auction">Auctions</option>
@@ -187,7 +207,7 @@ export function Marketplace() {
         </div>
       </div>
 
-      {(activeTab === 'all' ? listings : watchlist).length === 0 ? (
+      {filteredListings.length === 0 ? (
         <div className="text-center py-20 bg-white border-4 border-black rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
           <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4 border-4 border-black">
             <Store className="w-10 h-10 text-slate-400" />
@@ -201,7 +221,7 @@ export function Marketplace() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {(activeTab === 'all' ? listings : watchlist).map((listing) => (
+          {filteredListings.map((listing) => (
             <motion.div 
               key={listing.id}
               whileHover={{ y: -4, rotate: -1 }}
@@ -264,8 +284,12 @@ export function Marketplace() {
                 <div>
                   <p className="text-xs text-slate-500 font-bold uppercase">{listing.type === 'fixed' ? 'Buy Now' : 'Current Bid'}</p>
                   <div className="flex items-center gap-1 text-black font-black text-lg">
-                    <Coins className="w-4 h-4 text-yellow-500" />
-                    {listing.price_gold}
+                    {listing.currency === 'gems' ? (
+                      <Gem className="w-4 h-4 text-emerald-500" />
+                    ) : (
+                      <Coins className="w-4 h-4 text-yellow-500" />
+                    )}
+                    {listing.price}
                   </div>
                 </div>
                 {listing.type === 'auction' && (
