@@ -95,14 +95,34 @@ export function Collection() {
     }
   };
 
-  const handleQuicksell = async (cardId: string, isFoil: boolean) => {
-    if (!confirm('Are you sure you want to quicksell this card?')) return;
+  const getBaseValue = (rarity: string) => {
+    switch (rarity) {
+      case 'Common': return 10;
+      case 'Uncommon': return 25;
+      case 'Rare': return 100;
+      case 'Super-Rare': return 250;
+      case 'Mythic': return 500;
+      case 'Divine': return 1000;
+      default: return 0;
+    }
+  };
+
+  const calculateMillValue = (card: any) => {
+    const base = getBaseValue(card.rarity);
+    return card.is_foil ? base * 3 : base;
+  };
+
+  const handleMill = async (card: any) => {
+    const duplicates = card.quantity - 1;
+    if (duplicates <= 0) return;
+    
+    const totalGold = calculateMillValue(card) * duplicates;
+    if (!confirm(`Are you sure you want to mill ${duplicates} duplicate(s) of ${card.name}? You will receive ${totalGold} Gold.`)) return;
     
     try {
-      const { data, error } = await supabase.rpc('quicksell_card', {
-        p_card_id: cardId,
-        p_quantity: 1,
-        p_is_foil: isFoil
+      const { data, error } = await supabase.rpc('mill_duplicates', {
+        p_card_id: card.id,
+        p_quantity: duplicates
       });
       if (error) throw error;
       
@@ -118,16 +138,17 @@ export function Collection() {
       if (profileData) {
         useProfileStore.getState().setProfile(profileData);
       }
+      alert(`Successfully milled ${data.quantity_milled} cards for ${data.gold_earned} Gold!`);
     } catch (err: any) {
-      alert(err.message || 'Failed to quicksell');
+      alert(err.message || 'Failed to mill');
     }
   };
 
   const handleBulkMill = async () => {
-    if (!confirm('Are you sure you want to quicksell ALL duplicate cards? This cannot be undone.')) return;
+    if (!confirm('Are you sure you want to mill ALL duplicate cards? This cannot be undone.')) return;
     
     try {
-      const { error } = await supabase.rpc('mill_bulk_duplicates');
+      const { data, error } = await supabase.rpc('mill_bulk_duplicates');
       if (error) throw error;
       
       fetchCollection(); // Refresh
@@ -143,9 +164,9 @@ export function Collection() {
         useProfileStore.getState().setProfile(profileData);
       }
       
-      alert('Successfully quicksold all duplicates!');
+      alert(`Successfully milled ${data.cards_milled} cards for ${data.gold_earned} Gold!`);
     } catch (err: any) {
-      alert(err.message || 'Failed to bulk quicksell');
+      alert(err.message || 'Failed to bulk mill');
     }
   };
 
@@ -199,7 +220,7 @@ export function Collection() {
               className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
             >
               <Coins className="w-5 h-5" />
-              Sell All Dupes
+              Mill All Duplicates
             </button>
           )}
           
@@ -241,13 +262,22 @@ export function Collection() {
             animate={{ opacity: 1, scale: 1 }}
             whileHover={{ y: -4, rotate: -2 }}
             className={cn(
-              "aspect-[2.5/3.5] rounded-xl p-4 relative overflow-hidden flex flex-col justify-between border-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group cursor-pointer bg-white transition-transform",
-              card.rarity === 'Divine' ? 'border-yellow-400 bg-yellow-50' :
-              card.rarity === 'Mythic' ? 'border-purple-500 bg-purple-50' :
-              card.rarity === 'Rare' ? 'border-blue-500 bg-blue-50' :
-              'border-black'
+              "aspect-[2/3] rounded-xl p-4 relative overflow-hidden flex flex-col justify-between border-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group cursor-pointer bg-white transition-all duration-300",
+              card.rarity === 'Divine' ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' :
+              card.rarity === 'Mythic' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.5)]' :
+              card.rarity === 'Super-Rare' ? 'border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]' :
+              card.rarity === 'Rare' ? 'border-blue-500' :
+              card.rarity === 'Uncommon' ? 'border-green-500' :
+              'border-slate-400'
             )}
           >
+            {/* Hover Overlay */}
+            <div className="absolute inset-0 bg-black/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 p-6 flex flex-col justify-center items-center text-white text-center">
+              <h3 className="text-xl font-black uppercase mb-2">{card.name}</h3>
+              <p className="text-sm font-bold text-blue-300 mb-4">{card.card_type}</p>
+              <p className="text-sm italic text-slate-300">"{card.flavor_text}"</p>
+            </div>
+
             {card.is_foil && (
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/60 to-transparent animate-[shimmer_2s_infinite] pointer-events-none z-20" />
             )}
@@ -265,7 +295,7 @@ export function Collection() {
               </div>
             </div>
             
-            <div className="text-center z-10">
+            <div className="text-center z-10 flex-1 flex flex-col justify-center">
               <div className="w-full aspect-[3/4] mx-auto bg-gray-200 border-4 border-black rounded-lg mb-3 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)] overflow-hidden">
                 <img 
                   src={card.image_url} 
@@ -306,11 +336,11 @@ export function Collection() {
                   
                   {!card.is_locked && card.quantity > 1 && (
                     <button 
-                      onClick={(e) => { e.stopPropagation(); handleQuicksell(card.id, card.is_foil); }}
+                      onClick={(e) => { e.stopPropagation(); handleMill(card); }}
                       className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black text-sm rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
                     >
                       <Coins className="w-4 h-4" />
-                      Sell Dupes
+                      Mill
                     </button>
                   )}
                 </>

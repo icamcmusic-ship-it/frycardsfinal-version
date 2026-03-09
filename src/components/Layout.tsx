@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, User as UserIcon, LogOut, Bell } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function Layout() {
@@ -72,6 +72,11 @@ export function Layout() {
     { name: 'Packs', path: '/packs', icon: PackageOpen },
     { name: 'Collection', path: '/collection', icon: LayoutGrid },
     { name: 'Market', path: '/marketplace', icon: Store },
+    { name: 'Shop', path: '/shop', icon: ShoppingBag },
+    { name: 'Social', path: '/social', icon: Users },
+    { name: 'Trades', path: '/trades', icon: ArrowRightLeft },
+    { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
+    { name: 'Season Pass', path: '/season-pass', icon: Gift },
     { name: 'Profile', path: '/profile', icon: UserIcon },
   ];
 

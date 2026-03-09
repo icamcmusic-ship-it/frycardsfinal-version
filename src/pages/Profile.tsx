@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -10,9 +10,22 @@ export function Profile() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [username, setUsername] = useState(profile?.username || '');
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
+  const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || '');
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
+  const [achievements, setAchievements] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchAchievements();
+  }, []);
+
+  const fetchAchievements = async () => {
+    await supabase.rpc('check_and_unlock_achievements', { p_user_id: profile?.id });
+    const { data } = await supabase.rpc('get_user_achievements');
+    setAchievements(data || []);
+  };
 
   const fetchBlockedUsers = async () => {
     try {
@@ -46,6 +59,36 @@ export function Profile() {
     setShowBlocked(!showBlocked);
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+    const file = event.target.files?.[0];
+    if (!file || !profile) return;
+
+    try {
+      setSaving(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profile.id}/${type}-${Math.random()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      if (type === 'avatar') setAvatarUrl(publicUrl);
+      else setBannerUrl(publicUrl);
+      
+      alert(`${type === 'avatar' ? 'Avatar' : 'Banner'} uploaded! Save profile to apply.`);
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload file');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!profile) return;
     setSaving(true);
@@ -53,15 +96,15 @@ export function Profile() {
       const { data, error } = await supabase.rpc('update_user_profile', {
         p_user_id: profile.id,
         p_username: username,
-        p_avatar_url: profile.avatar_url,
-        p_banner_url: profile.banner_url,
+        p_avatar_url: avatarUrl,
+        p_banner_url: bannerUrl,
         p_bio: profile.bio
       });
 
       if (error) throw error;
       
       // Update local state
-      setProfile({ ...profile, username });
+      setProfile({ ...profile, username, avatar_url: avatarUrl, banner_url: bannerUrl });
       setEditing(false);
       alert('Profile updated successfully!');
     } catch (err: any) {
@@ -95,13 +138,12 @@ export function Profile() {
       <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
         {/* Banner */}
         <div className="h-48 bg-blue-400 relative border-b-4 border-black">
+          <img src={bannerUrl || profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
-          <button 
-            onClick={() => alert('Coming soon!')}
-            className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-          >
+          <label className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] cursor-pointer">
             <ImageIcon className="w-5 h-5" />
-          </button>
+            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'banner')} />
+          </label>
         </div>
 
         {/* Profile Info */}
@@ -109,15 +151,17 @@ export function Profile() {
           <div className="flex flex-col md:flex-row gap-6 items-start">
             {/* Avatar */}
             <div className="-mt-16 relative">
-              <div className="w-32 h-32 bg-yellow-300 rounded-2xl border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-3">
-                <UserIcon className="w-16 h-16 text-black" />
+              <div className="w-32 h-32 bg-yellow-300 rounded-2xl border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-3 overflow-hidden">
+                {avatarUrl || profile.avatar_url ? (
+                  <img src={avatarUrl || profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <UserIcon className="w-16 h-16 text-black" />
+                )}
               </div>
-              <button 
-                onClick={() => alert('Coming soon!')}
-                className="absolute -bottom-2 -right-2 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-              >
+              <label className="absolute -bottom-2 -right-2 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] cursor-pointer">
                 <Edit2 className="w-4 h-4" />
-              </button>
+                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'avatar')} />
+              </label>
             </div>
 
             {/* Details */}
@@ -203,24 +247,17 @@ export function Profile() {
             Achievements
           </h2>
           <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-              <div className="w-12 h-12 bg-yellow-100 border-2 border-black rounded-full flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-yellow-600" />
+            {achievements.map(ach => (
+              <div key={ach.id} className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <div className="w-12 h-12 bg-yellow-100 border-2 border-black rounded-full flex items-center justify-center">
+                  <Trophy className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div>
+                  <h3 className="font-black text-black uppercase">{ach.name}</h3>
+                  <p className="text-sm text-slate-600 font-bold">{ach.description}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-black text-black uppercase">First Blood</h3>
-                <p className="text-sm text-slate-600 font-bold">Win your first duel</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-              <div className="w-12 h-12 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center">
-                <LayoutGrid className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-black text-black uppercase">Collector</h3>
-                <p className="text-sm text-slate-600 font-bold">Collect 100 unique cards</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 

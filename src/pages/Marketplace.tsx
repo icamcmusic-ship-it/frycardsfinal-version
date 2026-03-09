@@ -4,6 +4,7 @@ import { useProfileStore } from '../stores/profileStore';
 import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import { CreateListingModal } from '../components/CreateListingModal';
 
 export function Marketplace() {
   const { profile } = useProfileStore();
@@ -150,6 +151,8 @@ export function Marketplace() {
     );
   }
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -160,7 +163,7 @@ export function Marketplace() {
         
         <div className="flex gap-4">
           <button 
-            onClick={() => alert('Coming soon!')}
+            onClick={() => setIsModalOpen(true)}
             className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
@@ -168,6 +171,8 @@ export function Marketplace() {
           </button>
         </div>
       </div>
+      
+      <CreateListingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchListings} />
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex bg-white border-4 border-black rounded-xl p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
@@ -234,13 +239,21 @@ export function Marketplace() {
               key={listing.id}
               whileHover={{ y: -4, rotate: -1 }}
               className={cn(
-                "bg-white border-4 rounded-2xl p-4 flex flex-col gap-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-transform",
-                listing.card_rarity === 'Divine' ? 'border-yellow-400' :
-                listing.card_rarity === 'Mythic' ? 'border-purple-500' :
+                "bg-white border-4 rounded-2xl p-4 flex flex-col gap-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 group relative overflow-hidden",
+                listing.card_rarity === 'Divine' ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' :
+                listing.card_rarity === 'Mythic' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.5)]' :
+                listing.card_rarity === 'Super-Rare' ? 'border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]' :
                 listing.card_rarity === 'Rare' ? 'border-blue-500' :
-                'border-black'
+                listing.card_rarity === 'Uncommon' ? 'border-green-500' :
+                'border-slate-400'
               )}
             >
+              {/* Hover Overlay */}
+              <div className="absolute inset-0 bg-black/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 p-6 flex flex-col justify-center items-center text-white text-center">
+                <h3 className="text-xl font-black uppercase mb-2">{listing.card_name}</h3>
+                <p className="text-sm font-bold text-blue-300 mb-4">{listing.card.card_type}</p>
+                <p className="text-sm italic text-slate-300">"{listing.card.flavor_text}"</p>
+              </div>
               <div className="flex justify-between items-start">
                 <div>
                   <div className="text-xs font-black uppercase tracking-wider text-black bg-gray-100 border-2 border-black px-2 py-0.5 rounded-full inline-block mb-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">

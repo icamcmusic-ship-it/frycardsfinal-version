@@ -23,6 +23,7 @@ export function Home() {
   const [nextRegen, setNextRegen] = useState<number | null>(null);
 
   const [stats, setStats] = useState<{ unique_cards: number; total_possible: number } | null>(null);
+  const [reward, setReward] = useState<any>(null);
 
   useEffect(() => {
     if (profile) {
@@ -121,6 +122,35 @@ export function Home() {
     }
   };
 
+  const handleClaimDailyReward = async () => {
+    try {
+      const { data, error } = await supabase.rpc('claim_daily_reward');
+      if (error) throw error;
+      
+      setReward(data);
+      
+      // Refresh profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profile?.id)
+        .single();
+        
+      if (profileData) {
+        useProfileStore.getState().setProfile(profileData);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to claim daily reward');
+    }
+  };
+
+  const isDailyClaimable = () => {
+    if (!profile?.last_daily_claim) return true;
+    const lastClaim = new Date(profile.last_daily_claim);
+    const today = new Date();
+    return lastClaim.toDateString() !== today.toDateString();
+  };
+
   if (!profile) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -155,6 +185,15 @@ export function Home() {
               <PackageOpen className="w-6 h-6" />
               Open Packs
             </Link>
+            {isDailyClaimable() && (
+              <button 
+                onClick={handleClaimDailyReward}
+                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+              >
+                <Trophy className="w-6 h-6" />
+                Claim Daily Reward
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -254,6 +293,31 @@ export function Home() {
           )}
         </div>
       </div>
+
+      {reward && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center"
+          >
+            <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-3xl font-black text-black uppercase mb-2">Reward Claimed!</h2>
+            <div className="text-xl font-bold text-slate-700 mb-6">
+              {reward.gold_earned > 0 && <p>+{reward.gold_earned} Gold</p>}
+              {reward.gems_earned > 0 && <p>+{reward.gems_earned} Gems</p>}
+              {reward.xp_earned > 0 && <p>+{reward.xp_earned} XP</p>}
+              <p className="mt-2 text-sm font-black text-blue-500 uppercase">Streak: {reward.current_streak} days</p>
+            </div>
+            <button 
+              onClick={() => setReward(null)}
+              className="w-full py-3 bg-black text-white font-black rounded-xl border-4 border-black hover:bg-gray-800 transition-colors"
+            >
+              Collect
+            </button>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 }
