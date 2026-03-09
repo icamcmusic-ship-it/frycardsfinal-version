@@ -6,11 +6,13 @@ export interface Profile {
   username: string;
   avatar_url: string | null;
   banner_url: string | null;
-  gold: number;
-  gems: number;
+  bio: string | null;
+  gold_balance: number;
+  gem_balance: number;
   level: number;
   xp: number;
   pity_counter: number;
+  created_at: string;
 }
 
 interface ProfileState {

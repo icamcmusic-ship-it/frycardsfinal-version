@@ -1,29 +1,34 @@
 import React, { useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
+import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
-import { Loader2, User as UserIcon, Settings, LogOut, Edit2 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings, Plus } from 'lucide-react';
 
 export function Profile() {
   const { profile, setProfile } = useProfileStore();
+  const { signOut } = useAuthStore();
   const [editing, setEditing] = useState(false);
-  const [username, setUsername] = useState(profile?.username || '');
   const [saving, setSaving] = useState(false);
+  const [username, setUsername] = useState(profile?.username || '');
 
   const handleSave = async () => {
     if (!profile) return;
     setSaving(true);
     try {
       const { data, error } = await supabase.rpc('update_user_profile', {
+        p_user_id: profile.id,
         p_username: username,
-        p_bio: null,
-        p_avatar_url: null,
-        p_banner_url: null
+        p_avatar_url: profile.avatar_url,
+        p_banner_url: profile.banner_url,
+        p_bio: profile.bio
       });
+
       if (error) throw error;
       
+      // Update local state
       setProfile({ ...profile, username });
       setEditing(false);
+      alert('Profile updated successfully!');
     } catch (err: any) {
       alert(err.message || 'Failed to update profile');
     } finally {
@@ -35,124 +40,154 @@ export function Profile() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* Banner & Avatar */}
-      <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-white/10">
-        <div className="h-48 bg-gradient-to-r from-indigo-900 to-purple-900 relative">
-          <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/tcg-banner/1200/400')] bg-cover bg-center opacity-30 mix-blend-overlay" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
+      <div className="flex items-center justify-between">
+        <h1 className="text-4xl font-black text-black tracking-tight uppercase">Profile</h1>
+        <button 
+          onClick={signOut}
+          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+        >
+          <LogOut className="w-5 h-5" />
+          Sign Out
+        </button>
+      </div>
+
+      <div className="bg-white border-4 border-black rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        {/* Banner */}
+        <div className="h-48 bg-blue-400 relative border-b-4 border-black">
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
+          <button className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <ImageIcon className="w-5 h-5" />
+          </button>
         </div>
-        
-        <div className="px-8 pb-8 relative -mt-16 sm:-mt-20 flex flex-col sm:flex-row items-center sm:items-end gap-6">
-          <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl bg-slate-800 border-4 border-slate-900 shadow-2xl overflow-hidden relative group">
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
-                <UserIcon className="w-16 h-16 text-white/50" />
+
+        {/* Profile Info */}
+        <div className="px-8 pb-8 relative">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            {/* Avatar */}
+            <div className="-mt-16 relative">
+              <div className="w-32 h-32 bg-yellow-300 rounded-2xl border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform -rotate-3">
+                <UserIcon className="w-16 h-16 text-black" />
               </div>
-            )}
-            <button className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-              <Edit2 className="w-6 h-6" />
-            </button>
-          </div>
-          
-          <div className="flex-1 text-center sm:text-left">
-            {editing ? (
-              <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <input 
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="bg-slate-800 border border-white/20 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  autoFocus
-                />
-                <button 
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
-                </button>
-                <button 
-                  onClick={() => { setEditing(false); setUsername(profile.username); }}
-                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition-colors"
-                >
-                  Cancel
-                </button>
+              <button className="absolute -bottom-2 -right-2 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <Edit2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Details */}
+            <div className="flex-1 pt-4 w-full">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex-1">
+                  {editing ? (
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="text-3xl font-black text-black bg-gray-50 border-4 border-black rounded-xl px-4 py-2 w-full max-w-md focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                      placeholder="Enter username"
+                    />
+                  ) : (
+                    <h2 className="text-4xl font-black text-black uppercase">{profile.username || 'Duelist'}</h2>
+                  )}
+                  <p className="text-slate-500 font-bold mt-1">Joined {new Date(profile.created_at).toLocaleDateString()}</p>
+                </div>
+
+                <div className="flex gap-3">
+                  {editing ? (
+                    <>
+                      <button 
+                        onClick={() => {
+                          setEditing(false);
+                          setUsername(profile.username || '');
+                        }}
+                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="px-4 py-2 bg-green-400 hover:bg-green-500 text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        Save
+                      </button>
+                    </>
+                  ) : (
+                    <button 
+                      onClick={() => setEditing(true)}
+                      className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                      Edit Profile
+                    </button>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="flex items-center gap-3 justify-center sm:justify-start">
-                <h1 className="text-3xl font-bold text-white tracking-tight">{profile.username || 'Duelist'}</h1>
-                <button 
-                  onClick={() => setEditing(true)}
-                  className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-md transition-colors"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gray-50 border-2 border-black rounded-xl p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Level</p>
+                  <p className="text-2xl font-black text-black">{profile.level}</p>
+                </div>
+                <div className="bg-gray-50 border-2 border-black rounded-xl p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">XP</p>
+                  <p className="text-2xl font-black text-black">{profile.xp}</p>
+                </div>
+                <div className="bg-gray-50 border-2 border-black rounded-xl p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Gold</p>
+                  <p className="text-2xl font-black text-yellow-600">{profile.gold_balance}</p>
+                </div>
+                <div className="bg-gray-50 border-2 border-black rounded-xl p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Gems</p>
+                  <p className="text-2xl font-black text-emerald-600">{profile.gem_balance}</p>
+                </div>
               </div>
-            )}
-            <p className="text-slate-400 mt-1">Level {profile.level} • {profile.xp} XP</p>
-          </div>
-          
-          <div className="flex gap-3 mt-4 sm:mt-0">
-            <button className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors border border-white/5">
-              <Settings className="w-5 h-5" />
-            </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Stats & Info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-slate-900/50 border border-white/10 rounded-3xl p-6">
-          <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <UserIcon className="w-5 h-5 text-indigo-400" />
-            Account Details
+      {/* Achievements / Showcase */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <h2 className="text-2xl font-black text-black mb-6 flex items-center gap-2 uppercase">
+            <Trophy className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+            Achievements
           </h2>
-          
           <div className="space-y-4">
-            <div className="flex justify-between items-center py-3 border-b border-white/5">
-              <span className="text-slate-400">Member Since</span>
-              <span className="text-white font-medium">March 2026</span>
+            <div className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <div className="w-12 h-12 bg-yellow-100 border-2 border-black rounded-full flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-black uppercase">First Blood</h3>
+                <p className="text-sm text-slate-600 font-bold">Win your first duel</p>
+              </div>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-white/5">
-              <span className="text-slate-400">Total Packs Opened</span>
-              <span className="text-white font-medium font-mono">142</span>
-            </div>
-            <div className="flex justify-between items-center py-3 border-b border-white/5">
-              <span className="text-slate-400">Pity Counter</span>
-              <span className="text-white font-medium font-mono">{profile.pity_counter} / 10</span>
-            </div>
-            <div className="flex justify-between items-center py-3">
-              <span className="text-slate-400">Collection Completion</span>
-              <span className="text-white font-medium font-mono">28%</span>
+            <div className="flex items-center gap-4 p-4 bg-gray-50 border-2 border-black rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <div className="w-12 h-12 bg-blue-100 border-2 border-black rounded-full flex items-center justify-center">
+                <LayoutGrid className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-black text-black uppercase">Collector</h3>
+                <p className="text-sm text-slate-600 font-bold">Collect 100 unique cards</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-slate-900/50 border border-white/10 rounded-3xl p-6">
-          <h2 className="text-xl font-bold text-white mb-6">Cosmetics</h2>
-          
-          <div className="space-y-4">
-            <div className="p-4 bg-slate-950/50 border border-white/5 rounded-2xl flex items-center justify-between">
-              <div>
-                <p className="font-medium text-white">Card Back</p>
-                <p className="text-sm text-slate-400">Default Holographic</p>
+        <div className="bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <h2 className="text-2xl font-black text-black mb-6 flex items-center gap-2 uppercase">
+            <Zap className="w-6 h-6 text-purple-500 fill-purple-500" />
+            Favorite Cards
+          </h2>
+          <div className="grid grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="aspect-[2.5/3.5] bg-gray-100 border-4 border-black rounded-xl border-dashed flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors">
+                <Plus className="w-8 h-8 text-slate-400" />
               </div>
-              <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-xl transition-colors">
-                Change
-              </button>
-            </div>
-            
-            <div className="p-4 bg-slate-950/50 border border-white/5 rounded-2xl flex items-center justify-between">
-              <div>
-                <p className="font-medium text-white">Profile Banner</p>
-                <p className="text-sm text-slate-400">Cosmic Nebula</p>
-              </div>
-              <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-xl transition-colors">
-                Change
-              </button>
-            </div>
+            ))}
           </div>
         </div>
       </div>

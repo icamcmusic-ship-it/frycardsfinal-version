@@ -32,31 +32,31 @@ export function Home() {
       className="space-y-8"
     >
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900/50 to-slate-900 border border-white/10 p-8 md:p-12">
-        <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl bg-blue-400 border-4 border-black p-8 md:p-12 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div className="absolute top-0 right-0 -translate-y-1/4 translate-x-1/4 w-64 h-64 bg-yellow-300 rounded-full border-4 border-black opacity-50" />
         
         <div className="relative z-10 max-w-2xl">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-            Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">{profile.username || 'Duelist'}</span>
+          <h1 className="text-4xl md:text-5xl font-black text-black mb-4 tracking-tight uppercase">
+            Welcome back, <br/><span className="text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">{profile.username || 'Duelist'}</span>
           </h1>
-          <p className="text-lg text-slate-400 mb-8">
+          <p className="text-xl text-black font-bold mb-8 bg-white/50 inline-block px-3 py-1 border-2 border-black rounded-lg transform -rotate-1">
             Level {profile.level} • {profile.xp} XP
           </p>
 
           <div className="flex flex-wrap gap-4">
             <Link 
               to="/packs"
-              className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 text-white font-medium rounded-xl transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] flex items-center gap-2"
+              className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
             >
-              <PackageOpen className="w-5 h-5" />
+              <PackageOpen className="w-6 h-6" />
               Open Packs
             </Link>
             <button 
               onClick={handleDailyReward}
               disabled={claiming}
-              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl border border-white/10 transition-all flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-3 bg-white hover:bg-gray-100 text-black font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 disabled:opacity-50"
             >
-              <Gift className="w-5 h-5 text-emerald-400" />
+              <Gift className="w-6 h-6 text-red-500" />
               {claiming ? 'Claiming...' : 'Daily Reward'}
             </button>
           </div>
@@ -64,67 +64,67 @@ export function Home() {
       </div>
 
       {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
-            <Trophy className="w-6 h-6 text-yellow-500" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white border-4 border-black rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-1 transition-transform">
+          <div className="w-14 h-14 rounded-xl bg-yellow-300 flex items-center justify-center border-4 border-black transform -rotate-3">
+            <Trophy className="w-7 h-7 text-black" />
           </div>
           <div>
-            <p className="text-sm text-slate-400 font-medium">Collection Score</p>
-            <p className="text-2xl font-bold text-white font-mono">1,240</p>
+            <p className="text-sm text-slate-600 font-bold uppercase">Collection Score</p>
+            <p className="text-3xl font-black text-black font-mono">1,240</p>
           </div>
         </div>
         
-        <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-            <LayoutGrid className="w-6 h-6 text-cyan-500" />
+        <div className="bg-white border-4 border-black rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-1 transition-transform">
+          <div className="w-14 h-14 rounded-xl bg-cyan-300 flex items-center justify-center border-4 border-black transform rotate-3">
+            <LayoutGrid className="w-7 h-7 text-black" />
           </div>
           <div>
-            <p className="text-sm text-slate-400 font-medium">Unique Cards</p>
-            <p className="text-2xl font-bold text-white font-mono">142 / 500</p>
+            <p className="text-sm text-slate-600 font-bold uppercase">Unique Cards</p>
+            <p className="text-3xl font-black text-black font-mono">142 / 500</p>
           </div>
         </div>
 
-        <div className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-            <Zap className="w-6 h-6 text-purple-500" />
+        <div className="bg-white border-4 border-black rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-1 transition-transform">
+          <div className="w-14 h-14 rounded-xl bg-purple-300 flex items-center justify-center border-4 border-black transform -rotate-3">
+            <Zap className="w-7 h-7 text-black" />
           </div>
           <div>
-            <p className="text-sm text-slate-400 font-medium">Energy</p>
-            <p className="text-2xl font-bold text-white font-mono">20 / 20</p>
+            <p className="text-sm text-slate-600 font-bold uppercase">Energy</p>
+            <p className="text-3xl font-black text-black font-mono">20 / 20</p>
           </div>
         </div>
       </div>
 
       {/* Daily Missions Preview */}
-      <div className="bg-slate-900/50 border border-white/5 rounded-3xl p-6 md:p-8">
+      <div className="bg-white border-4 border-black rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Zap className="w-5 h-5 text-yellow-400" />
+          <h2 className="text-2xl font-black text-black flex items-center gap-2 uppercase">
+            <Zap className="w-6 h-6 text-yellow-500 fill-yellow-500" />
             Daily Missions
           </h2>
-          <button className="text-sm text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+          <button className="text-sm text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 uppercase">
             View All <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-slate-950/50 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+            <div key={i} className="bg-gray-50 border-2 border-black rounded-xl p-4 flex items-center justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center">
-                  <PackageOpen className="w-5 h-5 text-slate-400" />
+                <div className="w-12 h-12 rounded-lg bg-blue-100 border-2 border-black flex items-center justify-center">
+                  <PackageOpen className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-white">Open 5 Packs</p>
-                  <div className="w-48 h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
-                    <div className="h-full bg-indigo-500 w-3/5" />
+                  <p className="font-bold text-black text-lg">Open 5 Packs</p>
+                  <div className="w-48 h-3 bg-white border-2 border-black rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-green-400 w-3/5 border-r-2 border-black" />
                   </div>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-medium text-slate-400">3 / 5</p>
-                <p className="text-xs text-yellow-500 font-medium mt-1">+50 Gold</p>
+                <p className="text-lg font-black text-black">3 / 5</p>
+                <p className="text-sm text-yellow-600 font-bold mt-1 bg-yellow-100 px-2 py-0.5 rounded border border-yellow-400 inline-block">+50 Gold</p>
               </div>
             </div>
           ))}
