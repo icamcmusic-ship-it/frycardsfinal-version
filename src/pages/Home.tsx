@@ -1,25 +1,56 @@
 import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Trophy, Gift, Zap, PackageOpen, LayoutGrid, ChevronRight } from 'lucide-react';
+import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 
 export function Home() {
   const { profile } = useProfileStore();
-  const [claiming, setClaiming] = useState(false);
+  const [quests, setQuests] = useState<any[]>([]);
+  const [loadingQuests, setLoadingQuests] = useState(true);
 
-  const handleDailyReward = async () => {
-    if (claiming) return;
-    setClaiming(true);
+  useEffect(() => {
+    if (profile) {
+      fetchQuests();
+    }
+  }, [profile]);
+
+  const fetchQuests = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('claim-daily-reward');
+      // First try to assign daily quests (will do nothing if already assigned today)
+      await supabase.rpc('assign_daily_quests', { p_user_id: profile?.id });
+      
+      const { data, error } = await supabase.rpc('get_user_quests', { p_user_id: profile?.id });
       if (error) throw error;
-      alert('Daily reward claimed!');
-    } catch (err: any) {
-      alert(err.message || 'Failed to claim daily reward');
+      setQuests(data || []);
+    } catch (err) {
+      console.error('Error fetching quests:', err);
     } finally {
-      setClaiming(false);
+      setLoadingQuests(false);
+    }
+  };
+
+  const handleClaimQuest = async (questId: string) => {
+    try {
+      const { error } = await supabase.rpc('claim_quest_reward', { p_user_quest_id: questId });
+      if (error) throw error;
+      
+      alert('Quest reward claimed!');
+      fetchQuests();
+      
+      // Refresh profile to update gold/gems
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profile?.id)
+        .single();
+        
+      if (profileData) {
+        useProfileStore.getState().setProfile(profileData);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to claim quest reward');
     }
   };
 
@@ -43,7 +74,7 @@ export function Home() {
             Level {profile.level} • {profile.xp} XP
           </p>
 
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 mt-8">
             <Link 
               to="/packs"
               className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
@@ -51,14 +82,6 @@ export function Home() {
               <PackageOpen className="w-6 h-6" />
               Open Packs
             </Link>
-            <button 
-              onClick={handleDailyReward}
-              disabled={claiming}
-              className="px-6 py-3 bg-white hover:bg-gray-100 text-black font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 disabled:opacity-50"
-            >
-              <Gift className="w-6 h-6 text-red-500" />
-              {claiming ? 'Claiming...' : 'Daily Reward'}
-            </button>
           </div>
         </div>
       </div>
@@ -109,25 +132,49 @@ export function Home() {
         </div>
         
         <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-gray-50 border-2 border-black rounded-xl p-4 flex items-center justify-between shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-blue-100 border-2 border-black flex items-center justify-center">
-                  <PackageOpen className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-bold text-black text-lg">Open 5 Packs</p>
-                  <div className="w-48 h-3 bg-white border-2 border-black rounded-full mt-2 overflow-hidden">
-                    <div className="h-full bg-green-400 w-3/5 border-r-2 border-black" />
+          {loadingQuests ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+            </div>
+          ) : quests.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 font-bold">No active quests. Check back tomorrow!</div>
+          ) : (
+            quests.map((quest) => (
+              <div key={quest.id} className="bg-gray-50 border-2 border-black rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                  <div className="w-12 h-12 rounded-lg bg-blue-100 border-2 border-black flex items-center justify-center shrink-0">
+                    <Zap className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-black text-lg">{quest.quest_type.replace(/_/g, ' ').toUpperCase()}</p>
+                    <div className="w-full sm:w-48 h-3 bg-white border-2 border-black rounded-full mt-2 overflow-hidden">
+                      <div 
+                        className="h-full bg-green-400 border-r-2 border-black transition-all" 
+                        style={{ width: `${Math.min(100, (quest.progress / quest.target_value) * 100)}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
+                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
+                  <p className="text-lg font-black text-black">{quest.progress} / {quest.target_value}</p>
+                  {quest.is_completed && !quest.is_claimed ? (
+                    <button 
+                      onClick={() => handleClaimQuest(quest.id)}
+                      className="px-4 py-1 bg-green-400 hover:bg-green-500 text-black font-black text-sm rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
+                    >
+                      Claim Reward
+                    </button>
+                  ) : quest.is_claimed ? (
+                    <span className="text-sm text-slate-500 font-bold uppercase">Claimed</span>
+                  ) : (
+                    <p className="text-sm text-yellow-600 font-bold bg-yellow-100 px-2 py-0.5 rounded border border-yellow-400 inline-block">
+                      +{quest.reward_amount} {quest.reward_type === 'gold' ? 'Gold' : 'Gems'}
+                    </p>
+                  )}
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-black text-black">3 / 5</p>
-                <p className="text-sm text-yellow-600 font-bold mt-1 bg-yellow-100 px-2 py-0.5 rounded border border-yellow-400 inline-block">+50 Gold</p>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </motion.div>

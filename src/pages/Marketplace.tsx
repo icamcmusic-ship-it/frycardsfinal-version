@@ -151,7 +151,15 @@ export function Marketplace() {
               </div>
               
               <div className="flex-1 flex items-center justify-center py-4">
-                <div className="w-24 h-24 bg-gray-200 border-4 border-black rounded-full shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]" />
+                <div className="w-full aspect-[3/4] bg-gray-200 border-4 border-black rounded-lg shadow-[inset_0_0_10px_rgba(0,0,0,0.2)] overflow-hidden">
+                  <img 
+                    src={listing.card.image_url} 
+                    alt={listing.card_name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
               </div>
 
               <div className="bg-gray-50 border-2 border-black rounded-xl p-3 flex justify-between items-center">

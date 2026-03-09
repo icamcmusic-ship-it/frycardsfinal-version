@@ -21,9 +21,35 @@ export function Packs() {
   const [opening, setOpening] = useState(false);
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
 
+  const [inventory, setInventory] = useState<any[]>([]);
+
   useEffect(() => {
     fetchPacks();
-  }, []);
+    fetchInventory();
+  }, [profile]);
+
+  const fetchInventory = async () => {
+    if (!profile) return;
+    try {
+      const { data, error } = await supabase
+        .from('user_packs')
+        .select(`
+          id,
+          pack_type_id,
+          pack_types (
+            name,
+            image_url
+          )
+        `)
+        .eq('user_id', profile.id)
+        .eq('is_opened', false);
+        
+      if (error) throw error;
+      setInventory(data || []);
+    } catch (err) {
+      console.error('Error fetching inventory:', err);
+    }
+  };
 
   const fetchPacks = async () => {
     try {
@@ -50,6 +76,70 @@ export function Packs() {
       });
 
       if (error) throw error;
+      
+      // Refresh profile to update balances
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profile.id)
+        .single();
+        
+      if (profileData) {
+        useProfileStore.getState().setProfile(profileData);
+      }
+      
+      setTimeout(() => {
+        setOpenedCards(data.cards);
+        setOpening(false);
+      }, 1500);
+
+    } catch (err: any) {
+      alert(err.message || 'Failed to open pack');
+      setOpening(false);
+    }
+  };
+
+  const handleBuyToInventory = async (packId: string, useGems: boolean) => {
+    if (!profile) return;
+    try {
+      const { error } = await supabase.rpc('buy_pack_to_inventory', {
+        p_pack_type_id: packId,
+        p_use_gems: useGems
+      });
+
+      if (error) throw error;
+      
+      alert('Pack added to inventory!');
+      
+      // Refresh profile to update balances
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profile.id)
+        .single();
+        
+      if (profileData) {
+        useProfileStore.getState().setProfile(profileData);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to buy pack');
+    }
+  };
+
+  const handleOpenFromInventory = async (userPackId: string) => {
+    if (opening || !profile) return;
+    setOpening(true);
+    setOpenedCards(null);
+
+    try {
+      const { data, error } = await supabase.rpc('open_pack_from_inventory', {
+        p_user_pack_id: userPackId
+      });
+
+      if (error) throw error;
+      
+      // Refresh inventory
+      fetchInventory();
       
       setTimeout(() => {
         setOpenedCards(data.cards);
@@ -92,8 +182,14 @@ export function Packs() {
           >
             <div className="aspect-[4/3] bg-blue-100 flex items-center justify-center p-8 relative border-b-4 border-black">
               {/* Pack Image Placeholder */}
-              <div className="w-32 h-48 bg-red-500 rounded-xl border-4 border-black flex items-center justify-center transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <PackageOpen className="w-16 h-16 text-white" />
+              <div className="w-32 h-48 bg-red-500 rounded-xl border-4 border-black flex items-center justify-center transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+                <img 
+                  src={pack.image_url} 
+                  alt={pack.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
+                  referrerPolicy="no-referrer"
+                />
               </div>
             </div>
 
@@ -101,32 +197,89 @@ export function Packs() {
               <h3 className="text-2xl font-black text-black mb-2 uppercase">{pack.name}</h3>
               <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
               
-              <div className="flex gap-3 mt-auto">
+              <div className="flex flex-col gap-3 mt-auto">
                 {pack.cost_gold > 0 && (
-                  <button 
-                    onClick={() => handleOpenPack(pack.id, false)}
-                    disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
-                    className="flex-1 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
-                  >
-                    <Coins className="w-5 h-5 text-yellow-700" />
-                    {pack.cost_gold}
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleOpenPack(pack.id, false)}
+                      disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
+                      className="flex-[2] bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
+                    >
+                      <Coins className="w-5 h-5 text-yellow-700" />
+                      Open
+                    </button>
+                    <button 
+                      onClick={() => handleBuyToInventory(pack.id, false)}
+                      disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
+                      className="flex-1 bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center"
+                      title="Buy to Inventory"
+                    >
+                      Stash
+                    </button>
+                  </div>
                 )}
                 {pack.cost_gems > 0 && (
-                  <button 
-                    onClick={() => handleOpenPack(pack.id, true)}
-                    disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
-                    className="flex-1 bg-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
-                  >
-                    <Gem className="w-5 h-5 text-emerald-700" />
-                    {pack.cost_gems}
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => handleOpenPack(pack.id, true)}
+                      disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
+                      className="flex-[2] bg-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
+                    >
+                      <Gem className="w-5 h-5 text-emerald-700" />
+                      Open
+                    </button>
+                    <button 
+                      onClick={() => handleBuyToInventory(pack.id, true)}
+                      disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
+                      className="flex-1 bg-white hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center"
+                      title="Buy to Inventory"
+                    >
+                      Stash
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
           </motion.div>
         ))}
       </div>
+
+      {inventory.length > 0 && (
+        <div className="mt-16">
+          <h2 className="text-3xl font-black text-black tracking-tight uppercase mb-6">Your Stash</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {inventory.map((item) => (
+              <motion.div 
+                key={item.id}
+                whileHover={{ y: -4, rotate: -1 }}
+                className="bg-white border-4 border-black rounded-xl overflow-hidden relative group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col"
+              >
+                <div className="aspect-[3/4] bg-blue-100 flex items-center justify-center p-4 relative border-b-4 border-black">
+                  <div className="w-full h-full bg-red-500 rounded-lg border-2 border-black flex items-center justify-center transform group-hover:scale-105 transition-all duration-300 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+                    <img 
+                      src={item.pack_types.image_url} 
+                      alt={item.pack_types.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                </div>
+                <div className="p-3 flex flex-col flex-1">
+                  <h3 className="text-sm font-black text-black mb-2 uppercase truncate" title={item.pack_types.name}>{item.pack_types.name}</h3>
+                  <button 
+                    onClick={() => handleOpenFromInventory(item.id)}
+                    disabled={opening}
+                    className="mt-auto w-full bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-2 rounded-lg border-2 border-black transition-transform active:translate-y-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center text-sm"
+                  >
+                    Open
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pack Opening Overlay */}
       <AnimatePresence>
@@ -187,7 +340,15 @@ export function Packs() {
                       </div>
                       
                       <div className="text-center z-10">
-                        <div className="w-24 h-24 mx-auto bg-gray-200 border-4 border-black rounded-full mb-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]" />
+                        <div className="w-24 h-24 mx-auto bg-gray-200 border-4 border-black rounded-lg mb-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)] overflow-hidden">
+                          <img 
+                            src={card.image_url} 
+                            alt={card.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
                         <h3 className="font-black text-black text-lg leading-tight uppercase">{card.name}</h3>
                       </div>
                       

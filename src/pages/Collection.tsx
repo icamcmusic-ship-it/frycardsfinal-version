@@ -27,7 +27,15 @@ export function Collection() {
         p_offset: 0
       });
       if (error) throw error;
-      setCards(data || []);
+      
+      const fetchedCards = data || [];
+      setCards(fetchedCards);
+
+      // Mark unseen cards as seen
+      const unseenCardIds = fetchedCards.filter((c: any) => !c.is_seen).map((c: any) => c.id);
+      if (unseenCardIds.length > 0) {
+        await supabase.rpc('mark_cards_seen', { card_ids: unseenCardIds });
+      }
     } catch (err) {
       console.error('Error fetching collection:', err);
     } finally {
@@ -55,7 +63,9 @@ export function Collection() {
     
     try {
       const { data, error } = await supabase.rpc('quicksell_card', {
-        p_card_id: cardId
+        p_card_id: cardId,
+        p_quantity: 1,
+        p_is_foil: isFoil
       });
       if (error) throw error;
       
@@ -73,6 +83,32 @@ export function Collection() {
       }
     } catch (err: any) {
       alert(err.message || 'Failed to quicksell');
+    }
+  };
+
+  const handleBulkMill = async () => {
+    if (!confirm('Are you sure you want to quicksell ALL duplicate cards? This cannot be undone.')) return;
+    
+    try {
+      const { error } = await supabase.rpc('mill_bulk_duplicates');
+      if (error) throw error;
+      
+      fetchCollection(); // Refresh
+      
+      // Also refresh profile to update gold balance in header
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profile?.id)
+        .single();
+        
+      if (profileData) {
+        useProfileStore.getState().setProfile(profileData);
+      }
+      
+      alert('Successfully quicksold all duplicates!');
+    } catch (err: any) {
+      alert(err.message || 'Failed to bulk quicksell');
     }
   };
 
@@ -99,6 +135,14 @@ export function Collection() {
         </div>
         
         <div className="flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={handleBulkMill}
+            className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+          >
+            <Coins className="w-5 h-5" />
+            Sell All Dupes
+          </button>
+          
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
@@ -162,7 +206,15 @@ export function Collection() {
             </div>
             
             <div className="text-center z-10">
-              <div className="w-16 h-16 mx-auto bg-gray-200 border-4 border-black rounded-full mb-3 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]" />
+              <div className="w-full aspect-[3/4] mx-auto bg-gray-200 border-4 border-black rounded-lg mb-3 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)] overflow-hidden">
+                <img 
+                  src={card.image_url} 
+                  alt={card.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
+                  referrerPolicy="no-referrer"
+                />
+              </div>
               <h3 className="font-black text-black text-sm leading-tight uppercase line-clamp-2">{card.name}</h3>
             </div>
 
