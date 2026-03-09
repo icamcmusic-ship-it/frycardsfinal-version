@@ -3,6 +3,7 @@ import { useProfileStore } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings, Plus } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 export function Profile() {
   const { profile, setProfile } = useProfileStore();
@@ -12,6 +13,7 @@ export function Profile() {
   const [username, setUsername] = useState(profile?.username || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || '');
+  const [ownedBanners, setOwnedBanners] = useState<any[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
@@ -19,6 +21,9 @@ export function Profile() {
 
   useEffect(() => {
     fetchAchievements();
+    supabase.rpc('get_user_cosmetics').then(({ data }) => {
+      setOwnedBanners((data || []).filter((c: any) => c.item_type === 'profile_banner'));
+    });
   }, []);
 
   const fetchAchievements = async () => {
@@ -59,41 +64,11 @@ export function Profile() {
     setShowBlocked(!showBlocked);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
-    const file = event.target.files?.[0];
-    if (!file || !profile) return;
-
-    try {
-      setSaving(true);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.id}/${type}-${Math.random()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
-
-      if (type === 'avatar') setAvatarUrl(publicUrl);
-      else setBannerUrl(publicUrl);
-      
-      alert(`${type === 'avatar' ? 'Avatar' : 'Banner'} uploaded! Save profile to apply.`);
-    } catch (err: any) {
-      alert(err.message || 'Failed to upload file');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleSave = async () => {
     if (!profile) return;
     setSaving(true);
     try {
-      const { data, error } = await supabase.rpc('update_user_profile', {
+      const { error } = await supabase.rpc('update_user_profile', {
         p_user_id: profile.id,
         p_username: username,
         p_avatar_url: avatarUrl,
@@ -140,10 +115,6 @@ export function Profile() {
         <div className="h-48 bg-blue-400 relative border-b-4 border-black">
           <img src={bannerUrl || profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
-          <label className="absolute top-4 right-4 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] cursor-pointer">
-            <ImageIcon className="w-5 h-5" />
-            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'banner')} />
-          </label>
         </div>
 
         {/* Profile Info */}
@@ -158,10 +129,6 @@ export function Profile() {
                   <UserIcon className="w-16 h-16 text-black" />
                 )}
               </div>
-              <label className="absolute -bottom-2 -right-2 p-2 bg-white hover:bg-gray-100 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] cursor-pointer">
-                <Edit2 className="w-4 h-4" />
-                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'avatar')} />
-              </label>
             </div>
 
             {/* Details */}
@@ -214,6 +181,25 @@ export function Profile() {
                   )}
                 </div>
               </div>
+
+              {editing && (
+                <div className="mb-6">
+                  <p className="font-black mb-2">Select Banner:</p>
+                  <div className="flex gap-3 flex-wrap">
+                    {ownedBanners.length === 0
+                      ? <p className="text-sm text-slate-500 font-bold">No banners owned. Visit the Shop!</p>
+                      : ownedBanners.map(b => (
+                          <button key={b.item_id}
+                            onClick={() => setBannerUrl(b.image_url)}
+                            className={cn("w-24 h-14 rounded-lg border-4 overflow-hidden",
+                              bannerUrl === b.image_url ? "border-blue-500" : "border-black")}>
+                            <img src={b.image_url} className="w-full h-full object-cover" />
+                          </button>
+                        ))
+                    }
+                  </div>
+                </div>
+              )}
 
               {/* Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Loader2, Search, UserPlus, UserMinus, Check, X, Users, UserCheck } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -72,7 +73,7 @@ export function Social() {
           <h2 className="text-xl font-black uppercase mb-4">Search Results</h2>
           {searchResults.map(user => (
             <div key={user.id} className="flex justify-between items-center p-2 border-b-2 border-slate-100">
-              <span className="font-bold">{user.username}</span>
+              <Link to={`/profile/${user.id}`} className="font-bold hover:underline text-blue-600">{user.username}</Link>
               <button onClick={() => sendRequest(user.id)} className="p-2 bg-green-400 rounded-lg"><UserPlus className="w-5 h-5" /></button>
             </div>
           ))}
@@ -84,7 +85,7 @@ export function Social() {
           <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2"><Users /> Friends</h2>
           {friends.map(friend => (
             <div key={friend.id} className="flex justify-between items-center p-2 border-b-2 border-slate-100">
-              <span className="font-bold">{friend.username}</span>
+              <Link to={`/profile/${friend.id}`} className="font-bold hover:underline text-blue-600">{friend.username}</Link>
             </div>
           ))}
         </div>

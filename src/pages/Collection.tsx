@@ -13,6 +13,7 @@ export function Collection() {
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'collection' | 'wishlist'>('collection');
   const [wishlist, setWishlist] = useState<any[]>([]);
+  const [selectedCard, setSelectedCard] = useState<any>(null);
 
   useEffect(() => {
     if (profile) {
@@ -134,6 +135,19 @@ export function Collection() {
     }
   };
 
+  const handleQuicksell = async (card: any) => {
+    const value = { Common: 10, Uncommon: 25, Rare: 100, 'Super-Rare': 250, Mythic: 500, Divine: 1000 }[card.rarity] ?? 10;
+    if (!confirm(`Quicksell ${card.name} for ${value} Gold?`)) return;
+    const { data, error } = await supabase.rpc('quicksell_card', {
+      p_card_id: card.id,
+      p_is_foil: false,
+      p_quantity: 1,
+    });
+    if (error) { alert(error.message); return; }
+    alert(`Sold for ${(data as any).gold_earned} Gold!`);
+    fetchCollection(); // refresh
+  };
+
   const handleBulkMill = async () => {
     if (!confirm('Are you sure you want to mill ALL duplicate cards? This cannot be undone.')) return;
     
@@ -240,6 +254,7 @@ export function Collection() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             whileHover={{ y: -4, rotate: -2 }}
+            onClick={() => setSelectedCard(card)}
             className={cn(
               "aspect-[2/3] rounded-xl p-4 relative overflow-hidden flex flex-col justify-between border-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] group cursor-pointer bg-white transition-all duration-300",
               card.rarity === 'Divine' ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' :
@@ -250,15 +265,17 @@ export function Collection() {
               'border-slate-400'
             )}
           >
-            {/* Hover Overlay */}
-            <div className="absolute inset-0 bg-black/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 p-6 flex flex-col justify-center items-center text-white text-center">
-              <h3 className="text-xl font-black uppercase mb-2">{card.name}</h3>
-              <p className="text-sm font-bold text-blue-300 mb-4">{card.card_type}</p>
-              <p className="text-sm italic text-slate-300">"{card.flavor_text}"</p>
-            </div>
-
             {card.is_foil && (
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/60 to-transparent animate-[shimmer_2s_infinite] pointer-events-none z-20" />
+            )}
+            
+            {card.foil_quantity > 0 && (
+              <div className="absolute inset-0 pointer-events-none z-10 rounded-xl"
+                style={{
+                  background: 'linear-gradient(135deg, transparent 40%, rgba(255,215,0,0.3) 50%, transparent 60%)',
+                  backgroundSize: '200% 200%',
+                  animation: 'foilShimmer 2s ease-in-out infinite',
+                }} />
             )}
             
             <div className="flex justify-between items-start z-10">
@@ -266,6 +283,11 @@ export function Collection() {
                 {card.rarity}
               </div>
               <div className="flex gap-1">
+                {card.foil_quantity > 0 && (
+                  <div className="absolute top-2 left-2 z-20 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded border border-black flex items-center gap-1">
+                    ✨ x{card.foil_quantity}
+                  </div>
+                )}
                 {card.quantity > 1 && (
                   <div className="bg-black text-white text-xs font-black px-2 py-1 rounded-lg border-2 border-white shadow-[2px_2px_0px_0px_rgba(255,255,255,1)]">
                     x{card.quantity}
@@ -295,6 +317,12 @@ export function Collection() {
 
             {/* Hover Actions */}
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 z-30">
+              <div className="text-center px-3 mb-1">
+                <p className="text-white font-black text-sm uppercase">{card.name}</p>
+                <p className="text-gray-300 text-xs font-bold">{card.rarity} · {card.card_type}</p>
+                {card.flavor_text && <p className="text-gray-400 text-[10px] italic mt-1 line-clamp-2">"{card.flavor_text}"</p>}
+              </div>
+
               <button 
                 onClick={(e) => { e.stopPropagation(); handleToggleWishlist(card.id); }}
                 className="p-3 bg-white hover:bg-gray-200 text-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
@@ -322,6 +350,12 @@ export function Collection() {
                       Mill
                     </button>
                   )}
+                  {!card.is_locked && (
+                    <button onClick={(e) => { e.stopPropagation(); handleQuicksell(card); }}
+                      className="px-4 py-2 bg-emerald-400 hover:bg-emerald-500 text-black font-black text-sm rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2">
+                      <Coins className="w-4 h-4" /> Sell
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -336,6 +370,56 @@ export function Collection() {
           </div>
           <h3 className="text-2xl font-black text-black mb-2 uppercase">No cards found</h3>
           <p className="text-slate-600 font-bold">Try adjusting your search or filters</p>
+        </div>
+      )}
+
+      {selectedCard && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSelectedCard(null)}>
+          <div className="bg-white border-4 border-black rounded-2xl p-6 max-w-sm w-full shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]" onClick={e => e.stopPropagation()}>
+            <div className="flex gap-4">
+              <img src={selectedCard.image_url} alt={selectedCard.name}
+                className="w-32 aspect-[2.5/3.5] object-cover rounded-lg border-4 border-black" />
+              <div className="flex-1 space-y-2">
+                <h2 className="text-xl font-black uppercase">{selectedCard.name}</h2>
+                <span className="inline-block text-xs font-black px-2 py-0.5 rounded border-2 border-black bg-gray-100">{selectedCard.rarity}</span>
+                <p className="text-sm font-bold text-slate-500">{selectedCard.card_type}{selectedCard.sub_type ? ` · ${selectedCard.sub_type}` : ''}</p>
+                {selectedCard.element && <p className="text-xs font-bold text-blue-600">{selectedCard.element}</p>}
+                {selectedCard.flavor_text && <p className="text-xs italic text-slate-400">"{selectedCard.flavor_text}"</p>}
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+              {selectedCard.hp != null && <div className="bg-red-50 border-2 border-red-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">HP</p><p className="font-black">{selectedCard.hp}</p></div>}
+              {selectedCard.attack != null && <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">ATK</p><p className="font-black">{selectedCard.attack}</p></div>}
+              {selectedCard.defense != null && <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">DEF</p><p className="font-black">{selectedCard.defense}</p></div>}
+            </div>
+            {selectedCard.ability_text && (
+              <div className="mt-3 p-3 bg-purple-50 border-2 border-purple-300 rounded-lg">
+                <p className="text-xs font-black text-purple-700 uppercase mb-1">{selectedCard.ability_type || 'Ability'}</p>
+                <p className="text-sm font-bold">{selectedCard.ability_text}</p>
+              </div>
+            )}
+            {selectedCard.keywords?.length > 0 && (
+              <div className="mt-3 flex gap-2 flex-wrap">
+                {selectedCard.keywords.map((kw: string) => (
+                  <span key={kw} className="text-xs font-black bg-gray-100 border border-black rounded px-2 py-0.5">{kw}</span>
+                ))}
+              </div>
+            )}
+            {/* Foil info */}
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+              <div className="bg-gray-50 border border-black rounded p-2 text-center">
+                <p className="text-xs text-slate-500">Normal</p>
+                <p className="font-black">x{selectedCard.quantity ?? 0}</p>
+              </div>
+              {selectedCard.foil_quantity > 0 && (
+                <div className="bg-yellow-50 border border-yellow-400 rounded p-2 text-center">
+                  <p className="text-xs text-yellow-600">✨ Foil</p>
+                  <p className="font-black">x{selectedCard.foil_quantity}</p>
+                </div>
+              )}
+            </div>
+            <button onClick={() => setSelectedCard(null)} className="mt-4 w-full py-2 bg-black text-white font-black rounded-xl border-4 border-black">Close</button>
+          </div>
         </div>
       )}
     </div>

@@ -13,7 +13,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
   const [collection, setCollection] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<any>(null);
-  const [listingType, setListingType] = useState<'fixed' | 'auction'>('fixed');
+  const [listingType, setListingType] = useState<'fixed_price' | 'auction'>('fixed_price');
   const [priceGold, setPriceGold] = useState(0);
   const [priceGems, setPriceGems] = useState(0);
   const [duration, setDuration] = useState(24);
@@ -92,7 +92,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setListingType('fixed')} className={cn("p-4 border-4 rounded-xl font-black", listingType === 'fixed' ? "border-black bg-blue-400" : "border-gray-200")}>Fixed Price</button>
+              <button onClick={() => setListingType('fixed_price')} className={cn("p-4 border-4 rounded-xl font-black", listingType === 'fixed_price' ? "border-black bg-blue-400" : "border-gray-200")}>Fixed Price</button>
               <button onClick={() => setListingType('auction')} className={cn("p-4 border-4 rounded-xl font-black", listingType === 'auction' ? "border-black bg-blue-400" : "border-gray-200")}>Auction</button>
             </div>
 

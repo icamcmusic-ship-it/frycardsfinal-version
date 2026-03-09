@@ -12,7 +12,17 @@ interface PackType {
   cost_gold: number;
   cost_gems: number;
   image_url: string;
+  foil_chance?: number;
 }
+
+const PACK_ODDS = [
+  { rarity: 'Common',     pct: '55%', color: 'text-slate-500' },
+  { rarity: 'Uncommon',   pct: '25%', color: 'text-green-600' },
+  { rarity: 'Rare',       pct: '12%', color: 'text-blue-600' },
+  { rarity: 'Super-Rare', pct: '5%',  color: 'text-purple-600' },
+  { rarity: 'Mythic',     pct: '2%',  color: 'text-yellow-600' },
+  { rarity: 'Divine',     pct: '1%',  color: 'text-red-600' },
+];
 
 export function Packs() {
   const { profile } = useProfileStore();
@@ -20,6 +30,7 @@ export function Packs() {
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
+  const [showOdds, setShowOdds] = useState(false);
 
   const [inventory, setInventory] = useState<any[]>([]);
 
@@ -187,6 +198,27 @@ export function Packs() {
               <h3 className="text-2xl font-black text-black mb-2 uppercase">{pack.name}</h3>
               <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
               
+              <button onClick={() => setShowOdds(!showOdds)}
+                className="text-xs text-slate-500 font-bold underline mt-1 mb-2">
+                {showOdds ? 'Hide Odds' : 'View Odds'}
+              </button>
+              {showOdds && (
+                <div className="mt-2 space-y-1 text-xs font-bold border-t border-slate-200 pt-2">
+                  {PACK_ODDS.map(o => (
+                    <div key={o.rarity} className="flex justify-between">
+                      <span className={o.color}>{o.rarity}</span>
+                      <span>{o.pct}</span>
+                    </div>
+                  ))}
+                  {pack.foil_chance && (
+                    <div className="flex justify-between text-yellow-600 border-t border-slate-100 pt-1">
+                      <span>✨ Foil chance</span>
+                      <span>{(pack.foil_chance * 100).toFixed(1)}%</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="flex flex-col gap-3 mt-auto">
                 {pack.cost_gold > 0 && (
                   <div className="flex gap-2">
@@ -314,48 +346,32 @@ export function Packs() {
                 </div>
                 
                 <div className="flex flex-wrap justify-center gap-6">
-                  {openedCards?.map((card, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 50, scale: 0.8 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ delay: i * 0.15, type: 'spring' }}
-                      className={cn(
-                        "w-48 aspect-[2.5/3.5] rounded-xl p-4 relative overflow-hidden flex flex-col justify-between border-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white",
-                        card.rarity === 'Divine' ? 'border-yellow-400 bg-yellow-50' :
-                        card.rarity === 'Mythic' ? 'border-purple-500 bg-purple-50' :
-                        card.rarity === 'Rare' ? 'border-blue-500 bg-blue-50' :
-                        'border-black'
-                      )}
-                    >
-                      {card.is_foil && (
-                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/60 to-transparent animate-[shimmer_2s_infinite] pointer-events-none z-20" />
-                      )}
-                      
-                      <div className="text-xs font-black uppercase tracking-wider text-black bg-white border-2 border-black px-2 py-0.5 rounded-full inline-block self-start z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                        {card.rarity}
-                      </div>
-                      
-                      <div className="text-center z-10">
-                        <div className="w-24 h-24 mx-auto bg-gray-200 border-4 border-black rounded-lg mb-4 shadow-[inset_0_0_10px_rgba(0,0,0,0.2)] overflow-hidden">
-                          <img 
-                            src={card.image_url} 
-                            alt={card.name}
-                            className="w-full h-full object-cover"
-                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/fallback-card.png'; }}
-                            referrerPolicy="no-referrer"
-                          />
+                  {(() => {
+                    const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Super-Rare', 'Mythic', 'Divine'];
+                    const sortedCards = [...(openedCards || [])].sort(
+                      (a, b) => RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity)
+                    );
+                    return sortedCards.map((card, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 80, rotateY: 180, scale: 0.8 }}
+                        animate={{ opacity: 1, y: 0, rotateY: 0, scale: 1 }}
+                        transition={{ delay: i * 0.25, type: 'spring', stiffness: 120 }}
+                        className={cn(
+                          "w-48 aspect-[2.5/3.5] rounded-xl relative overflow-hidden border-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-white",
+                          card.rarity === 'Divine' ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.8)]' :
+                          card.rarity === 'Mythic' ? 'border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.6)]' :
+                          card.rarity === 'Super-Rare' ? 'border-purple-500' :
+                          card.rarity === 'Rare' ? 'border-blue-400' : 'border-slate-300'
+                        )}>
+                        <img src={card.image_url} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
+                        <div className="absolute bottom-0 inset-x-0 bg-black/80 p-2">
+                          <p className="text-white font-black text-xs uppercase truncate">{card.name}</p>
+                          <p className="text-gray-300 text-[10px]">{card.rarity}{card.is_foil ? ' ✨' : ''}</p>
                         </div>
-                        <h3 className="font-black text-black text-lg leading-tight uppercase">{card.name}</h3>
-                      </div>
-                      
-                      {card.is_foil && (
-                        <div className="absolute top-2 right-2 z-10">
-                          <Sparkles className="w-6 h-6 text-yellow-500 fill-yellow-500 drop-shadow-[1px_1px_0px_rgba(0,0,0,1)]" />
-                        </div>
-                      )}
-                    </motion.div>
-                  ))}
+                      </motion.div>
+                    ));
+                  })()}
                 </div>
               </div>
             )}

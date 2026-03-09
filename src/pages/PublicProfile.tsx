@@ -1,0 +1,81 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { Loader2, Trophy, UserPlus, UserCheck } from 'lucide-react';
+
+export function PublicProfile() {
+  const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) return;
+    supabase.rpc('get_public_profile', { p_user_id: userId }).then(({ data }) => {
+      setProfile(data);
+      setLoading(false);
+    });
+  }, [userId]);
+
+  const sendRequest = async () => {
+    await supabase.rpc('send_friend_request', { p_addressee_id: userId });
+    setProfile((p: any) => ({ ...p, friendship_status: 'pending' }));
+  };
+
+  if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
+  if (!profile) return <div className="text-center py-20 font-black text-2xl">Profile not found or private.</div>;
+
+  return (
+    <div className="space-y-8 max-w-2xl mx-auto">
+      {/* Banner */}
+      {profile.banner_url && profile.banner_url !== 'default' && (
+        <div className="w-full h-40 rounded-2xl border-4 border-black overflow-hidden">
+          <img src={profile.banner_url} className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="bg-white border-4 border-black rounded-2xl p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+        <div className="flex items-start gap-6">
+          {profile.avatar_url
+            ? <img src={profile.avatar_url} className="w-24 h-24 rounded-full border-4 border-black" />
+            : <div className="w-24 h-24 rounded-full bg-blue-400 border-4 border-black flex items-center justify-center text-3xl font-black text-white">
+                {profile.username?.[0]?.toUpperCase()}
+              </div>
+          }
+          <div className="flex-1">
+            <h1 className="text-3xl font-black uppercase">{profile.username}</h1>
+            {profile.bio && <p className="text-slate-600 mt-1">{profile.bio}</p>}
+            <p className="text-sm font-bold text-slate-400 mt-1">Level {profile.level}</p>
+            {userId !== undefined && (
+              profile.friendship_status === 'accepted' ? (
+                <span className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-green-500 rounded-xl font-bold text-green-700">
+                  <UserCheck className="w-4 h-4" /> Friends
+                </span>
+              ) : profile.friendship_status === 'pending' ? (
+                <span className="mt-3 inline-flex px-4 py-2 bg-yellow-100 border-2 border-yellow-400 rounded-xl font-bold text-yellow-700">
+                  Request Pending
+                </span>
+              ) : (
+                <button onClick={sendRequest}
+                  className="mt-3 flex items-center gap-2 px-4 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <UserPlus className="w-4 h-4" /> Add Friend
+                </button>
+              )
+            )}
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4 mt-6">
+          {[
+            { label: 'Unique Cards', value: profile.unique_cards },
+            { label: 'Packs Opened', value: profile.packs_opened },
+            { label: 'Total Trades', value: profile.total_trades ?? 0 },
+          ].map(s => (
+            <div key={s.label} className="bg-gray-50 border-2 border-black rounded-xl p-4 text-center">
+              <p className="text-2xl font-black">{(s.value ?? 0).toLocaleString()}</p>
+              <p className="text-xs text-slate-500 font-bold uppercase mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

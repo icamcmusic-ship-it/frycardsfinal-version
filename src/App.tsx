@@ -15,6 +15,7 @@ import { Leaderboard } from './pages/Leaderboard';
 import { SeasonPass } from './pages/SeasonPass';
 import { Settings } from './pages/Settings';
 import { Profile } from './pages/Profile';
+import { PublicProfile } from './pages/PublicProfile';
 import { Notifications } from './pages/Notifications';
 import { Loader2 } from 'lucide-react';
 
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="/season-pass" element={<SeasonPass />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:userId" element={<PublicProfile />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

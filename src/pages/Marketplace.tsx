@@ -213,7 +213,7 @@ export function Marketplace() {
             className="w-full sm:w-48 pl-10 pr-4 py-3 bg-white border-4 border-black rounded-xl text-black font-bold appearance-none focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
           >
             <option value="all">All Types</option>
-            <option value="fixed">Buy Now</option>
+            <option value="fixed_price">Buy Now</option>
             <option value="auction">Auctions</option>
           </select>
         </div>
@@ -302,7 +302,7 @@ export function Marketplace() {
 
               <div className="bg-gray-50 border-2 border-black rounded-xl p-3 flex justify-between items-center">
                 <div>
-                  <p className="text-xs text-slate-500 font-bold uppercase">{listing.type === 'fixed' ? 'Buy Now' : 'Current Bid'}</p>
+                  <p className="text-xs text-slate-500 font-bold uppercase">{listing.type === 'fixed_price' ? 'Buy Now' : 'Current Bid'}</p>
                   <div className="flex items-center gap-1 text-black font-black text-lg">
                     {listing.currency === 'gems' ? (
                       <Gem className="w-4 h-4 text-emerald-500" />
@@ -333,7 +333,7 @@ export function Marketplace() {
                 ) : (
                   <>
                     <Coins className="w-5 h-5" />
-                    {listing.type === 'fixed' ? 'Buy Now' : 'Place Bid'}
+                    {listing.type === 'fixed_price' ? 'Buy Now' : 'Place Bid'}
                   </>
                 )}
               </button>

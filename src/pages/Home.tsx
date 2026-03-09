@@ -75,7 +75,7 @@ export function Home() {
 
   const fetchQuests = async () => {
     try {
-      const { data, error } = await supabase.rpc('ensure_and_get_daily_missions', { user_id: profile?.id });
+      const { data, error } = await supabase.rpc('ensure_and_get_daily_missions', { p_user_id: profile?.id });
       if (error) {
         console.error('Error fetching quests:', error);
         setQuests([]); // Set empty array on error
