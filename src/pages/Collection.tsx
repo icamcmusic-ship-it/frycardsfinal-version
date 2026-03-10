@@ -233,6 +233,7 @@ export function Collection() {
             <option value="common">Common</option>
             <option value="uncommon">Uncommon</option>
             <option value="rare">Rare</option>
+            <option value="super-rare">Super-Rare</option>
             <option value="mythic">Mythic</option>
             <option value="divine">Divine</option>
           </select>
