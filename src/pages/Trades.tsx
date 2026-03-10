@@ -16,6 +16,7 @@ export function Trades() {
   const [offeredIds, setOfferedIds] = useState<string[]>([]);
   const [requestedIds, setRequestedIds] = useState<string[]>([]);
   const [offeredGold, setOfferedGold] = useState(0);
+  const [offeredGems, setOfferedGems] = useState(0);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchTrades(); fetchFriends(); fetchMyCards(); }, []);
@@ -70,7 +71,9 @@ export function Trades() {
         p_offered_card_ids: offeredIds,
         p_requested_card_ids: requestedIds,
         p_offered_gold: offeredGold,
+        p_offered_gems: offeredGems,
         p_requested_gold: 0,
+        p_requested_gems: 0,
       });
       if (error) throw error;
       toast.success('Trade offer sent!');
@@ -78,6 +81,7 @@ export function Trades() {
       setOfferedIds([]);
       setRequestedIds([]);
       setOfferedGold(0);
+      setOfferedGems(0);
       setReceiverId('');
       fetchTrades();
     } catch (err: any) {
@@ -127,10 +131,17 @@ export function Trades() {
               ))}
             </div>
           </div>
-          <div>
-            <label className="font-black block mb-1 text-[var(--text)]">Gold to offer:</label>
-            <input type="number" min={0} value={offeredGold} onChange={e => setOfferedGold(Number(e.target.value))}
-              className="border-4 border-[var(--border)] p-3 rounded-xl font-bold w-40 bg-[var(--bg)] text-[var(--text)]" />
+          <div className="flex gap-4">
+            <div>
+              <label className="font-black block mb-1 text-[var(--text)]">Gold to offer:</label>
+              <input type="number" min={0} value={offeredGold} onChange={e => setOfferedGold(Number(e.target.value))}
+                className="border-4 border-[var(--border)] p-3 rounded-xl font-bold w-40 bg-[var(--bg)] text-[var(--text)]" />
+            </div>
+            <div>
+              <label className="font-black block mb-1 text-[var(--text)]">Gems to offer:</label>
+              <input type="number" min={0} value={offeredGems} onChange={e => setOfferedGems(Number(e.target.value))}
+                className="border-4 border-[var(--border)] p-3 rounded-xl font-bold w-40 bg-[var(--bg)] text-[var(--text)]" />
+            </div>
           </div>
           <button onClick={submitTrade} disabled={submitting}
             className="w-full py-3 bg-emerald-500 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] disabled:opacity-50">
@@ -156,6 +167,7 @@ export function Trades() {
                 <p className="font-black text-lg uppercase text-[var(--text)]">{trade.sender_username} ↔ {trade.receiver_username}</p>
                 <p className="text-sm font-bold text-slate-500 capitalize">Status: {trade.status}</p>
                 {trade.sender_gold > 0 && <p className="text-sm font-bold text-yellow-600">+{trade.sender_gold} gold offered</p>}
+                {trade.sender_gems > 0 && <p className="text-sm font-bold text-emerald-600">+{trade.sender_gems} gems offered</p>}
               </div>
               <div className="flex gap-2">
                 {trade.status === 'pending' && (

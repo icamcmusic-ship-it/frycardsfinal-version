@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Loader2, Gift, Lock, Check, Gem, Coins, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import toast from 'react-hot-toast';
 
 const REWARD_ICONS: Record<string, React.ReactNode> = {
   gold:  <Coins className="w-5 h-5 text-yellow-500" />,
@@ -32,8 +33,8 @@ export function SeasonPass() {
 
   const claimTier = async (tier: number) => {
     // claim_season_pass_tier signature: (p_season, p_tier)
-    const { error } = await supabase.rpc('claim_season_pass_tier', { p_season: 1, p_tier: tier });
-    if (error) { alert(error.message); return; }
+    const { error } = await supabase.rpc('claim_season_pass_tier', { p_season: passData?.season || 1, p_tier: tier });
+    if (error) { toast.error(error.message); return; }
     fetchData();
   };
 

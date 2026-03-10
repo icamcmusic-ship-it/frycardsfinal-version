@@ -2,14 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Loader2, Coins, Gem, Clock, Package } from 'lucide-react';
 import { cn } from '../lib/utils';
+import toast from 'react-hot-toast';
 
 interface CreateListingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialCard?: any;
 }
 
-export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListingModalProps) {
+export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: CreateListingModalProps) {
   const [collection, setCollection] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<any>(null);
@@ -23,14 +25,21 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      fetchCollection();
+      if (initialCard) {
+        setSelectedCard(initialCard);
+        setIsFoil(initialCard.is_foil || false);
+      } else {
+        fetchCollection();
+      }
     } else {
       document.body.style.overflow = 'unset';
+      setSelectedCard(null);
+      setIsFoil(false);
     }
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen]);
+  }, [isOpen, initialCard]);
 
   const fetchCollection = async () => {
     try {
@@ -58,11 +67,11 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
         p_is_foil: isFoil
       });
       if (error) throw error;
-      alert('Listing created successfully!');
+      toast.success('Listing created!');
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert(err.message || 'Failed to create listing');
+      toast.error(err.message || 'Failed to create listing');
     } finally {
       setSubmitting(false);
     }
@@ -81,7 +90,10 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
         {!selectedCard ? (
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
             {loading ? <Loader2 className="animate-spin text-[var(--text)]" /> : collection.map(card => (
-              <button key={card.id} onClick={() => setSelectedCard(card)} className="border-2 border-[var(--border)] rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 bg-[var(--bg)]">
+              <button key={card.id} onClick={() => setSelectedCard(card)} className="relative border-2 border-[var(--border)] rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 bg-[var(--bg)]">
+                {card.foil_quantity > 0 && (
+                  <span className="absolute top-1 left-1 bg-yellow-400 text-black text-[8px] font-black px-1 rounded z-10">FOIL</span>
+                )}
                 {card.is_video ? (
                   <video src={card.image_url} autoPlay muted loop playsInline className="w-full aspect-[3/4] object-cover rounded" />
                 ) : (
@@ -120,6 +132,13 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
               <option value={48}>48 Hours</option>
               <option value={72}>72 Hours</option>
             </select>
+
+            {selectedCard.foil_quantity > 0 && (
+              <label className="flex items-center gap-2 font-bold text-[var(--text)] cursor-pointer">
+                <input type="checkbox" checked={isFoil} onChange={e => setIsFoil(e.target.checked)} className="w-5 h-5 rounded border-2 border-[var(--border)]" />
+                List as Foil
+              </label>
+            )}
 
             <button onClick={handleSubmit} disabled={submitting} className="w-full py-4 bg-emerald-500 text-white font-black text-xl rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]">
               {submitting ? 'Listing...' : 'Create Listing'}

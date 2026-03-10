@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
-import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings, Plus } from 'lucide-react';
+import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings as SettingsIcon, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
+import toast from 'react-hot-toast';
 
 export function Profile() {
   const { profile, setProfile } = useProfileStore();
@@ -83,9 +84,9 @@ export function Profile() {
       // Update local state
       setProfile({ ...profile, username, avatar_url: avatarUrl, banner_url: bannerUrl });
       setEditing(false);
-      alert('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
     } catch (err: any) {
-      alert(err.message || 'Failed to update profile');
+      toast.error(err.message || 'Failed to update profile');
     } finally {
       setSaving(false);
     }
@@ -252,7 +253,7 @@ export function Profile() {
         <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">
-              <Settings className="w-6 h-6 text-slate-500" />
+              <SettingsIcon className="w-6 h-6 text-slate-500" />
               Settings
             </h2>
           </div>

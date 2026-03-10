@@ -31,6 +31,7 @@ export function Store() {
   const [opening, setOpening] = useState(false);
   const [packOpeningStep, setPackOpeningStep] = useState<'idle' | 'shaking' | 'revealing'>('idle');
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
+  const [openingSummary, setOpeningSummary] = useState<{ xp_gained: number, new_card_count: number } | null>(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [revealedCards, setRevealedCards] = useState<any[]>([]);
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
@@ -115,7 +116,6 @@ export function Store() {
 
     try {
       const { data, error } = await supabase.rpc('open_pack', {
-        p_user_id: profile.id,
         p_pack_type_id: packId,
         p_use_gems: useGems
       });
@@ -133,9 +133,12 @@ export function Store() {
       }
       
       setOpenedCards(data.cards);
+      setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
       setCurrentCardIndex(0);
       setRevealedCards([]);
       setPackOpeningStep('revealing');
+
+      fetchPacks(); // Refresh pity counter
 
     } catch (err: any) {
       toast.error(err.message || 'Failed to open pack');
@@ -175,9 +178,12 @@ export function Store() {
       fetchInventory();
       
       setOpenedCards(data.cards);
+      setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
       setCurrentCardIndex(0);
       setRevealedCards([]);
       setPackOpeningStep('revealing');
+
+      fetchPacks(); // Refresh pity counter
 
     } catch (err: any) {
       toast.error(err.message || 'Failed to open pack');
@@ -229,6 +235,11 @@ export function Store() {
 
               <div className="p-6 flex flex-col flex-1">
                 <h3 className="text-2xl font-black text-[var(--text)] mb-2 uppercase">{pack.name}</h3>
+                {pack.next_pity_in !== undefined && (
+                  <p className="text-[10px] font-black uppercase text-blue-500 mb-1">
+                    Pity in {pack.next_pity_in} packs
+                  </p>
+                )}
                 <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
                 
                 <button onClick={() => setShowOdds(prev => ({...prev, [pack.id]: !prev[pack.id]}))}
@@ -471,10 +482,25 @@ export function Store() {
               </div>
 
               {currentCardIndex >= openedCards.length && (
-                <button onClick={() => { setPackOpeningStep('idle'); setOpening(false); setOpenedCards(null); setCurrentCardIndex(0); setRevealedCards([]); }}
-                  className="px-8 py-4 bg-white text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  Done
-                </button>
+                <div className="flex flex-col items-center gap-4">
+                  {openingSummary && (
+                    <div className="flex gap-4 bg-white/10 backdrop-blur-md p-4 rounded-xl border-2 border-white/20">
+                      <div className="text-center">
+                        <p className="text-[10px] font-black uppercase text-blue-300">XP Gained</p>
+                        <p className="text-xl font-black text-white">+{openingSummary.xp_gained}</p>
+                      </div>
+                      <div className="w-px bg-white/20" />
+                      <div className="text-center">
+                        <p className="text-[10px] font-black uppercase text-yellow-300">New Cards</p>
+                        <p className="text-xl font-black text-white">{openingSummary.new_card_count}</p>
+                      </div>
+                    </div>
+                  )}
+                  <button onClick={() => { setPackOpeningStep('idle'); setOpening(false); setOpenedCards(null); setOpeningSummary(null); setCurrentCardIndex(0); setRevealedCards([]); }}
+                    className="px-8 py-4 bg-white text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    Done
+                  </button>
+                </div>
               )}
             </div>
           )}

@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase';
 import { Loader2, Bell, Check, Trash2, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 export function Notifications() {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -106,12 +108,12 @@ export function Notifications() {
                 </div>
                 <p className="text-slate-600 font-bold mt-1">{notification.body}</p>
                 {notification.action_url && (
-                  <a 
-                    href={notification.action_url}
+                  <button 
+                    onClick={() => navigate(notification.action_url)}
                     className="inline-flex items-center gap-1 mt-3 text-sm font-black text-blue-600 hover:text-blue-800 uppercase"
                   >
                     View Details <ExternalLink className="w-4 h-4" />
-                  </a>
+                  </button>
                 )}
               </div>
               {!notification.is_read && (

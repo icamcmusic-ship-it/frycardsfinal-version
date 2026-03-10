@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import { EmptyState } from '../components/EmptyState';
 import { CardDisplay } from '../components/CardDisplay';
+import { CreateListingModal } from '../components/CreateListingModal';
 
 export function Collection() {
   const { profile } = useProfileStore();
@@ -17,6 +18,8 @@ export function Collection() {
   const [activeTab, setActiveTab] = useState<'collection' | 'wishlist'>('collection');
   const [wishlist, setWishlist] = useState<any[]>([]);
   const [selectedCard, setSelectedCard] = useState<any>(null);
+  const [isListingModalOpen, setIsListingModalOpen] = useState(false);
+  const [cardToList, setCardToList] = useState<any>(null);
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>('rarity');
@@ -233,7 +236,6 @@ export function Collection() {
             <option value="common">Common</option>
             <option value="uncommon">Uncommon</option>
             <option value="rare">Rare</option>
-            <option value="super-rare">Super-Rare</option>
             <option value="mythic">Mythic</option>
             <option value="divine">Divine</option>
           </select>
@@ -313,19 +315,33 @@ export function Collection() {
             
             <CardDisplay card={card} />
 
-            {/* Hover Actions - Strictly Quick Sell */}
+            {/* Hover Actions */}
             <div className="absolute inset-x-0 bottom-0 bg-black/85 backdrop-blur-sm translate-y-full group-hover:translate-y-0 transition-transform duration-300 p-3 z-30 rounded-b-xl">
               <p className="text-white font-black text-xs uppercase tracking-wide">{card.name}</p>
               <p className="text-gray-300 text-[10px] font-bold">{card.rarity} · {card.card_type}</p>
               {card.element && <p className="text-blue-300 text-[10px]">{card.element}</p>}
-              {activeTab === 'collection' && !card.is_locked && (
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleQuicksell(card); }}
-                  className="mt-2 w-full py-1 bg-emerald-500 text-white font-black rounded text-[10px] uppercase border border-black"
-                >
-                  💰 Quick Sell
-                </button>
-              )}
+              <div className="flex gap-2 mt-2">
+                {activeTab === 'collection' && !card.is_locked && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleQuicksell(card); }}
+                    className="flex-1 py-1 bg-emerald-500 text-white font-black rounded text-[10px] uppercase border border-black"
+                  >
+                    💰 Sell
+                  </button>
+                )}
+                {activeTab === 'collection' && !card.is_locked && (
+                  <button 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setCardToList(card);
+                      setIsListingModalOpen(true);
+                    }}
+                    className="flex-1 py-1 bg-blue-500 text-white font-black rounded text-[10px] uppercase border border-black"
+                  >
+                    📋 List
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         ))}
@@ -399,7 +415,22 @@ export function Collection() {
                   )}
                 </div>
 
-                <button onClick={() => setSelectedCard(null)} className="w-full py-3 bg-black text-white font-black rounded-xl border-4 border-black hover:bg-gray-800 transition-colors">Close</button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={async () => {
+                      await handleToggleLock(selectedCard.id);
+                      setSelectedCard({ ...selectedCard, is_locked: !selectedCard.is_locked });
+                    }}
+                    className={cn(
+                      "flex-1 py-3 font-black rounded-xl border-4 border-black transition-colors flex items-center justify-center gap-2",
+                      selectedCard.is_locked ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-600"
+                    )}
+                  >
+                    {selectedCard.is_locked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+                    {selectedCard.is_locked ? 'Unlock Card' : 'Lock Card'}
+                  </button>
+                  <button onClick={() => setSelectedCard(null)} className="flex-1 py-3 bg-black text-white font-black rounded-xl border-4 border-black hover:bg-gray-800 transition-colors">Close</button>
+                </div>
               </div>
             </div>
           </div>
@@ -429,6 +460,15 @@ export function Collection() {
           </button>
         </div>
       )}
+      <CreateListingModal 
+        isOpen={isListingModalOpen} 
+        onClose={() => {
+          setIsListingModalOpen(false);
+          setCardToList(null);
+        }} 
+        onSuccess={fetchCollection}
+        initialCard={cardToList}
+      />
       </div>
     </>
   );

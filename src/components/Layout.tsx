@@ -70,7 +70,7 @@ export function Layout() {
   const navItems = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Collection', path: '/collection', icon: LayoutGrid },
-    { name: 'Market', path: '/marketplace', icon: Store },
+    { name: 'Market', path: '/marketplace', icon: ShoppingBag },
     { name: 'Store', path: '/store', icon: Store },
     { name: 'Social', path: '/social', icon: Users },
     { name: 'Trades', path: '/trades', icon: ArrowRightLeft },

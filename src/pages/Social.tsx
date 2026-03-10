@@ -12,6 +12,7 @@ export function Social() {
   const [friends, setFriends] = useState<any[]>([]);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [socialCounts, setSocialCounts] = useState({ followers: 0, following: 0 });
 
   useEffect(() => {
     fetchSocialData();
@@ -19,8 +20,24 @@ export function Social() {
 
   const fetchSocialData = async () => {
     setLoading(true);
-    await Promise.all([fetchFriends(), fetchPendingRequests()]);
+    await Promise.all([fetchFriends(), fetchPendingRequests(), fetchSocialCounts()]);
     setLoading(false);
+  };
+
+  const fetchSocialCounts = async () => {
+    const { data } = await supabase.rpc('get_social_counts');
+    if (data) setSocialCounts(data);
+  };
+
+  const toggleFollow = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('toggle_follow', { p_target_user_id: userId });
+      if (error) throw error;
+      toast.success('Follow status updated');
+      fetchSocialCounts();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to toggle follow');
+    }
   };
 
   const fetchFriends = async () => {
@@ -58,6 +75,20 @@ export function Social() {
     <div className="space-y-8">
       <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Social</h1>
 
+      <div className="flex gap-8">
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-4 flex-1 flex justify-around shadow-[4px_4px_0px_0px_var(--border)]">
+          <div className="text-center">
+            <p className="text-xs font-black uppercase text-slate-500">Followers</p>
+            <p className="text-2xl font-black text-[var(--text)]">{socialCounts.followers}</p>
+          </div>
+          <div className="w-px bg-[var(--border)]" />
+          <div className="text-center">
+            <p className="text-xs font-black uppercase text-slate-500">Following</p>
+            <p className="text-2xl font-black text-[var(--text)]">{socialCounts.following}</p>
+          </div>
+        </div>
+      </div>
+
       <form onSubmit={handleSearch} className="flex gap-2">
         <input
           type="text"
@@ -77,7 +108,10 @@ export function Social() {
           {searchResults.map(user => (
             <div key={user.id} className="flex justify-between items-center p-2 border-b-2 border-slate-100">
               <Link to={`/profile/${user.id}`} className="font-bold hover:underline text-blue-600">{user.username}</Link>
-              <button onClick={() => sendRequest(user.id)} className="p-2 bg-green-400 rounded-lg border-2 border-[var(--border)] text-black"><UserPlus className="w-5 h-5" /></button>
+              <div className="flex gap-2">
+                <button onClick={() => toggleFollow(user.id)} className="p-2 bg-blue-400 rounded-lg border-2 border-[var(--border)] text-black" title="Follow/Unfollow"><UserCheck className="w-5 h-5" /></button>
+                <button onClick={() => sendRequest(user.id)} className="p-2 bg-green-400 rounded-lg border-2 border-[var(--border)] text-black" title="Add Friend"><UserPlus className="w-5 h-5" /></button>
+              </div>
             </div>
           ))}
         </div>

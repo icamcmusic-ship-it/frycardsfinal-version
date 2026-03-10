@@ -20,6 +20,8 @@ export function Marketplace() {
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [rarityFilter, setRarityFilter] = useState('all');
+  const [elementFilter, setElementFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'price' | 'newest'>('newest');
 
   useEffect(() => {
@@ -28,14 +30,16 @@ export function Marketplace() {
     } else {
       fetchWatchlist();
     }
-  }, [activeTab]);
+  }, [activeTab, rarityFilter, elementFilter]);
 
   const fetchListings = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_active_listings', {
         p_limit: 50,
-        p_offset: 0
+        p_offset: 0,
+        p_rarity: rarityFilter === 'all' ? null : rarityFilter,
+        p_element: elementFilter === 'all' ? null : elementFilter
       });
       if (error) throw error;
       setListings(data || []);
@@ -194,6 +198,32 @@ export function Marketplace() {
             <option value="fixed_price">Buy Now</option>
             <option value="auction">Auctions</option>
           </select>
+          <select 
+            value={rarityFilter}
+            onChange={(e) => setRarityFilter(e.target.value)}
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+          >
+            <option value="all">All Rarities</option>
+            <option value="Common">Common</option>
+            <option value="Uncommon">Uncommon</option>
+            <option value="Rare">Rare</option>
+            <option value="Super-Rare">Super-Rare</option>
+            <option value="Mythic">Mythic</option>
+            <option value="Divine">Divine</option>
+          </select>
+          <select 
+            value={elementFilter}
+            onChange={(e) => setElementFilter(e.target.value)}
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+          >
+            <option value="all">All Elements</option>
+            <option value="Fire">Fire</option>
+            <option value="Water">Water</option>
+            <option value="Earth">Earth</option>
+            <option value="Air">Air</option>
+            <option value="Light">Light</option>
+            <option value="Dark">Dark</option>
+          </select>
         </div>
       </div>
       
@@ -319,7 +349,7 @@ export function Marketplace() {
               
               <div className="flex-1 flex items-center justify-center py-4">
                 <div className="w-full max-w-[200px]">
-                  <CardDisplay card={listing.card} showQuantity={false} showNewBadge={false} />
+                  <CardDisplay card={{ ...listing.card, is_foil: listing.is_foil }} showQuantity={false} showNewBadge={false} />
                 </div>
               </div>
 
@@ -332,8 +362,11 @@ export function Marketplace() {
                     ) : (
                       <Coins className="w-4 h-4 text-yellow-500" />
                     )}
-                    {listing.price}
+                    {listing.type === 'auction' ? (listing.current_bid_gold || listing.current_bid_gems || listing.price) : listing.price}
                   </div>
+                  {listing.type === 'auction' && listing.highest_bidder_name && (
+                    <p className="text-[10px] text-slate-500 font-bold truncate max-w-[100px]">by {listing.highest_bidder_name}</p>
+                  )}
                 </div>
                 {listing.type === 'auction' && (
                   <div className="text-right">
@@ -346,20 +379,62 @@ export function Marketplace() {
                 )}
               </div>
 
-              <button 
-                onClick={() => handleBuy(listing)}
-                disabled={buying === listing.id || profile?.id === listing.seller_id}
-                className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
-              >
-                {buying === listing.id ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Coins className="w-5 h-5" />
-                    {listing.type === 'fixed_price' ? 'Buy Now' : 'Place Bid'}
-                  </>
-                )}
-              </button>
+              {listing.type === 'fixed_price' ? (
+                <button 
+                  onClick={() => handleBuy(listing)}
+                  disabled={buying === listing.id || profile?.id === listing.seller_id}
+                  className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                >
+                  {buying === listing.id ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Coins className="w-5 h-5" />
+                      Buy Now
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <input 
+                    type="number" 
+                    min={(listing.current_bid_gold || listing.current_bid_gems || listing.price) + 1}
+                    placeholder="Bid amount"
+                    id={`bid-${listing.id}`}
+                    className="w-full px-3 py-2 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl text-[var(--text)] font-bold focus:outline-none"
+                  />
+                  <button 
+                    onClick={async () => {
+                      const input = document.getElementById(`bid-${listing.id}`) as HTMLInputElement;
+                      const bidAmount = Number(input?.value);
+                      if (!bidAmount || bidAmount <= (listing.current_bid_gold || listing.current_bid_gems || listing.price)) {
+                        toast.error('Bid must be higher than current bid');
+                        return;
+                      }
+                      
+                      setBuying(listing.id);
+                      try {
+                        const { error } = await supabase.rpc('place_bid', {
+                          p_listing_id: listing.id,
+                          p_bid_gold: listing.currency === 'gold' ? bidAmount : 0,
+                          p_bid_gems: listing.currency === 'gems' ? bidAmount : 0
+                        });
+                        if (error) throw error;
+                        toast.success('Bid placed successfully!');
+                        fetchListings();
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to place bid');
+                      } finally {
+                        setBuying(null);
+                      }
+                    }}
+                    disabled={buying === listing.id || profile?.id === listing.seller_id}
+                    className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-2 border-[var(--border)] transition-transform active:translate-y-1 shadow-[2px_2px_0px_0px_var(--border)] flex items-center justify-center whitespace-nowrap"
+                  >
+                    {buying === listing.id ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Place Bid'}
+                  </button>
+                </div>
+              )}
             </motion.div>
           ))}
         </div>

@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
+import toast from 'react-hot-toast';
 
 export function Home() {
   const { profile } = useProfileStore();
@@ -100,9 +101,9 @@ export function Home() {
         if (data.gold_earned) rewards.push(`${data.gold_earned} Gold`);
         if (data.gems_earned) rewards.push(`${data.gems_earned} Gems`);
         if (data.xp_earned) rewards.push(`${data.xp_earned} XP`);
-        alert(`Quest reward claimed! You earned: ${rewards.join(', ')}`);
+        toast.success(`Claimed! +${rewards.join(', ')}`);
       } else {
-        alert('Quest reward claimed!');
+        toast.success('Quest reward claimed!');
       }
       
       fetchQuests();
@@ -118,7 +119,7 @@ export function Home() {
         useProfileStore.getState().setProfile(profileData);
       }
     } catch (err: any) {
-      alert(err.message || 'Failed to claim quest reward');
+      toast.error(err.message || 'Failed to claim quest');
     }
   };
 
@@ -128,6 +129,19 @@ export function Home() {
       if (error) throw error;
       
       setReward(data);
+      
+      // Rich toast
+      toast.success((t) => (
+        <div className="flex flex-col gap-1">
+          <p className="font-black uppercase">Daily Reward Claimed!</p>
+          <div className="text-sm font-bold">
+            {data.gold_earned > 0 && <p className="text-yellow-600">+{data.gold_earned} Gold</p>}
+            {data.gems_earned > 0 && <p className="text-emerald-600">+{data.gems_earned} Gems</p>}
+            {data.xp_earned > 0 && <p className="text-blue-600">+{data.xp_earned} XP</p>}
+            <p className="text-xs mt-1 text-slate-500">Streak: {data.current_streak} days</p>
+          </div>
+        </div>
+      ), { duration: 5000 });
       
       // Refresh profile
       const { data: profileData } = await supabase
@@ -140,7 +154,7 @@ export function Home() {
         useProfileStore.getState().setProfile(profileData);
       }
     } catch (err: any) {
-      alert(err.message || 'Failed to claim daily reward');
+      toast.error(err.message || 'Failed to claim daily reward');
     }
   };
 
