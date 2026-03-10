@@ -200,34 +200,34 @@ export function Home() {
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border-4 border-black rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-1 transition-transform">
-          <div className="w-14 h-14 rounded-xl bg-yellow-300 flex items-center justify-center border-4 border-black transform -rotate-3">
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
+          <div className="w-14 h-14 rounded-xl bg-yellow-300 flex items-center justify-center border-4 border-[var(--border)] transform -rotate-3">
             <Trophy className="w-7 h-7 text-black" />
           </div>
           <div>
             <p className="text-sm text-slate-600 font-bold uppercase">Collection Score</p>
-            <p className="text-3xl font-black text-black font-mono">1,240</p>
+            <p className="text-3xl font-black text-[var(--text)] font-mono">1,240</p>
           </div>
         </div>
         
-        <div className="bg-white border-4 border-black rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-1 transition-transform">
-          <div className="w-14 h-14 rounded-xl bg-cyan-300 flex items-center justify-center border-4 border-black transform rotate-3">
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
+          <div className="w-14 h-14 rounded-xl bg-cyan-300 flex items-center justify-center border-4 border-[var(--border)] transform rotate-3">
             <LayoutGrid className="w-7 h-7 text-black" />
           </div>
           <div>
             <p className="text-sm text-slate-600 font-bold uppercase">Unique Cards</p>
-            <p className="text-3xl font-black text-black font-mono">{stats?.unique_cards ?? 0} / {stats?.total_possible ?? '?'}</p>
+            <p className="text-3xl font-black text-[var(--text)] font-mono">{stats?.unique_cards ?? 0} / {stats?.total_possible ?? '?'}</p>
           </div>
         </div>
 
-        <div className="bg-white border-4 border-black rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transform hover:-translate-y-1 transition-transform">
-          <div className="w-14 h-14 rounded-xl bg-purple-300 flex items-center justify-center border-4 border-black transform -rotate-3">
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
+          <div className="w-14 h-14 rounded-xl bg-purple-300 flex items-center justify-center border-4 border-[var(--border)] transform -rotate-3">
             <Zap className="w-7 h-7 text-black" />
           </div>
           <div>
             <p className="text-sm text-slate-600 font-bold uppercase">Energy</p>
             <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-black text-black font-mono">{currentEnergy} / 20</p>
+              <p className="text-3xl font-black text-[var(--text)] font-mono">{currentEnergy} / 20</p>
               {currentEnergy < 20 && nextRegen && (
                 <span className="text-xs font-bold text-slate-500">
                   +1 in {Math.max(0, Math.ceil((nextRegen - Date.now()) / 60000))}m
@@ -239,9 +239,9 @@ export function Home() {
       </div>
 
       {/* Daily Missions Preview */}
-      <div className="bg-white border-4 border-black rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_var(--border)]">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-black text-black flex items-center gap-2 uppercase">
+          <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">
             <Zap className="w-6 h-6 text-yellow-500 fill-yellow-500" />
             Daily Missions
           </h2>
@@ -256,16 +256,16 @@ export function Home() {
             <div className="text-center py-8 text-slate-500 font-bold">No active quests. Check back tomorrow!</div>
           ) : (
             quests.map((quest) => (
-              <div key={quest.id} className="bg-gray-50 border-2 border-black rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <div key={quest.id} className="bg-gray-50 border-2 border-[var(--border)] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[2px_2px_0px_0px_var(--border)]">
                 <div className="flex items-center gap-4 w-full sm:w-auto">
-                  <div className="w-12 h-12 rounded-lg bg-blue-100 border-2 border-black flex items-center justify-center shrink-0">
+                  <div className="w-12 h-12 rounded-lg bg-blue-100 border-2 border-[var(--border)] flex items-center justify-center shrink-0">
                     <Zap className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="flex-1">
                     <p className="font-bold text-black text-lg">{quest.quest_type.replace(/_/g, ' ').toUpperCase()}</p>
-                    <div className="w-full sm:w-48 h-3 bg-white border-2 border-black rounded-full mt-2 overflow-hidden">
+                    <div className="w-full sm:w-48 h-3 bg-white border-2 border-[var(--border)] rounded-full mt-2 overflow-hidden">
                       <div 
-                        className="h-full bg-green-400 border-r-2 border-black transition-all" 
+                        className="h-full bg-green-400 border-r-2 border-[var(--border)] transition-all" 
                         style={{ width: `${Math.min(100, (quest.progress / quest.target_value) * 100)}%` }}
                       />
                     </div>
@@ -276,7 +276,7 @@ export function Home() {
                   {quest.is_completed && !quest.is_claimed ? (
                     <button 
                       onClick={() => { console.log('Claim clicked'); handleClaimQuest(quest.id); }}
-                      className="px-4 py-1 bg-green-400 hover:bg-green-500 text-black font-black text-sm rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all"
+                      className="px-4 py-1 bg-green-400 hover:bg-green-500 text-black font-black text-sm rounded-lg border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] active:translate-y-1 active:shadow-none transition-all"
                     >
                       Claim Reward
                     </button>
@@ -299,10 +299,10 @@ export function Home() {
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white border-4 border-black rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center"
+            className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0px_0px_var(--border)] text-center"
           >
             <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-3xl font-black text-black uppercase mb-2">Reward Claimed!</h2>
+            <h2 className="text-3xl font-black text-[var(--text)] uppercase mb-2">Reward Claimed!</h2>
             <div className="text-xl font-bold text-slate-700 mb-6">
               {reward.gold_earned > 0 && <p>+{reward.gold_earned} Gold</p>}
               {reward.gems_earned > 0 && <p>+{reward.gems_earned} Gems</p>}

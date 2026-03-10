@@ -72,48 +72,56 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white border-4 border-black rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[8px_8px_0px_0px_var(--border)]">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-black uppercase">Create Listing</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full"><X /></button>
+          <h2 className="text-2xl font-black uppercase text-[var(--text)]">Create Listing</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-[var(--text)]"><X /></button>
         </div>
 
         {!selectedCard ? (
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-            {loading ? <Loader2 className="animate-spin" /> : collection.map(card => (
-              <button key={card.id} onClick={() => setSelectedCard(card)} className="border-2 border-black rounded-lg p-2 hover:bg-blue-50">
-                <img src={card.image_url} alt={card.name} className="w-full aspect-[3/4] object-cover rounded" />
-                <p className="text-xs font-bold mt-1 truncate">{card.name}</p>
+            {loading ? <Loader2 className="animate-spin text-[var(--text)]" /> : collection.map(card => (
+              <button key={card.id} onClick={() => setSelectedCard(card)} className="border-2 border-[var(--border)] rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 bg-[var(--bg)]">
+                {card.is_video ? (
+                  <video src={card.image_url} autoPlay muted loop playsInline className="w-full aspect-[3/4] object-cover rounded" />
+                ) : (
+                  <img src={card.image_url} alt={card.name} className="w-full aspect-[3/4] object-cover rounded" />
+                )}
+                <p className="text-xs font-bold mt-1 truncate text-[var(--text)]">{card.name}</p>
               </button>
             ))}
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center gap-4 border-2 border-black p-4 rounded-xl">
-              <img src={selectedCard.image_url} alt={selectedCard.name} className="w-20 h-20 object-cover rounded" />
+            <div className="flex items-center gap-4 border-2 border-[var(--border)] p-4 rounded-xl bg-[var(--bg)]">
+              {selectedCard.is_video ? (
+                <video src={selectedCard.image_url} autoPlay muted loop playsInline className="w-20 h-20 object-cover rounded" />
+              ) : (
+                <img src={selectedCard.image_url} alt={selectedCard.name} className="w-20 h-20 object-cover rounded" />
+              )}
               <div>
-                <p className="font-black text-lg">{selectedCard.name}</p>
+                <p className="font-black text-lg text-[var(--text)]">{selectedCard.name}</p>
                 <button onClick={() => setSelectedCard(null)} className="text-blue-500 font-bold text-sm underline">Change Card</button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setListingType('fixed_price')} className={cn("p-4 border-4 rounded-xl font-black", listingType === 'fixed_price' ? "border-black bg-blue-400" : "border-gray-200")}>Fixed Price</button>
-              <button onClick={() => setListingType('auction')} className={cn("p-4 border-4 rounded-xl font-black", listingType === 'auction' ? "border-black bg-blue-400" : "border-gray-200")}>Auction</button>
+              <button onClick={() => setListingType('fixed_price')} className={cn("p-4 border-4 rounded-xl font-black text-[var(--text)]", listingType === 'fixed_price' ? "border-[var(--border)] bg-blue-400 text-black" : "border-[var(--border)] bg-[var(--bg)]")}>Fixed Price</button>
+              <button onClick={() => setListingType('auction')} className={cn("p-4 border-4 rounded-xl font-black text-[var(--text)]", listingType === 'auction' ? "border-[var(--border)] bg-blue-400 text-black" : "border-[var(--border)] bg-[var(--bg)]")}>Auction</button>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <input type="number" placeholder="Gold" onChange={e => setPriceGold(Number(e.target.value))} className="border-4 border-black p-3 rounded-xl font-bold" />
-              <input type="number" placeholder="Gems" onChange={e => setPriceGems(Number(e.target.value))} className="border-4 border-black p-3 rounded-xl font-bold" />
+              <input type="number" placeholder="Gold" onChange={e => setPriceGold(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)]" />
+              <input type="number" placeholder="Gems" onChange={e => setPriceGems(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)]" />
             </div>
 
-            <select onChange={e => setDuration(Number(e.target.value))} className="w-full border-4 border-black p-3 rounded-xl font-bold">
+            <select onChange={e => setDuration(Number(e.target.value))} className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)]">
               <option value={24}>24 Hours</option>
               <option value={48}>48 Hours</option>
               <option value={72}>72 Hours</option>
             </select>
 
-            <button onClick={handleSubmit} disabled={submitting} className="w-full py-4 bg-emerald-500 text-white font-black text-xl rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <button onClick={handleSubmit} disabled={submitting} className="w-full py-4 bg-emerald-500 text-white font-black text-xl rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]">
               {submitting ? 'Listing...' : 'Create Listing'}
             </button>
           </div>

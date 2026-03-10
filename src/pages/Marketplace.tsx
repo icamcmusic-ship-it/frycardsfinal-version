@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import { CreateListingModal } from '../components/CreateListingModal';
 import { CardSkeleton } from '../components/CardSkeleton';
+import { CardDisplay } from '../components/CardDisplay';
 
 export function Marketplace() {
   const { profile } = useProfileStore();
@@ -166,37 +167,33 @@ export function Marketplace() {
 
   return (
     <>
-      <div className="sticky top-16 z-40 bg-yellow-50/90 backdrop-blur-sm py-4 border-b-2 border-black -mx-4 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-wrap gap-4">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-4 py-2 bg-white border-4 border-black rounded-xl text-black font-bold focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-            >
-              <option value="newest">Sort by Newest</option>
-              <option value="price">Sort by Price</option>
-            </select>
-          </div>
+      <div className="sticky top-16 z-30 bg-[var(--bg)]/90 backdrop-blur-sm py-4 border-b-2 border-[var(--border)] -mx-4 px-4">
+        <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-nowrap items-center">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+          >
+            <option value="newest">Sort by Newest</option>
+            <option value="price">Sort by Price</option>
+          </select>
           
-          <div className="flex flex-wrap gap-4">
-            <input 
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search marketplace..."
-              className="px-4 py-2 bg-white border-4 border-black rounded-xl text-black font-bold placeholder-slate-400 focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-            />
-            <select 
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="px-4 py-2 bg-white border-4 border-black rounded-xl text-black font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-            >
-              <option value="all">All Types</option>
-              <option value="fixed_price">Buy Now</option>
-              <option value="auction">Auctions</option>
-            </select>
-          </div>
+          <input 
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search marketplace..."
+            className="shrink-0 w-48 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold placeholder-slate-400 focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+          />
+          <select 
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+          >
+            <option value="all">All Types</option>
+            <option value="fixed_price">Buy Now</option>
+            <option value="auction">Auctions</option>
+          </select>
         </div>
       </div>
       
@@ -204,14 +201,14 @@ export function Marketplace() {
       
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black text-black tracking-tight uppercase">Marketplace</h1>
+          <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Marketplace</h1>
           <p className="text-slate-600 font-bold mt-1">Buy and sell cards with other players</p>
         </div>
         
         <div className="flex gap-4">
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Create Listing
@@ -221,12 +218,12 @@ export function Marketplace() {
       
       <CreateListingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchListings} />
 
-      <div className="flex bg-white border-4 border-black rounded-xl p-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] w-fit">
+      <div className="flex bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl p-1 shadow-[4px_4px_0px_0px_var(--border)] w-fit">
         <button
           onClick={() => setActiveTab('all')}
           className={cn(
             "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
-            activeTab === 'all' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
+            activeTab === 'all' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
           )}
         >
           All Listings
@@ -235,7 +232,7 @@ export function Marketplace() {
           onClick={() => setActiveTab('watchlist')}
           className={cn(
             "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
-            activeTab === 'watchlist' ? "bg-black text-white" : "text-slate-600 hover:bg-slate-100"
+            activeTab === 'watchlist' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
           )}
         >
           Watchlist
@@ -243,11 +240,11 @@ export function Marketplace() {
       </div>
 
       {filteredListings.length === 0 ? (
-        <div className="text-center py-20 bg-white border-4 border-black rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4 border-4 border-black">
+        <div className="text-center py-20 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[8px_8px_0px_0px_var(--border)]">
+          <div className="w-20 h-20 mx-auto bg-[var(--bg)] rounded-full flex items-center justify-center mb-4 border-4 border-[var(--border)]">
             <Store className="w-10 h-10 text-slate-400" />
           </div>
-          <h3 className="text-2xl font-black text-black mb-2 uppercase">
+          <h3 className="text-2xl font-black text-[var(--text)] mb-2 uppercase">
             {activeTab === 'all' ? 'Market is empty' : 'Watchlist is empty'}
           </h3>
           <p className="text-slate-600 font-bold">
@@ -261,7 +258,7 @@ export function Marketplace() {
               key={listing.id}
               whileHover={{ y: -4, rotate: -1 }}
               className={cn(
-                "bg-white border-4 rounded-2xl p-4 flex flex-col gap-4 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 group relative overflow-hidden",
+                "bg-[var(--surface)] border-4 rounded-2xl p-4 flex flex-col gap-4 shadow-[6px_6px_0px_0px_var(--border)] transition-all duration-300 group relative overflow-hidden",
                 listing.card_rarity === 'Divine' ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' :
                 listing.card_rarity === 'Mythic' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.5)]' :
                 listing.card_rarity === 'Super-Rare' ? 'border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]' :
@@ -285,12 +282,12 @@ export function Marketplace() {
               <div className="flex justify-between items-start">
                 <div>
                   <div className={cn(
-                    "text-xs font-black uppercase tracking-wider px-2 py-1 rounded-full border-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] inline-block mb-2",
+                    "text-xs font-black uppercase tracking-wider px-2 py-1 rounded-full border-2 shadow-[2px_2px_0px_0px_var(--border)] inline-block mb-2",
                     getRarityStyles(listing.card_rarity, listing.card.is_foil)
                   )}>
                     {listing.card_rarity}
                   </div>
-                  <h3 className="font-black text-black text-lg leading-tight uppercase">{listing.card_name}</h3>
+                  <h3 className="font-black text-[var(--text)] text-lg leading-tight uppercase">{listing.card_name}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <p className="text-sm text-slate-500 font-bold">Seller: {listing.seller_name}</p>
                     {profile?.id !== listing.seller_id && (
@@ -307,7 +304,7 @@ export function Marketplace() {
                 <div className="flex flex-col items-end gap-2">
                   <button 
                     onClick={() => handleToggleWatchlist(listing.id)}
-                    className="p-1 hover:bg-gray-100 rounded-full transition-colors border-2 border-transparent hover:border-black"
+                    className="p-1 hover:bg-gray-100 rounded-full transition-colors border-2 border-transparent hover:border-[var(--border)]"
                     title={activeTab === 'watchlist' ? "Remove from Watchlist" : "Add to Watchlist"}
                   >
                     <Star className={cn("w-5 h-5", activeTab === 'watchlist' ? "fill-yellow-400 text-yellow-500" : "text-slate-400")} />
@@ -321,22 +318,15 @@ export function Marketplace() {
               </div>
               
               <div className="flex-1 flex items-center justify-center py-4">
-                <div className="w-full aspect-[3/4] bg-gray-200 border-4 border-black rounded-lg shadow-[inset_0_0_10px_rgba(0,0,0,0.2)] overflow-hidden">
-                  <img 
-                    src={listing.card.image_url} 
-                    alt={listing.card_name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => (e.currentTarget.src = 'https://picsum.photos/seed/card-back/200/300')}
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
-                  />
+                <div className="w-full max-w-[200px]">
+                  <CardDisplay card={listing.card} showQuantity={false} showNewBadge={false} />
                 </div>
               </div>
 
-              <div className="bg-gray-50 border-2 border-black rounded-xl p-3 flex justify-between items-center">
+              <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-3 flex justify-between items-center">
                 <div>
                   <p className="text-xs text-slate-500 font-bold uppercase">{listing.type === 'fixed_price' ? 'Buy Now' : 'Current Bid'}</p>
-                  <div className="flex items-center gap-1 text-black font-black text-lg">
+                  <div className="flex items-center gap-1 text-[var(--text)] font-black text-lg">
                     {listing.currency === 'gems' ? (
                       <Gem className="w-4 h-4 text-emerald-500" />
                     ) : (
@@ -359,7 +349,7 @@ export function Marketplace() {
               <button 
                 onClick={() => handleBuy(listing)}
                 disabled={buying === listing.id || profile?.id === listing.seller_id}
-                className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2"
+                className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
               >
                 {buying === listing.id ? (
                   <Loader2 className="w-5 h-5 animate-spin" />

@@ -13,7 +13,7 @@ export function getRarityStyles(rarity: string, isFoil: boolean) {
     case 'Rare': return "bg-blue-500 text-white border-black";
     case 'Super-Rare': return "bg-purple-500 text-white border-black";
     case 'Mythic': return "bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 animate-[foilShimmer_2s_linear_infinite] text-black border-black";
-    case 'Divine': return "bg-gradient-to-r from-red-600 via-red-400 to-red-600 animate-[foilShimmer_2s_linear_infinite] text-white border-black";
+    case 'Divine': return "bg-gradient-to-r from-red-700 via-orange-500 to-red-700 animate-[foilShimmer_1.5s_linear_infinite] text-white border-red-400 shadow-[0_0_12px_rgba(239,68,68,0.8)]";
     default: return "bg-slate-400 text-white border-black";
   }
 }

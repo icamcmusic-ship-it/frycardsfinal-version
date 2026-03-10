@@ -5,24 +5,25 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
-:root, .theme-light {
-  --bg: #fefce8;       /* yellow-50 */
+:root, [data-theme="light"] {
+  --bg: #fefce8;        /* yellow-50 */
   --surface: #ffffff;
-  --border: #000000;
   --text: #0f172a;
+  --border: #000000;
 }
-.theme-dark {
+[data-theme="dark"] {
   --bg: #0f172a;
   --surface: #1e293b;
-  --border: #334155;
   --text: #f8fafc;
+  --border: #334155;
 }
-.theme-neon {
-  --bg: #0a0a0a;
-  --surface: #111827;
-  --border: #22d3ee;
-  --text: #f0fdf4;
+[data-theme="neon"] {
+  --bg: #050011;
+  --surface: #0d0025;
+  --text: #00ffcc;
+  --border: #ff00ff;
 }
+body { background-color: var(--bg); color: var(--text); }
 
 @keyframes shimmer {
   0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }

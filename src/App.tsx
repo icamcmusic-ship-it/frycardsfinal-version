@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { useAuthStore } from './stores/authStore';
+import { useThemeStore } from './stores/themeStore';
 import { Toaster } from 'react-hot-toast';
 import { Layout } from './components/Layout';
 import { Auth } from './pages/Auth';
@@ -21,6 +22,11 @@ import { Loader2 } from 'lucide-react';
 
 export default function App() {
   const { user, initialized, setUser, setSession, setInitialized } = useAuthStore();
+  const { theme } = useThemeStore();
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -60,6 +66,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/store" element={<Store />} />
+            <Route path="/inventory" element={<Store />} />
             <Route path="/collection" element={<Collection />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/social" element={<Social />} />

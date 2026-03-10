@@ -11,7 +11,7 @@ export const NeoCard: React.FC<NeoCardProps> = ({ card, onQuickSell, onClick }) 
   return (
     <div 
       onClick={onClick}
-      className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all duration-300 hover:scale-105 cursor-pointer bg-white"
+      className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border-4 border-[var(--border)] shadow-[6px_6px_0px_0px_var(--border)] transition-all duration-300 hover:scale-105 cursor-pointer bg-[var(--surface)]"
     >
       {/* Card Art */}
       <img 
@@ -35,7 +35,7 @@ export const NeoCard: React.FC<NeoCardProps> = ({ card, onQuickSell, onClick }) 
           <p className="text-white font-black text-sm uppercase tracking-widest">{card.name}</p>
           <p className="text-gray-300 text-xs font-bold mt-1">{card.rarity} · {card.card_type}</p>
           {card.flavor_text && (
-            <div className="mt-4 p-3 bg-white/10 border border-white/20 rounded-lg backdrop-blur-sm">
+            <div className="mt-4 p-3 bg-[var(--surface)]/10 border border-[var(--border)]/20 rounded-lg backdrop-blur-sm">
               <p className="text-gray-200 text-[11px] italic leading-snug">"{card.flavor_text}"</p>
             </div>
           )}

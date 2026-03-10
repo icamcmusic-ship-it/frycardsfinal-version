@@ -4,6 +4,7 @@ import { Loader2, ArrowRightLeft, Check, X, Trash2, Plus, Handshake } from 'luci
 import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import { EmptyState } from '../components/EmptyState';
+import { CardDisplay } from '../components/CardDisplay';
 
 export function Trades() {
   const [trades, setTrades] = useState<any[]>([]);
@@ -38,7 +39,10 @@ export function Trades() {
 
   const respondTrade = async (offerId: string, accept: boolean) => {
     try {
-      await supabase.rpc('respond_to_trade_offer', { p_offer_id: offerId, p_accept: accept });
+      const { data, error } = await supabase.rpc('respond_to_trade_offer', { p_offer_id: offerId, p_accept: accept });
+      if (error) throw error;
+      // Check for application-level error
+      if (data && data.success === false) throw new Error(data.error);
       fetchTrades();
       toast.success(accept ? 'Trade accepted!' : 'Trade declined!');
     } catch (err: any) {
@@ -92,40 +96,44 @@ export function Trades() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-black text-black tracking-tight uppercase">Trades</h1>
+        <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Trades</h1>
         <button onClick={() => setShowCreate(!showCreate)}
-          className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2">
+          className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2">
           <Plus className="w-5 h-5" /> Create Trade
         </button>
       </div>
 
       {showCreate && (
-        <div className="bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] space-y-4">
-          <h2 className="text-xl font-black uppercase">New Trade Offer</h2>
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] space-y-4">
+          <h2 className="text-xl font-black uppercase text-[var(--text)]">New Trade Offer</h2>
           <select value={receiverId} onChange={e => setReceiverId(e.target.value)}
-            className="w-full border-4 border-black p-3 rounded-xl font-bold">
+            className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)]">
             <option value="">— Select a friend —</option>
             {friends.map(f => <option key={f.id} value={f.id}>{f.username}</option>)}
           </select>
           <div>
-            <p className="font-black mb-2">Cards you're offering (click to select):</p>
+            <p className="font-black mb-2 text-[var(--text)]">Cards you're offering (click to select):</p>
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto">
               {myCards.map(c => (
                 <button key={c.id} onClick={() => toggleCard(c.id, offeredIds, setOfferedIds)}
-                  className={cn("border-2 rounded-lg p-1 text-left", offeredIds.includes(c.id) ? "border-blue-500 bg-blue-50" : "border-gray-200")}>
-                  <img src={c.image_url} alt={c.name} className="w-full aspect-[3/4] object-cover rounded" />
-                  <p className="text-[10px] font-bold truncate mt-1">{c.name}</p>
+                  className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)]", offeredIds.includes(c.id) ? "border-blue-500 bg-blue-50" : "border-[var(--border)]")}>
+                    {c.is_video ? (
+                      <video src={c.image_url} autoPlay muted loop playsInline className="w-full aspect-[3/4] object-cover rounded" />
+                    ) : (
+                      <img src={c.image_url} alt={c.name} className="w-full aspect-[3/4] object-cover rounded" />
+                    )}
+                    <p className="text-[10px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <label className="font-black block mb-1">Gold to offer:</label>
+            <label className="font-black block mb-1 text-[var(--text)]">Gold to offer:</label>
             <input type="number" min={0} value={offeredGold} onChange={e => setOfferedGold(Number(e.target.value))}
-              className="border-4 border-black p-3 rounded-xl font-bold w-40" />
+              className="border-4 border-[var(--border)] p-3 rounded-xl font-bold w-40 bg-[var(--bg)] text-[var(--text)]" />
           </div>
           <button onClick={submitTrade} disabled={submitting}
-            className="w-full py-3 bg-emerald-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50">
+            className="w-full py-3 bg-emerald-500 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] disabled:opacity-50">
             {submitting ? 'Sending...' : 'Send Trade Offer'}
           </button>
         </div>
@@ -142,30 +150,48 @@ export function Trades() {
           />
         )}
         {trades.map(trade => (
-          <div key={trade.id} className="bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <div key={trade.id} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
             <div className="flex justify-between items-start flex-wrap gap-4">
               <div>
-                <p className="font-black text-lg uppercase">{trade.sender_username} ↔ {trade.receiver_username}</p>
+                <p className="font-black text-lg uppercase text-[var(--text)]">{trade.sender_username} ↔ {trade.receiver_username}</p>
                 <p className="text-sm font-bold text-slate-500 capitalize">Status: {trade.status}</p>
                 {trade.sender_gold > 0 && <p className="text-sm font-bold text-yellow-600">+{trade.sender_gold} gold offered</p>}
               </div>
               <div className="flex gap-2">
                 {trade.status === 'pending' && (
                   <>
-                    <button onClick={() => respondTrade(trade.id, true)} className="p-3 bg-green-400 rounded-xl border-2 border-black"><Check /></button>
-                    <button onClick={() => respondTrade(trade.id, false)} className="p-3 bg-red-400 rounded-xl border-2 border-black"><X /></button>
+                    <button onClick={() => respondTrade(trade.id, true)} className="p-3 bg-green-400 rounded-xl border-2 border-[var(--border)] text-black"><Check /></button>
+                    <button onClick={() => respondTrade(trade.id, false)} className="p-3 bg-red-400 rounded-xl border-2 border-[var(--border)] text-white"><X /></button>
                   </>
                 )}
                 {['pending', 'cancelled'].includes(trade.status) && (
-                  <button onClick={() => cancelTrade(trade.id)} className="p-3 bg-slate-200 rounded-xl border-2 border-black"><Trash2 /></button>
+                  <button onClick={() => cancelTrade(trade.id)} className="p-3 bg-slate-200 rounded-xl border-2 border-[var(--border)] text-black"><Trash2 /></button>
                 )}
               </div>
             </div>
             {trade.sender_cards?.length > 0 && (
-              <div className="mt-4 flex gap-2 flex-wrap">
-                <span className="text-xs font-black text-slate-500 self-center">OFFERING:</span>
+              <div className="mt-4 flex gap-2 flex-wrap items-center">
+                <span className="text-xs font-black text-slate-500">OFFERING:</span>
                 {trade.sender_cards.map((c: any) => (
-                  <div key={c.id} className="text-xs font-bold bg-blue-50 border border-blue-200 rounded px-2 py-1">{c.name}</div>
+                  <div key={c.id} className="w-14 h-20 relative group">
+                    <CardDisplay card={c} showQuantity={false} showNewBadge={false} />
+                    <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-30 rounded-xl">
+                      <span className="text-[8px] text-white font-bold text-center px-1">{c.name}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {trade.receiver_cards?.length > 0 && (
+              <div className="mt-4 flex gap-2 flex-wrap items-center">
+                <span className="text-xs font-black text-slate-500">REQUESTING:</span>
+                {trade.receiver_cards.map((c: any) => (
+                  <div key={c.id} className="w-14 h-20 relative group">
+                    <CardDisplay card={c} showQuantity={false} showNewBadge={false} />
+                    <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-30 rounded-xl">
+                      <span className="text-[8px] text-white font-bold text-center px-1">{c.name}</span>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
