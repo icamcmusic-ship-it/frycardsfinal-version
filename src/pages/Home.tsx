@@ -316,11 +316,16 @@ export function Home() {
             className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0px_0px_var(--border)] text-center"
           >
             <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-3xl font-black text-[var(--text)] uppercase mb-2">Reward Claimed!</h2>
+            <h2 className="text-3xl font-black text-[var(--text)] uppercase mb-2">
+              {reward.reward_type === 'jackpot' ? '🎉 Jackpot!' :
+               reward.reward_type === 'gem_cache' ? '💎 Gem Cache!' :
+               reward.reward_type === 'gold_stash' ? '💰 Gold Stash!' :
+               'Reward Claimed!'}
+            </h2>
             <div className="text-xl font-bold text-slate-700 mb-6">
-              {reward.gold_earned > 0 && <p>+{reward.gold_earned} Gold</p>}
-              {reward.gems_earned > 0 && <p>+{reward.gems_earned} Gems</p>}
-              {reward.xp_earned > 0 && <p>+{reward.xp_earned} XP</p>}
+              {reward.gold_earned > 0 && <p className="text-yellow-600">+{reward.gold_earned} Gold</p>}
+              {reward.gems_earned > 0 && <p className="text-emerald-600">+{reward.gems_earned} Gems</p>}
+              {reward.xp_earned > 0 && <p className="text-blue-600">+{reward.xp_earned} XP</p>}
               <p className="mt-2 text-sm font-black text-blue-500 uppercase">Streak: {reward.current_streak} days</p>
             </div>
             <button 

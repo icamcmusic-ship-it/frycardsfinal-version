@@ -23,6 +23,51 @@
   --text: #00ffcc;
   --border: #ff00ff;
 }
+
+/* === OCEAN === */
+[data-theme="ocean"] {
+  --bg: #0a1628;
+  --surface: #0f2040;
+  --border: #1e4080;
+  --text: #e0f0ff;
+  --accent: #00b4d8;
+}
+
+/* === SUNSET === */
+[data-theme="sunset"] {
+  --bg: #1a0a00;
+  --surface: #2d1200;
+  --border: #7c2d12;
+  --text: #fff7ed;
+  --accent: #f97316;
+}
+
+/* === FOREST === */
+[data-theme="forest"] {
+  --bg: #0a1a0a;
+  --surface: #0f2810;
+  --border: #166534;
+  --text: #f0fdf4;
+  --accent: #22c55e;
+}
+
+/* === MONOCHROME === */
+[data-theme="monochrome"] {
+  --bg: #111111;
+  --surface: #1c1c1c;
+  --border: #333333;
+  --text: #ffffff;
+  --accent: #888888;
+}
+
+/* === CANDY === */
+[data-theme="candy"] {
+  --bg: #fff0fb;
+  --surface: #ffffff;
+  --border: #f472b6;
+  --text: #1a001a;
+  --accent: #ec4899;
+}
 body { background-color: var(--bg); color: var(--text); }
 
 @keyframes shimmer {

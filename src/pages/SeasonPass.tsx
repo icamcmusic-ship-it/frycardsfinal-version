@@ -61,12 +61,9 @@ export function SeasonPass() {
       }
 
       // Deduct gems
-      const { error: deductError } = await supabase.rpc('deduct_gems', { amount: 500 });
+      const { error: deductError } = await supabase.rpc('deduct_gems', { p_amount: 500 });
       if (deductError) {
-        // Fallback if deduct_gems doesn't exist, we can try direct update if RLS allows, 
-        // but usually we need an RPC. Let's assume there's a way or just update the pass.
-        // Actually, the prompt says: "Also deduct gems via a custom RPC or direct update"
-        // Let's just update the pass for now, and try to deduct gems if possible.
+        throw new Error(deductError.message || 'Failed to deduct gems');
       }
 
       const { error } = await supabase

@@ -60,6 +60,17 @@ export function Settings() {
     }
   };
 
+  const themes = [
+    { id: 'light',      label: '☀️ Light',      preview: '#fff7ed' },
+    { id: 'dark',       label: '🌙 Dark',       preview: '#18181b' },
+    { id: 'neon',       label: '⚡ Neon',       preview: '#0d0d0d' },
+    { id: 'ocean',      label: '🌊 Ocean',      preview: '#0a1628' },
+    { id: 'sunset',     label: '🌅 Sunset',     preview: '#1a0a00' },
+    { id: 'forest',     label: '🌲 Forest',     preview: '#0a1a0a' },
+    { id: 'monochrome', label: '⬛ Mono',       preview: '#111111' },
+    { id: 'candy',      label: '🍭 Candy',      preview: '#fff0fb' },
+  ];
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Settings</h1>
@@ -68,14 +79,15 @@ export function Settings() {
         <h2 className="text-2xl font-black uppercase flex items-center gap-2 text-[var(--text)]">
           <Palette className="w-6 h-6" /> Theme
         </h2>
-        <div className="grid grid-cols-3 gap-4">
-          {(['light', 'dark', 'neon'] as const).map((t) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {themes.map((t) => (
             <button
-              key={t}
-              onClick={() => setTheme(t)}
-              className={`px-4 py-3 font-black rounded-xl border-4 border-[var(--border)] uppercase ${theme === t ? 'bg-black text-white' : 'bg-gray-100 text-black'}`}
+              key={t.id}
+              onClick={() => setTheme(t.id as any)}
+              className={`px-4 py-3 font-black rounded-xl border-4 border-[var(--border)] uppercase flex flex-col items-center gap-2 ${theme === t.id ? 'bg-black text-white' : 'bg-[var(--bg)] text-[var(--text)]'}`}
             >
-              {t}
+              <div className="w-6 h-6 rounded-full border-2 border-[var(--border)]" style={{ backgroundColor: t.preview }} />
+              <span className="text-xs">{t.label}</span>
             </button>
           ))}
         </div>

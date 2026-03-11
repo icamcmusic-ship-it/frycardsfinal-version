@@ -440,6 +440,8 @@ export function Collection() {
                   {selectedCard.hp != null && <div className="bg-red-50 border-2 border-red-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">HP</p><p className="font-black text-black">{selectedCard.hp}</p></div>}
                   {selectedCard.attack != null && <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">ATK</p><p className="font-black text-black">{selectedCard.attack}</p></div>}
                   {selectedCard.defense != null && <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">DEF</p><p className="font-black text-black">{selectedCard.defense}</p></div>}
+                  {selectedCard.dice_cost != null && <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">Cost</p><p className="font-black text-black">{selectedCard.dice_cost}</p></div>}
+                  {selectedCard.bounty != null && <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">Bounty</p><p className="font-black text-black">{selectedCard.bounty}</p></div>}
                 </div>
 
                 {selectedCard.ability_text && (

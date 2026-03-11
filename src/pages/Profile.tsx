@@ -223,6 +223,18 @@ export function Profile() {
                   <p className="text-2xl font-black text-emerald-600">{profile.gem_balance}</p>
                 </div>
               </div>
+
+              {/* Card Back Preview */}
+              <div className="mt-6">
+                <p className="text-xs text-slate-500 font-bold uppercase mb-2">Equipped Card Back</p>
+                <div className="w-24 aspect-[3/4] rounded-xl border-4 border-[var(--border)] bg-gray-200 overflow-hidden shadow-[4px_4px_0px_0px_var(--border)]">
+                  <img 
+                    src={profile.card_back_url || 'https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?w=400&q=80'} 
+                    alt="Card Back" 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>

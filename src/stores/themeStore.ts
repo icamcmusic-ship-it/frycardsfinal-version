@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-type Theme = 'light' | 'dark' | 'neon';
+type Theme = 'light' | 'dark' | 'neon' | 'ocean' | 'sunset' | 'forest' | 'monochrome' | 'candy';
 interface ThemeStore { theme: Theme; setTheme: (t: Theme) => void; }
 
 export const useThemeStore = create<ThemeStore>()(

@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { CardDisplay } from '../components/CardDisplay';
+import { FlipCard } from '../components/FlipCard';
 
 import { useLocation } from 'react-router-dom';
 
@@ -29,6 +30,7 @@ export function Store() {
   const [userCosmetics, setUserCosmetics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
+  const [openingPackImageUrl, setOpeningPackImageUrl] = useState<string>('');
   const [packOpeningStep, setPackOpeningStep] = useState<'idle' | 'shaking' | 'revealing'>('idle');
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
   const [openingSummary, setOpeningSummary] = useState<{ xp_gained: number, new_card_count: number } | null>(null);
@@ -76,10 +78,17 @@ export function Store() {
   const handleBuyItem = async (itemId: string, priceGold: number, priceGems: number) => {
     if (!confirm('Are you sure you want to buy this item?')) return;
     try {
-      const { error } = await supabase.rpc('buy_shop_item', { p_item_id: itemId, p_use_gems: useGems });
+      const { data, error } = await supabase.rpc('buy_shop_item', { p_item_id: itemId, p_use_gems: useGems });
       if (error) throw error;
-      toast.success('Item purchased!');
+      if (data?.success === false) {
+        toast.error(data.error || 'Purchase failed');
+        return;
+      }
+      toast.success(`${data?.item_name || 'Item'} purchased!`);
       fetchUserCosmetics();
+      
+      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', profile!.id).single();
+      if (profileData) useProfileStore.getState().setProfile(profileData);
     } catch (err: any) {
       toast.error(err.message || 'Failed to buy item');
     }
@@ -94,6 +103,9 @@ export function Store() {
       }
       toast.success('Equipped!');
       fetchUserCosmetics();
+      
+      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', profile!.id).single();
+      if (profileData) useProfileStore.getState().setProfile(profileData);
     } catch (err: any) {
       toast.error(err.message || 'Failed to equip item');
     }
@@ -104,14 +116,18 @@ export function Store() {
       const { error } = await supabase.rpc('unequip_cosmetic_type', { p_item_type: itemType });
       if (error) throw error;
       fetchUserCosmetics();
+      
+      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', profile!.id).single();
+      if (profileData) useProfileStore.getState().setProfile(profileData);
     } catch (err: any) {
       toast.error(err.message || 'Failed to unequip item');
     }
   };
 
-  const handleOpenPack = async (packId: string, useGems: boolean) => {
+  const handleOpenPack = async (packId: string, useGems: boolean, packImageUrl: string) => {
     if (opening || !profile) return;
     setOpening(true);
+    setOpeningPackImageUrl(packImageUrl);
     setPackOpeningStep('shaking');
 
     try {
@@ -163,13 +179,14 @@ export function Store() {
     }
   };
 
-  const handleOpenFromInventory = async (packTypeId: string) => {
+  const handleOpenFromInventory = async (packTypeId: string, packImageUrl: string) => {
     if (opening || !profile) return;
     setOpening(true);
+    setOpeningPackImageUrl(packImageUrl);
     setPackOpeningStep('shaking');
 
     try {
-      const { data, error } = await supabase.rpc('open_pack_from_inventory', {
+      const { data, error } = await supabase.rpc('open_pack_from_inventory_by_type', {
         p_pack_type_id: packTypeId
       });
 
@@ -214,11 +231,16 @@ export function Store() {
       {/* Content based on activeTab */}
       {activeTab === 'packs' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {packs.map((pack) => (
+          {packs.map((pack) => {
+            const canAfford = pack.cost_gold
+              ? (profile?.gold_balance ?? 0) >= pack.cost_gold
+              : (profile?.gem_balance ?? 0) >= (pack.cost_gems ?? 0);
+
+            return (
             <motion.div 
               key={pack.id}
               whileHover={{ y: -4, rotate: -1 }}
-              className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col"
+              className={cn("bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col", !canAfford && "opacity-60")}
             >
               <div className="aspect-[4/3] bg-blue-100 flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]">
                 <div className="w-32 h-48 bg-red-500 rounded-xl border-4 border-[var(--border)] flex items-center justify-center transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)] overflow-hidden">
@@ -262,7 +284,7 @@ export function Store() {
                   {pack.cost_gold > 0 && (
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => handleOpenPack(pack.id, false)}
+                        onClick={() => handleOpenPack(pack.id, false, pack.image_url)}
                         disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
                         className="flex-[2] bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
                       >
@@ -282,7 +304,7 @@ export function Store() {
                   {pack.cost_gems > 0 && (
                     <div className="flex gap-2">
                       <button 
-                        onClick={() => handleOpenPack(pack.id, true)}
+                        onClick={() => handleOpenPack(pack.id, true, pack.image_url)}
                         disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
                         className="flex-[2] bg-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
                       >
@@ -302,7 +324,8 @@ export function Store() {
                 </div>
               </div>
             </motion.div>
-          ))}
+          );
+        })}
         </div>
       )}
 
@@ -317,7 +340,9 @@ export function Store() {
               <p className="text-sm text-slate-600 font-bold mb-4 line-clamp-2">{item.description}</p>
               <div className="mt-auto flex items-center justify-between">
                 <div className="flex items-center gap-1 font-black text-lg text-[var(--text)]">
-                  {item.cost_gems > 0
+                  {item.cost_gold === 0 && !item.cost_gems
+                    ? <span className="text-green-500 font-black text-sm uppercase">🎁 Free</span>
+                    : item.cost_gems > 0
                     ? <><Gem className="w-4 h-4 text-emerald-500" /> {item.cost_gems} Gems</>
                     : <><Coins className="w-4 h-4 text-yellow-500" /> {item.cost_gold} Gold</>
                   }
@@ -354,7 +379,9 @@ export function Store() {
               <p className="text-sm text-slate-600 font-bold mb-4 line-clamp-2">{item.description}</p>
               <div className="mt-auto flex items-center justify-between">
                 <div className="flex items-center gap-1 font-black text-lg text-[var(--text)]">
-                  {item.cost_gems > 0
+                  {item.cost_gold === 0 && !item.cost_gems
+                    ? <span className="text-green-500 font-black text-sm uppercase">🎁 Free</span>
+                    : item.cost_gems > 0
                     ? <><Gem className="w-4 h-4 text-emerald-500" /> {item.cost_gems} Gems</>
                     : <><Coins className="w-4 h-4 text-yellow-500" /> {item.cost_gold} Gold</>
                   }
@@ -383,6 +410,33 @@ export function Store() {
       {activeTab === 'inventory' && (
         <div className="space-y-6">
           <h2 className="text-2xl font-black uppercase text-[var(--text)]">Your Inventory</h2>
+          
+          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
+            <h3 className="font-black uppercase mb-4 text-[var(--text)]">Packs</h3>
+            {inventory.length === 0 ? (
+              <p className="text-slate-500 font-bold">No packs in inventory.</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {inventory.map(inv => (
+                  <div key={inv.pack_type_id} className="border-4 border-[var(--border)] bg-[var(--bg)] rounded-xl p-3 text-center transition-all">
+                    <div className="aspect-[3/4] rounded overflow-hidden mb-2 border-2 border-[var(--border)] bg-gray-200">
+                      <img src={inv.image_url} alt={inv.name} className="w-full h-full object-cover" />
+                    </div>
+                    <p className="text-xs font-black uppercase text-[var(--text)]">{inv.name}</p>
+                    <p className="text-xs font-bold text-slate-500 mb-2">Quantity: {inv.quantity}</p>
+                    <button 
+                      onClick={() => handleOpenFromInventory(inv.pack_type_id, inv.image_url)}
+                      disabled={opening}
+                      className="w-full py-2 bg-red-500 text-white text-xs font-black rounded border-2 border-black hover:bg-red-600 disabled:opacity-50"
+                    >
+                      Open Pack
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {['profile_banner', 'card_back'].map(slotType => (
             <div key={slotType} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
               <h3 className="font-black uppercase mb-4 text-[var(--text)]">{slotType.replace('_', ' ')}</h3>
@@ -392,7 +446,7 @@ export function Store() {
                     "border-4 rounded-xl p-3 text-center transition-all",
                     c.is_equipped ? "border-yellow-500 bg-yellow-50" : "border-[var(--border)] bg-[var(--bg)]"
                   )}>
-                    <div className="aspect-video rounded overflow-hidden mb-2 border-2 border-[var(--border)]">
+                    <div className={cn("rounded overflow-hidden mb-2 border-2 border-[var(--border)]", slotType === 'card_back' ? 'aspect-[3/4]' : 'aspect-video')}>
                       <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
                     </div>
                     <p className="text-xs font-black uppercase text-[var(--text)]">{c.name}</p>
@@ -421,70 +475,91 @@ export function Store() {
       )}
 
       {packOpeningStep !== 'idle' && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
-          {packOpeningStep === 'shaking' && (
-            <motion.div
-              animate={{ x: [-10, 10, -10, 10, 0] }}
-              transition={{ duration: 0.5, repeat: Infinity }}
-              className="text-white text-4xl font-black uppercase"
-            >
-              Opening Pack...
-            </motion.div>
-          )}
-          {packOpeningStep === 'revealing' && openedCards && (
-            <div className="flex flex-col items-center gap-8">
-              <p className="text-white font-black text-xl uppercase tracking-widest">
-                {currentCardIndex < openedCards.length
-                  ? `${openedCards.length - currentCardIndex} cards remaining — click to reveal!`
-                  : '🎉 All cards revealed!'}
-              </p>
-
-              {/* Stack of unrevealed cards */}
-              {currentCardIndex < openedCards.length && (
+        <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4 overflow-hidden">
+          
+          {/* Particle burst — always visible */}
+          {packOpeningStep !== 'idle' && (
+            <div className="absolute inset-0 pointer-events-none">
+              {[...Array(20)].map((_, i) => (
                 <motion.div
-                  key={currentCardIndex}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => {
-                    setRevealedCards(prev => [...prev, openedCards[currentCardIndex]]);
-                    setCurrentCardIndex(prev => prev + 1);
+                  key={i}
+                  className="absolute w-2 h-2 rounded-full bg-yellow-400"
+                  style={{ left: '50%', top: '50%' }}
+                  animate={{
+                    x: (Math.random() - 0.5) * 600,
+                    y: (Math.random() - 0.5) * 600,
+                    opacity: [1, 0],
+                    scale: [1, 0],
                   }}
-                  className="w-48 h-72 cursor-pointer relative"
-                  style={{ transformStyle: 'preserve-3d' }}
-                >
-                  {/* Card back */}
-                  <div className="absolute inset-0 bg-indigo-900 border-4 border-white rounded-2xl flex items-center justify-center shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-                    <span className="text-white font-black text-5xl">?</span>
+                  transition={{ duration: 1.2, delay: Math.random() * 0.5, ease: 'easeOut' }}
+                />
+              ))}
+            </div>
+          )}
+
+          {packOpeningStep === 'shaking' && (
+            <div className="flex flex-col items-center gap-6">
+              <motion.div
+                animate={{ 
+                  rotate: [-3, 3, -3, 3, -3, 3, 0],
+                  scale: [1, 1.05, 1, 1.05, 1, 1.05, 1.1],
+                }}
+                transition={{ duration: 0.6, repeat: Infinity, repeatType: 'loop' }}
+                className="w-40 h-56 rounded-xl border-4 border-yellow-400 overflow-hidden shadow-[0_0_40px_rgba(250,204,21,0.6)]"
+              >
+                <img src={openingPackImageUrl} className="w-full h-full object-cover" />
+              </motion.div>
+              <motion.p 
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 0.8, repeat: Infinity }}
+                className="text-yellow-400 font-black text-2xl uppercase tracking-widest"
+              >
+                Opening...
+              </motion.p>
+              <p className="text-white/40 text-sm font-bold">tap to skip</p>
+            </div>
+          )}
+
+          {packOpeningStep === 'revealing' && openedCards && (
+            <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
+              
+              {currentCardIndex < openedCards.length ? (
+                <>
+                  <p className="text-white/60 font-black text-sm uppercase tracking-widest">
+                    Card {currentCardIndex + 1} of {openedCards.length}
+                  </p>
+                  
+                  {/* 3D Flip Card */}
+                  <FlipCard
+                    card={openedCards[currentCardIndex]}
+                    cardBackUrl={profile?.card_back_url || null}
+                    onReveal={() => {
+                      setRevealedCards(prev => [...prev, openedCards[currentCardIndex]]);
+                      setCurrentCardIndex(prev => prev + 1);
+                    }}
+                  />
+                </>
+              ) : (
+                // All revealed — show grid + summary
+                <div className="flex flex-col items-center gap-6 w-full">
+                  <p className="text-white font-black text-2xl uppercase tracking-widest">🎉 Pack Complete!</p>
+                  
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 w-full max-w-xl">
+                    {revealedCards.map((card, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="aspect-[3/4]"
+                      >
+                        <CardDisplay card={card} showQuantity={false} />
+                      </motion.div>
+                    ))}
                   </div>
-                  {/* Stack depth indicators */}
-                  {Array.from({length: Math.min(3, openedCards.length - currentCardIndex - 1)}).map((_, i) => (
-                    <div key={i}
-                      className="absolute inset-0 bg-indigo-800 border-4 border-white/50 rounded-2xl"
-                      style={{ transform: `translateY(${(i+1)*4}px) translateX(${(i+1)*2}px)`, zIndex: -(i+1) }}
-                    />
-                  ))}
-                </motion.div>
-              )}
 
-              {/* Revealed cards row */}
-              <div className="flex flex-wrap justify-center gap-4 max-w-4xl">
-                {revealedCards.map((card: any, i: number) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, scale: 0.5, y: -50 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ type: 'spring', stiffness: 300 }}
-                    className="w-28 h-40 relative rounded-xl overflow-hidden border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                  >
-                    <CardDisplay card={card} />
-                  </motion.div>
-                ))}
-              </div>
-
-              {currentCardIndex >= openedCards.length && (
-                <div className="flex flex-col items-center gap-4">
                   {openingSummary && (
-                    <div className="flex gap-4 bg-white/10 backdrop-blur-md p-4 rounded-xl border-2 border-white/20">
+                    <div className="flex gap-6 bg-white/10 px-6 py-3 rounded-xl border-2 border-white/20">
                       <div className="text-center">
                         <p className="text-[10px] font-black uppercase text-blue-300">XP Gained</p>
                         <p className="text-xl font-black text-white">+{openingSummary.xp_gained}</p>
@@ -496,8 +571,11 @@ export function Store() {
                       </div>
                     </div>
                   )}
-                  <button onClick={() => { setPackOpeningStep('idle'); setOpening(false); setOpenedCards(null); setOpeningSummary(null); setCurrentCardIndex(0); setRevealedCards([]); }}
-                    className="px-8 py-4 bg-white text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  
+                  <button
+                    onClick={() => { setPackOpeningStep('idle'); setOpening(false); setOpenedCards(null); setOpeningSummary(null); setCurrentCardIndex(0); setRevealedCards([]); }}
+                    className="px-8 py-4 bg-white text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  >
                     Done
                   </button>
                 </div>
