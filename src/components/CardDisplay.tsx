@@ -42,7 +42,8 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
   return (
     <div className={cn(
       'relative rounded-xl overflow-hidden border-4 aspect-[3/4] bg-black group',
-      cfg.border, cfg.glow, className
+      cfg.border, cfg.glow, className,
+      (card.is_foil || (card.foil_quantity ?? 0) > 0) && "ring-2 ring-yellow-400 animate-pulse"
     )}>
       {/* Art */}
       {card.is_video ? (
@@ -60,19 +61,19 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
       )}
 
       {/* Foil shimmer */}
-      {card.is_foil && (
+      {(card.is_foil || (card.foil_quantity ?? 0) > 0) && (
         <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-purple-500/10 to-white/20 pointer-events-none" />
       )}
 
       {/* ✅ RARITY BADGE — moved to TOP RIGHT, cooler styling */}
       <div className={cn(
         'absolute top-2 right-2 z-20 flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-full border-2 shadow-[2px_2px_0px_rgba(0,0,0,0.8)]',
-        card.is_foil
+        (card.is_foil || (card.foil_quantity ?? 0) > 0)
           ? 'bg-gradient-to-r from-yellow-300 to-pink-400 text-black border-yellow-600'
           : cfg.badge
       )}>
         <span>{cfg.icon}</span>
-        <span>{card.is_foil ? '✨ Foil' : card.rarity}</span>
+        <span>{(card.is_foil || (card.foil_quantity ?? 0) > 0) ? '✨ Foil' : card.rarity}</span>
       </div>
 
       {/* Quantity badge — top-left */}
@@ -84,8 +85,8 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
 
       {/* NEW badge */}
       {showNewBadge && card.is_new && (
-        <div className="absolute top-8 left-2 bg-yellow-400 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md border-2 border-black z-20 animate-bounce">
-          NEW
+        <div className="absolute top-1 left-1 bg-green-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full z-20 uppercase">
+          New
         </div>
       )}
 

@@ -111,12 +111,22 @@ export function Decks() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-black uppercase">{editingDeck.id ? 'Edit Deck' : 'New Deck'}</h1>
-          <div className="flex gap-2">
-            <button onClick={() => setEditingDeck(null)} className="px-4 py-2 bg-gray-200 text-black font-black rounded-xl border-2 border-black flex items-center gap-2">
+          <h1 className="text-3xl font-black uppercase text-[var(--text)]">{editingDeck.id ? 'Edit Deck' : 'New Deck'}</h1>
+          <div className="flex gap-2 items-center">
+            <div className={cn(
+              "px-3 py-1.5 rounded-lg border-2 font-black text-sm",
+              selectedCards.length === 20 ? "bg-green-400 text-black border-green-600" : "bg-yellow-400 text-black border-yellow-600"
+            )}>
+              {selectedCards.length}/20
+            </div>
+            <button onClick={() => setEditingDeck(null)} className="px-4 py-2 bg-[var(--bg)] text-[var(--text)] font-black rounded-xl border-2 border-[var(--border)] flex items-center gap-2">
               <X className="w-4 h-4" /> Cancel
             </button>
-            <button onClick={editingDeck.id ? handleUpdateDeck : handleCreateDeck} className="px-4 py-2 bg-blue-500 text-white font-black rounded-xl border-2 border-black flex items-center gap-2">
+            <button 
+              onClick={editingDeck.id ? handleUpdateDeck : handleCreateDeck} 
+              disabled={selectedCards.length !== 20}
+              className="px-4 py-2 bg-blue-500 disabled:opacity-50 text-white font-black rounded-xl border-2 border-[var(--border)] flex items-center gap-2"
+            >
               <Save className="w-4 h-4" /> Save Deck
             </button>
           </div>
@@ -128,12 +138,12 @@ export function Decks() {
             value={deckName}
             onChange={e => setDeckName(e.target.value)}
             placeholder="Deck Name"
-            className="flex-1 px-4 py-3 bg-white border-4 border-black rounded-xl font-bold"
+            className="flex-1 px-4 py-3 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl font-bold text-[var(--text)]"
           />
         </div>
 
         <div>
-          <h2 className="text-xl font-black uppercase mb-4">Select Cards ({selectedCards.length})</h2>
+          <h2 className="text-xl font-black uppercase mb-4 text-[var(--text)]">Select Cards ({selectedCards.length})</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {collection.map(card => {
               const isSelected = selectedCards.includes(card.id);
@@ -159,7 +169,7 @@ export function Decks() {
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-black text-black tracking-tight uppercase">My Decks</h1>
+        <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">My Decks</h1>
         <button 
           onClick={() => {
             setEditingDeck({});
@@ -167,23 +177,23 @@ export function Decks() {
             setSelectedCards([]);
             setLeaderId(null);
           }}
-          className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+          className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
         >
           <Plus className="w-5 h-5" /> New Deck
         </button>
       </div>
 
       {decks.length === 0 ? (
-        <div className="text-center py-20 bg-white border-4 border-black rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <h3 className="text-2xl font-black mb-2 uppercase">No Decks Yet</h3>
+        <div className="text-center py-20 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[8px_8px_0px_0px_var(--border)]">
+          <h3 className="text-2xl font-black mb-2 uppercase text-[var(--text)]">No Decks Yet</h3>
           <p className="text-slate-500 font-bold">Create your first deck to start battling!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {decks.map(deck => (
-            <div key={deck.id} className="bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col">
+            <div key={deck.id} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] flex flex-col">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-2xl font-black uppercase truncate">{deck.name}</h3>
+                <h3 className="text-2xl font-black uppercase truncate text-[var(--text)]">{deck.name}</h3>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => {
@@ -192,13 +202,13 @@ export function Decks() {
                       setSelectedCards(deck.cards?.map((c: any) => c.id) || []);
                       setLeaderId(deck.leader_id);
                     }}
-                    className="p-2 bg-yellow-400 hover:bg-yellow-500 text-black rounded-lg border-2 border-black"
+                    className="p-2 bg-yellow-400 hover:bg-yellow-500 text-black rounded-lg border-2 border-[var(--border)]"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={() => handleDeleteDeck(deck.id)}
-                    className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg border-2 border-black"
+                    className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg border-2 border-[var(--border)]"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -208,12 +218,12 @@ export function Decks() {
               
               <div className="flex -space-x-4 overflow-hidden py-2 mt-auto">
                 {deck.cards?.slice(0, 5).map((card: any, i: number) => (
-                  <div key={i} className="w-12 h-16 rounded border-2 border-black bg-gray-200 overflow-hidden inline-block shrink-0">
+                  <div key={i} className="w-12 h-16 rounded border-2 border-[var(--border)] bg-gray-200 overflow-hidden inline-block shrink-0">
                     <img src={card.image_url} alt={card.name} className="w-full h-full object-cover" />
                   </div>
                 ))}
                 {(deck.cards?.length || 0) > 5 && (
-                  <div className="w-12 h-16 rounded border-2 border-black bg-gray-100 flex items-center justify-center font-black text-xs shrink-0 z-10">
+                  <div className="w-12 h-16 rounded border-2 border-[var(--border)] bg-gray-100 flex items-center justify-center font-black text-xs shrink-0 z-10">
                     +{deck.cards.length - 5}
                   </div>
                 )}

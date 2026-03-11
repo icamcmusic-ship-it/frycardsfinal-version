@@ -89,7 +89,7 @@ export function Marketplace() {
       if (activeTab === 'watchlist') {
         fetchWatchlist();
       } else {
-        toast.success('Watchlist updated!');
+        toast.success('Watchlist updated!', { icon: '✨' });
       }
     } catch (err) {
       console.error('Error toggling watchlist:', err);
@@ -106,7 +106,7 @@ export function Marketplace() {
       });
       if (error) throw error;
       
-      toast.success(`Blocked ${username}`);
+      toast.success(`Blocked ${username}`, { icon: '🚫' });
       fetchListings(); // Refresh to hide their listings
     } catch (err) {
       console.error('Error blocking user:', err);
@@ -121,7 +121,7 @@ export function Marketplace() {
         p_listing_id: listingId
       });
       if (error) throw error;
-      toast.success('Listing cancelled!');
+      toast.success('Listing cancelled!', { icon: '🗑️' });
       fetchMyListings();
     } catch (err: any) {
       toast.error(err.message || 'Failed to cancel listing');
@@ -150,7 +150,7 @@ export function Marketplace() {
 
       if (error) throw error;
       
-      toast.success(`Successfully bought ${listing.card_name}!`);
+      toast.success(`Successfully bought ${listing.card_name}!`, { icon: '✨' });
       fetchListings();
       
       // Refresh profile to update gold balance
@@ -462,7 +462,7 @@ export function Marketplace() {
                           p_bid_gems: listing.currency === 'gems' ? bidAmount : 0
                         });
                         if (error) throw error;
-                        toast.success('Bid placed successfully!');
+                        toast.success('Bid placed successfully!', { icon: '🔨' });
                         fetchListings();
                       } catch (err: any) {
                         toast.error(err.message || 'Failed to place bid');

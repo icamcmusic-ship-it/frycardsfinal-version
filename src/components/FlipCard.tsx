@@ -28,10 +28,17 @@ export function FlipCard({
   };
 
   return (
-    <div
+    <motion.div
       className="relative w-44 h-64 cursor-pointer select-none"
       style={{ perspective: '1000px' }}
       onClick={handleClick}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      onDragEnd={(_, info) => {
+        if (Math.abs(info.offset.x) > 50 && !flipped) {
+          handleClick();
+        }
+      }}
     >
       <motion.div
         className="relative w-full h-full"
@@ -99,6 +106,6 @@ export function FlipCard({
           </div>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

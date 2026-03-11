@@ -103,7 +103,7 @@ export function Collection() {
       if (activeTab === 'wishlist') {
         fetchWishlist();
       } else {
-        toast.success('Wishlist updated!');
+        toast.success('Wishlist updated!', { icon: '✨' });
       }
     } catch (err) {
       console.error('Error toggling wishlist:', err);
@@ -178,7 +178,7 @@ export function Collection() {
       p_quantity: 1,
     });
     if (error) { toast.error(error.message); return; }
-    toast.success(`Sold for ${(data as any).gold_earned} Gold!`);
+    toast.success(`Sold for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
     fetchCollection(); // refresh
   };
 
@@ -191,7 +191,7 @@ export function Collection() {
       
       fetchCollection(); // Refresh
       
-      toast.success(`Successfully milled ${data.cards_milled} cards for ${data.gold_earned} Gold!`);
+      toast.success(`Successfully milled ${data.cards_milled} cards for ${data.gold_earned} Gold!`, { icon: '🪙' });
     } catch (err: any) {
       toast.error(err.message || 'Failed to bulk mill');
     }
@@ -271,7 +271,7 @@ export function Collection() {
                 onClick={async () => {
                   await supabase.rpc('mark_cards_seen');
                   setCards(prev => prev.map(c => ({ ...c, is_new: false })));
-                  toast.success('All cards marked as seen!');
+                  toast.success('All cards marked as seen!', { icon: '✨' });
                 }}
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
               >
@@ -288,6 +288,23 @@ export function Collection() {
             </>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {['all', 'common', 'uncommon', 'rare', 'super-rare', 'mythic', 'divine'].map((r) => (
+          <button
+            key={r}
+            onClick={() => setFilter(r)}
+            className={cn(
+              "px-4 py-1.5 rounded-full font-black text-xs uppercase border-2 transition-all",
+              filter === r 
+                ? "bg-[var(--text)] text-[var(--surface)] border-[var(--text)]" 
+                : "bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400"
+            )}
+          >
+            {r}
+          </button>
+        ))}
       </div>
 
       <div className="sticky top-16 z-30 bg-[var(--bg)]/90 backdrop-blur-sm py-4 border-b-2 border-[var(--border)] -mx-4 px-4 md:-mx-8 md:px-8">
@@ -429,15 +446,11 @@ export function Collection() {
             onClick={async () => {
               if (!confirm(`Are you sure you want to quicksell ${selectedCardIds.length} cards?`)) return;
               try {
-                for (const cardId of selectedCardIds) {
-                  const card = cards.find(c => c.id === cardId);
-                  if (card?.foil_quantity > 0) {
-                    await supabase.rpc('quicksell_card', { p_card_id: cardId, p_is_foil: true, p_quantity: 1 });
-                  } else {
-                    await supabase.rpc('quicksell_card', { p_card_id: cardId, p_is_foil: false, p_quantity: 1 });
-                  }
-                }
-                toast.success('Successfully sold cards!');
+                const { data, error } = await supabase.rpc('mill_bulk_duplicates', {
+                  p_card_ids: selectedCardIds
+                });
+                if (error) throw error;
+                toast.success(`Sold ${data.count} cards for ${data.gold_earned} gold!`, { icon: '🪙' });
                 setSelectedCardIds([]);
                 setIsBatchMode(false);
                 fetchCollection();

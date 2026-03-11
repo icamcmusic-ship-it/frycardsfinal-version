@@ -23,7 +23,15 @@ import { Loader2 } from 'lucide-react';
 
 export default function App() {
   const { user, initialized, setUser, setSession, setInitialized } = useAuthStore();
-  const { theme, gameStyle } = useThemeStore();
+  const { theme, gameStyle, setGameStyle } = useThemeStore();
+
+  useEffect(() => {
+    supabase.rpc('get_user_settings').then(({ data }) => {
+      if (data?.game_style) {
+        setGameStyle(data.game_style);
+      }
+    });
+  }, [setGameStyle]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);

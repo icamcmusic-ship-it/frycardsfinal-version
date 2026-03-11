@@ -47,7 +47,7 @@ export function Trades() {
       // Check for application-level error
       if (data && data.success === false) throw new Error(data.error);
       fetchTrades();
-      toast.success(accept ? 'Trade accepted!' : 'Trade declined!');
+      toast.success(accept ? 'Trade accepted!' : 'Trade declined!', { icon: accept ? '✅' : '❌' });
     } catch (err: any) {
       toast.error(err.message || 'Failed to respond to trade');
     }
@@ -57,7 +57,7 @@ export function Trades() {
     try {
       await supabase.rpc('cancel_trade', { p_offer_id: offerId });
       fetchTrades();
-      toast.success('Trade cancelled');
+      toast.success('Trade cancelled', { icon: '🗑️' });
     } catch (err: any) {
       toast.error(err.message || 'Failed to cancel trade');
     }
@@ -76,28 +76,11 @@ export function Trades() {
         p_offered_gems: offeredGems,
         p_requested_gold: 0,
         p_requested_gems: 0,
+        p_message: tradeMessage,
       });
       if (error) throw error;
       
-      // If we have a message and the RPC returned the trade ID, update it
-      if (tradeMessage && tradeId) {
-        await supabase.from('trade_offers').update({ message: tradeMessage }).eq('id', tradeId);
-      } else if (tradeMessage) {
-        // Fallback: try to find the most recent trade offer we just created
-        const { data: recentTrade } = await supabase
-          .from('trade_offers')
-          .select('id')
-          .eq('receiver_id', receiverId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-          
-        if (recentTrade) {
-          await supabase.from('trade_offers').update({ message: tradeMessage }).eq('id', recentTrade.id);
-        }
-      }
-
-      toast.success('Trade offer sent!');
+      toast.success('Trade offer sent!', { icon: '🤝' });
       setShowCreate(false);
       setOfferedIds([]);
       setRequestedIds([]);

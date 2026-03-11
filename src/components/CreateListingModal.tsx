@@ -22,6 +22,39 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
   const [duration, setDuration] = useState(24);
   const [isFoil, setIsFoil] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [marketStats, setMarketStats] = useState<{ min_gold: number; min_gems: number; count: number } | null>(null);
+
+  useEffect(() => {
+    if (selectedCard) {
+      fetchMarketStats();
+    }
+  }, [selectedCard]);
+
+  const fetchMarketStats = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('market_listings')
+        .select('price_gold, price_gems')
+        .eq('card_id', selectedCard.card_id || selectedCard.id)
+        .eq('status', 'active');
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const goldPrices = data.map(l => l.price_gold).filter(p => p > 0);
+        const gemPrices = data.map(l => l.price_gems).filter(p => p > 0);
+        setMarketStats({
+          min_gold: goldPrices.length > 0 ? Math.min(...goldPrices) : 0,
+          min_gems: gemPrices.length > 0 ? Math.min(...gemPrices) : 0,
+          count: data.length
+        });
+      } else {
+        setMarketStats(null);
+      }
+    } catch (err) {
+      console.error('Error fetching market stats:', err);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -108,6 +141,15 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
               <div>
                 <p className="font-black text-lg text-[var(--text)]">{selectedCard.name}</p>
                 <button onClick={() => setSelectedCard(null)} className="text-blue-500 font-bold text-sm underline">Change Card</button>
+                
+                {marketStats && (
+                  <div className="mt-2 p-2 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                    <p className="text-[10px] font-black uppercase text-blue-600 mb-1">Market Insight</p>
+                    <p className="text-xs font-bold text-blue-800">
+                      {marketStats.count} active listings. Lowest: {marketStats.min_gold > 0 ? `${marketStats.min_gold} Gold` : ''} {marketStats.min_gems > 0 ? `${marketStats.min_gems} Gems` : ''}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

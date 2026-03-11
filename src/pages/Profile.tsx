@@ -92,6 +92,12 @@ export function Profile() {
     }
   };
 
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/profile/${profile?.id}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Profile link copied to clipboard!', { icon: '🔗' });
+  };
+
   if (!profile) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -153,6 +159,13 @@ export function Profile() {
                 </div>
 
                 <div className="flex gap-3">
+                  <button 
+                    onClick={handleCopyLink}
+                    className="px-4 py-2 bg-[var(--bg)] hover:bg-slate-50 text-[var(--text)] font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+                  >
+                    <Plus className="w-5 h-5 rotate-45" />
+                    Copy Link
+                  </button>
                   {editing ? (
                     <>
                       <button 
