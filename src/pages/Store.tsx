@@ -51,8 +51,14 @@ export function Store() {
   };
 
   const fetchPacks = async () => {
-    const { data } = await supabase.rpc('get_available_packs');
-    setPacks(data || []);
+    try {
+      const { data, error } = await supabase.rpc('get_available_packs');
+      if (error) throw error;
+      setPacks(data || []);
+    } catch (err) {
+      console.error('Error fetching packs:', err);
+      toast.error('Failed to load packs');
+    }
   };
 
   const fetchShopItems = async () => {
@@ -230,109 +236,119 @@ export function Store() {
 
       {/* Content based on activeTab */}
       {activeTab === 'packs' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {packs.map((pack) => {
-            const canAfford = pack.cost_gold
-              ? (profile?.gold_balance ?? 0) >= pack.cost_gold
-              : (profile?.gem_balance ?? 0) >= (pack.cost_gems ?? 0);
+        packs.length === 0 ? (
+          <EmptyState 
+            icon={PackageOpen}
+            title="No packs available"
+            description="Check back later for new pack releases!"
+            ctaText="Back to Home"
+            ctaPath="/"
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {packs.map((pack) => {
+              const canAfford = pack.cost_gold
+                ? (profile?.gold_balance ?? 0) >= pack.cost_gold
+                : (profile?.gem_balance ?? 0) >= (pack.cost_gems ?? 0);
 
-            return (
-            <motion.div 
-              key={pack.id}
-              whileHover={{ y: -4, rotate: -1 }}
-              className={cn("bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col", !canAfford && "opacity-60")}
-            >
-              <div className="aspect-[4/3] bg-blue-100 flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]">
-                <div className="w-32 aspect-[3/4] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gradient-to-b from-slate-700 to-slate-900 relative transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)]">
-                  <img
-                    src={pack.image_url}
-                    alt={pack.name}
-                    className="w-full h-full object-cover relative z-10"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                    referrerPolicy="no-referrer"
-                    loading="lazy"
-                  />
-                  {/* Fallback pack art shown when image fails */}
-                  <div className="absolute inset-0 flex items-center justify-center z-0">
-                    <PackageOpen className="w-16 h-16 text-white/30" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 flex flex-col flex-1">
-                <h3 className="text-2xl font-black text-[var(--text)] mb-2 uppercase">{pack.name}</h3>
-                {pack.next_pity_in !== undefined && (
-                  <p className="text-[10px] font-black uppercase text-blue-500 mb-1">
-                    Pity in {pack.next_pity_in} packs
-                  </p>
-                )}
-                <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
-                
-                <button onClick={() => setShowOdds(prev => ({...prev, [pack.id]: !prev[pack.id]}))}
-                  className="text-xs text-slate-500 font-bold underline mt-1 mb-2">
-                  {showOdds[pack.id] ? 'Hide Odds' : 'View Odds'}
-                </button>
-                {showOdds[pack.id] && (
-                  <div className="mb-4 space-y-1 text-xs font-bold border-t border-[var(--border)] pt-2">
-                    {PACK_ODDS.map(o => (
-                      <div key={o.rarity} className="flex justify-between">
-                        <span className={o.color}>{o.rarity}</span>
-                        <span className="text-[var(--text)]">{o.pct}</span>
+              return (
+                <motion.div 
+                  key={pack.id}
+                  whileHover={{ y: -4, rotate: -1 }}
+                  className={cn("bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col", !canAfford && "opacity-60")}
+                >
+                  <div className="aspect-[4/3] bg-blue-100 flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]">
+                    <div className="w-32 aspect-[3/4] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gradient-to-b from-slate-700 to-slate-900 relative transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)]">
+                      <img
+                        src={pack.image_url}
+                        alt={pack.name}
+                        className="w-full h-full object-cover relative z-10"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                      />
+                      {/* Fallback pack art shown when image fails */}
+                      <div className="absolute inset-0 flex items-center justify-center z-0">
+                        <PackageOpen className="w-16 h-16 text-white/30" />
                       </div>
-                    ))}
-                    {pack.foil_chance && <div className="flex justify-between text-yellow-600"><span>Foil Chance</span><span>{pack.foil_chance}%</span></div>}
+                    </div>
                   </div>
-                )}
-                
-                <div className="flex flex-col gap-3 mt-auto">
-                  {pack.cost_gold > 0 && (
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleOpenPack(pack.id, false, pack.image_url)}
-                        disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
-                        className="flex-[2] bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
-                      >
-                        <Coins className="w-5 h-5 text-yellow-700" />
-                        Open
-                      </button>
-                      <button 
-                        onClick={() => handleBuyToInventory(pack.id, false)}
-                        disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
-                        className="flex-1 bg-[var(--bg)] hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text)] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center"
-                        title="Buy to Inventory"
-                      >
-                        Stash
-                      </button>
+
+                  <div className="p-6 flex flex-col flex-1">
+                    <h3 className="text-2xl font-black text-[var(--text)] mb-2 uppercase">{pack.name}</h3>
+                    {pack.next_pity_in !== undefined && (
+                      <p className="text-[10px] font-black uppercase text-blue-500 mb-1">
+                        Pity in {pack.next_pity_in} packs
+                      </p>
+                    )}
+                    <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
+                    
+                    <button onClick={() => setShowOdds(prev => ({...prev, [pack.id]: !prev[pack.id]}))}
+                      className="text-xs text-slate-500 font-bold underline mt-1 mb-2">
+                      {showOdds[pack.id] ? 'Hide Odds' : 'View Odds'}
+                    </button>
+                    {showOdds[pack.id] && (
+                      <div className="mb-4 space-y-1 text-xs font-bold border-t border-[var(--border)] pt-2">
+                        {PACK_ODDS.map(o => (
+                          <div key={o.rarity} className="flex justify-between">
+                            <span className={o.color}>{o.rarity}</span>
+                            <span className="text-[var(--text)]">{o.pct}</span>
+                          </div>
+                        ))}
+                        {pack.foil_chance && <div className="flex justify-between text-yellow-600"><span>Foil Chance</span><span>{pack.foil_chance}%</span></div>}
+                      </div>
+                    )}
+                    
+                    <div className="flex flex-col gap-3 mt-auto">
+                      {pack.cost_gold > 0 && (
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleOpenPack(pack.id, false, pack.image_url)}
+                            disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
+                            className="flex-[2] bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                          >
+                            <Coins className="w-5 h-5 text-yellow-700" />
+                            Open
+                          </button>
+                          <button 
+                            onClick={() => handleBuyToInventory(pack.id, false)}
+                            disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
+                            className="flex-1 bg-[var(--bg)] hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text)] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center"
+                            title="Buy to Inventory"
+                          >
+                            Stash
+                          </button>
+                        </div>
+                      )}
+                      {pack.cost_gems > 0 && (
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleOpenPack(pack.id, true, pack.image_url)}
+                            disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
+                            className="flex-[2] bg-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                          >
+                            <Gem className="w-5 h-5 text-emerald-700" />
+                            Open
+                          </button>
+                          <button 
+                            onClick={() => handleBuyToInventory(pack.id, true)}
+                            disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
+                            className="flex-1 bg-[var(--bg)] hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text)] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center"
+                            title="Buy to Inventory"
+                          >
+                            Stash
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {pack.cost_gems > 0 && (
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleOpenPack(pack.id, true, pack.image_url)}
-                        disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
-                        className="flex-[2] bg-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
-                      >
-                        <Gem className="w-5 h-5 text-emerald-700" />
-                        Open
-                      </button>
-                      <button 
-                        onClick={() => handleBuyToInventory(pack.id, true)}
-                        disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
-                        className="flex-1 bg-[var(--bg)] hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text)] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center"
-                        title="Buy to Inventory"
-                      >
-                        Stash
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-        </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )
       )}
 
       {activeTab === 'banners' && (
