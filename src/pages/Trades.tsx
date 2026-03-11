@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { ClickableUsername } from '../components/ClickableUsername';
 import { Loader2, ArrowRightLeft, Check, X, Trash2, Plus, Handshake } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
@@ -142,12 +143,8 @@ export function Trades() {
               {myCards.map(c => (
                 <button key={c.id} onClick={() => toggleCard(c.id, offeredIds, setOfferedIds)}
                   className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)]", offeredIds.includes(c.id) ? "border-blue-500 bg-blue-50" : "border-[var(--border)]")}>
-                    {c.is_video ? (
-                      <video src={c.image_url} autoPlay muted loop playsInline className="w-full aspect-[3/4] object-cover rounded" />
-                    ) : (
-                      <img src={c.image_url} alt={c.name} className="w-full aspect-[3/4] object-cover rounded" />
-                    )}
-                    <p className="text-[10px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
+                  <CardDisplay card={c} showQuantity={false} showNewBadge={false} />
+                  <p className="text-[10px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
                 </button>
               ))}
             </div>

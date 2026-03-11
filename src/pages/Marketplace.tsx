@@ -334,18 +334,6 @@ export function Marketplace() {
                 'border-slate-400'
               )}
             >
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 p-6 flex flex-col justify-center items-center text-white text-center">
-                <div className="text-center mb-4">
-                  <p className="text-white font-black text-sm uppercase tracking-widest">{listing.card_name}</p>
-                  <p className="text-gray-300 text-xs font-bold mt-1">{listing.card_rarity} · {listing.card.card_type}</p>
-                  {listing.card.flavor_text && (
-                    <div className="mt-4 p-3 bg-white/10 border border-white/20 rounded-lg backdrop-blur-sm">
-                      <p className="text-gray-200 text-[11px] italic leading-snug">"{listing.card.flavor_text}"</p>
-                    </div>
-                  )}
-                </div>
-              </div>
               <div className="flex justify-between items-start">
                 <div>
                   <div className={cn(

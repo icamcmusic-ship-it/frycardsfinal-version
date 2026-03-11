@@ -5,6 +5,61 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+/* RETRO (default) — bold borders, chunky fonts, yellow accents */
+[data-style="retro"] {
+  --card-radius: 1rem;
+  --border-width: 4px;
+  --shadow-size: 6px;
+  --font-heading: 'Black Han Sans', sans-serif;
+  --anim-speed: 1;
+}
+
+/* NEON — glowing borders, dark base, electric colors */
+[data-style="neon"] {
+  --card-radius: 0.5rem;
+  --border-width: 2px;
+  --shadow-size: 0px;
+  /* Override surface/bg for neon feel */
+  --bg: #0a0a1a;
+  --surface: #111128;
+  --border: #6366f1;
+  --text: #e0e0ff;
+  --anim-speed: 0.7;
+}
+[data-style="neon"] .border-4 { border-color: #6366f1; box-shadow: 0 0 10px #6366f180; }
+
+/* MINIMAL — no heavy shadows, thin borders, clean */
+[data-style="minimal"] {
+  --card-radius: 0.75rem;
+  --border-width: 1px;
+  --shadow-size: 0px;
+  --anim-speed: 1.5;
+}
+[data-style="minimal"] .shadow-\[8px_8px_0px_0px_var\(--border\)\] { box-shadow: none !important; }
+[data-style="minimal"] .border-4 { border-width: 1px; }
+
+/* FANTASY — warm, parchment feel, ornate */
+[data-style="fantasy"] {
+  --card-radius: 1.5rem;
+  --border-width: 3px;
+  --bg: #fdf6e3;
+  --surface: #fef9ed;
+  --border: #8B6914;
+  --text: #3d2b00;
+  --anim-speed: 1.2;
+}
+
+/* DARK — sleek dark mode with subtle purple tones */
+[data-style="dark"] {
+  --card-radius: 0.75rem;
+  --border-width: 2px;
+  --bg: #0f0f13;
+  --surface: #1a1a24;
+  --border: #2d2d45;
+  --text: #d1d5db;
+  --anim-speed: 0.9;
+}
+
 :root, [data-theme="light"] {
   --bg: #fefce8;        /* yellow-50 */
   --surface: #ffffff;

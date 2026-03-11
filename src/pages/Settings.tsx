@@ -3,19 +3,37 @@ import { supabase } from '../lib/supabase';
 import { useThemeStore } from '../stores/themeStore';
 import { Loader2, Palette, RefreshCw, AlertTriangle, Volume2, VolumeX, Music } from 'lucide-react';
 import toast from 'react-hot-toast';
-
+import { cn } from '../lib/utils';
 import { useProfileStore } from '../stores/profileStore';
 
 export function Settings() {
   const { profile } = useProfileStore();
   const { theme, setTheme } = useThemeStore();
+  const { gameStyle, setGameStyle } = useThemeStore();
   const [resetting, setResetting] = useState(false);
   const [settings, setSettings] = useState({
     master_volume: 80,
-    music_volume: 50,
+    music_volume: 60,
     sfx_volume: 70,
-    audio_enabled: true
+    audio_enabled: true,
+    sfx_enabled: true,
+    music_enabled: true,
+    low_perf_mode: false,
+    notifications_enabled: true,
+    trade_notifications: true,
+    auction_notifications: true,
+    friend_notifications: true,
+    show_online_status: true,
+    game_style: 'retro',
   });
+
+  const GAME_STYLES = [
+    { id: 'retro',   label: 'Retro',   emoji: '🎮', desc: 'Bold borders, chunky pop art feel' },
+    { id: 'neon',    label: 'Neon',    emoji: '⚡', desc: 'Dark base with glowing electric accents' },
+    { id: 'minimal', label: 'Minimal', emoji: '🪄', desc: 'Clean, no shadows, quiet UI' },
+    { id: 'fantasy', label: 'Fantasy', emoji: '🏰', desc: 'Warm parchment, ornate gold borders' },
+    { id: 'dark',    label: 'Dark',    emoji: '🌑', desc: 'Sleek dark with purple tones' },
+  ];
 
   useEffect(() => {
     fetchSettings();
@@ -27,6 +45,7 @@ export function Settings() {
       if (error) throw error;
       if (data) {
         setSettings(data);
+        if (data.game_style) setGameStyle(data.game_style as any);
       }
     } catch (err) {
       console.error('Error fetching settings:', err);
@@ -93,6 +112,32 @@ export function Settings() {
         </div>
       </div>
 
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
+        <h2 className="text-xl font-black uppercase text-[var(--text)] mb-4">🎨 Game Style</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {GAME_STYLES.map(style => (
+            <button
+              key={style.id}
+              onClick={() => {
+                setGameStyle(style.id as any);
+                updateSetting('game_style', style.id);
+              }}
+              className={cn(
+                "p-4 rounded-xl border-4 text-left transition-all",
+                gameStyle === style.id
+                  ? "border-blue-500 bg-blue-50 shadow-[4px_4px_0px_0px_#3b82f6]"
+                  : "border-[var(--border)] bg-[var(--bg)] hover:border-blue-300"
+              )}
+            >
+              <p className="text-2xl mb-1">{style.emoji}</p>
+              <p className="font-black text-[var(--text)]">{style.label}</p>
+              <p className="text-xs text-slate-500 font-bold mt-1">{style.desc}</p>
+              {gameStyle === style.id && <p className="text-xs font-black text-blue-500 mt-2">✓ Active</p>}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Audio Settings */}
       <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] space-y-6">
         <h2 className="text-2xl font-black uppercase flex items-center gap-2 text-[var(--text)]">
@@ -146,6 +191,39 @@ export function Settings() {
               onChange={(e) => updateSetting('sfx_volume', parseInt(e.target.value))}
               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* General Settings */}
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] space-y-6">
+        <h2 className="text-2xl font-black uppercase flex items-center gap-2 text-[var(--text)]">
+          <Palette className="w-6 h-6" /> General
+        </h2>
+        <div className="space-y-4">
+          {[
+            { key: 'sfx_enabled', label: 'SFX Enabled' },
+            { key: 'music_enabled', label: 'Music Enabled' },
+            { key: 'low_perf_mode', label: 'Low Performance Mode' },
+            { key: 'notifications_enabled', label: 'Enable Notifications' },
+            { key: 'trade_notifications', label: 'Trade Notifications' },
+            { key: 'auction_notifications', label: 'Auction Notifications' },
+            { key: 'friend_notifications', label: 'Friend Notifications' },
+            { key: 'show_online_status', label: 'Show Online Status' },
+          ].map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between">
+              <span className="font-bold text-[var(--text)]">{label}</span>
+              <button 
+                onClick={() => updateSetting(key, !(settings as any)[key])}
+                className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${(settings as any)[key] ? 'bg-green-400' : 'bg-slate-300'}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${(settings as any)[key] ? 'left-6' : 'left-1'}`} />
+              </button>
+            </div>
+          ))}
+
+          <div className="pt-4 border-t-2 border-[var(--border)]">
+            {/* Removed duplicate Game Style section */}
           </div>
         </div>
       </div>

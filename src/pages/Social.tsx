@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
+import { ClickableUsername } from '../components/ClickableUsername';
 import { Loader2, Search, UserPlus, UserMinus, Check, X, Users, UserCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -109,7 +110,7 @@ export function Social() {
           <h2 className="text-xl font-black uppercase mb-4 text-[var(--text)]">Search Results</h2>
           {searchResults.map(user => (
             <div key={user.id} className="flex justify-between items-center p-2 border-b-2 border-slate-100">
-              <Link to={`/profile/${user.id}`} className="font-bold hover:underline text-blue-600">{user.username}</Link>
+              <ClickableUsername userId={user.id} username={user.username} className="text-blue-600" />
               <div className="flex gap-2">
                 <button onClick={() => toggleFollow(user.id)} className="p-2 bg-blue-400 rounded-lg border-2 border-[var(--border)] text-black" title="Follow/Unfollow"><UserCheck className="w-5 h-5" /></button>
                 <button onClick={() => sendRequest(user.id)} className="p-2 bg-green-400 rounded-lg border-2 border-[var(--border)] text-black" title="Add Friend"><UserPlus className="w-5 h-5" /></button>
@@ -124,7 +125,7 @@ export function Social() {
           <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 text-[var(--text)]"><Users /> Friends</h2>
           {friends.map(friend => (
             <div key={friend.id} className="flex justify-between items-center p-2 border-b-2 border-slate-100">
-              <Link to={`/profile/${friend.friend_id}`} className="font-bold hover:underline text-blue-600">{friend.username}</Link>
+              <ClickableUsername userId={friend.friend_id} username={friend.username} className="text-blue-600" />
             </div>
           ))}
         </div>
@@ -133,7 +134,7 @@ export function Social() {
           <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 text-[var(--text)]"><UserCheck /> Pending Requests</h2>
           {pendingRequests.map(req => (
             <div key={req.id} className="flex justify-between items-center p-2 border-b-2 border-slate-100">
-              <span className="font-bold text-[var(--text)]">{req.from_username}</span>
+              <ClickableUsername userId={req.from_id} username={req.from_username} className="text-[var(--text)]" />
               <div className="flex gap-2">
                 <button onClick={() => respondRequest(req.id, true)} className="p-2 bg-green-400 rounded-lg border-2 border-[var(--border)] text-black"><Check className="w-5 h-5" /></button>
                 <button onClick={() => respondRequest(req.id, false)} className="p-2 bg-red-400 rounded-lg border-2 border-[var(--border)] text-white"><X className="w-5 h-5" /></button>

@@ -8,6 +8,7 @@ import { cn, getRarityStyles } from '../lib/utils';
 import { EmptyState } from '../components/EmptyState';
 import { CardDisplay } from '../components/CardDisplay';
 import { CreateListingModal } from '../components/CreateListingModal';
+import { Card3DModal } from '../components/Card3DModal';
 
 export function Collection() {
   const { profile } = useProfileStore();
@@ -51,7 +52,7 @@ export function Collection() {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_user_collection', {
         p_user_id: profile?.id,
-        p_rarity: filter === 'all' ? null : filter.charAt(0).toUpperCase() + filter.slice(1),
+        p_rarity: filter === 'all' ? null : filter.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-'),
         p_sort_by: 'rarity',
         p_limit: 1000,
         p_offset: 0
@@ -320,12 +321,13 @@ export function Collection() {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_var(--border)]"
           >
             <option value="all">All Rarities</option>
             <option value="common">Common</option>
             <option value="uncommon">Uncommon</option>
             <option value="rare">Rare</option>
+            <option value="super-rare">Super-Rare</option>
             <option value="mythic">Mythic</option>
             <option value="divine">Divine</option>
           </select>
@@ -414,85 +416,11 @@ export function Collection() {
       )}
 
       {selectedCard && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSelectedCard(null)}>
-          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 max-w-2xl w-full shadow-[8px_8px_0px_0px_var(--border)]" onClick={e => e.stopPropagation()}>
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* Left: Large card art */}
-              <div className="w-full md:w-64 shrink-0 aspect-[3/4] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gray-200">
-                {selectedCard.is_video
-                  ? <video src={selectedCard.image_url} autoPlay muted loop className="w-full h-full object-cover" />
-                  : <img src={selectedCard.image_url} alt={selectedCard.name} className="w-full h-full object-cover" />}
-              </div>
-              
-              {/* Right: Stats */}
-              <div className="flex-1 space-y-4">
-                <div>
-                  <h2 className="text-2xl font-black uppercase text-[var(--text)]">{selectedCard.name}</h2>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="inline-block text-xs font-black px-2 py-1 rounded border-2 border-[var(--border)] bg-gray-100 text-black">{selectedCard.rarity}</span>
-                    <span className="text-sm font-bold text-slate-500">{selectedCard.card_type}{selectedCard.sub_type ? ` · ${selectedCard.sub_type}` : ''}</span>
-                  </div>
-                  {selectedCard.element && <p className="text-sm font-bold text-blue-600 mt-1">{selectedCard.element}</p>}
-                  {selectedCard.flavor_text && <p className="text-sm italic text-slate-400 mt-2">"{selectedCard.flavor_text}"</p>}
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  {selectedCard.hp != null && <div className="bg-red-50 border-2 border-red-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">HP</p><p className="font-black text-black">{selectedCard.hp}</p></div>}
-                  {selectedCard.attack != null && <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">ATK</p><p className="font-black text-black">{selectedCard.attack}</p></div>}
-                  {selectedCard.defense != null && <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">DEF</p><p className="font-black text-black">{selectedCard.defense}</p></div>}
-                  {selectedCard.dice_cost != null && <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">Cost</p><p className="font-black text-black">{selectedCard.dice_cost}</p></div>}
-                  {selectedCard.bounty != null && <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-2"><p className="text-xs font-bold text-slate-500">Bounty</p><p className="font-black text-black">{selectedCard.bounty}</p></div>}
-                </div>
-
-                {selectedCard.ability_text && (
-                  <div className="p-3 bg-purple-50 border-2 border-purple-300 rounded-lg">
-                    <p className="text-xs font-black text-purple-700 uppercase mb-1">{selectedCard.ability_type || 'Ability'}</p>
-                    <p className="text-sm font-bold text-black">{selectedCard.ability_text}</p>
-                  </div>
-                )}
-
-                {selectedCard.keywords?.length > 0 && (
-                  <div className="flex gap-2 flex-wrap">
-                    {selectedCard.keywords.map((kw: string) => (
-                      <span key={kw} className="text-xs font-black bg-gray-100 border border-[var(--border)] rounded px-2 py-0.5 text-black">{kw}</span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Foil info */}
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="bg-gray-50 border border-[var(--border)] rounded p-2 text-center">
-                    <p className="text-xs text-slate-500">Normal</p>
-                    <p className="font-black text-black">x{selectedCard.quantity ?? 0}</p>
-                  </div>
-                  {selectedCard.foil_quantity > 0 && (
-                    <div className="bg-yellow-50 border border-yellow-400 rounded p-2 text-center">
-                      <p className="text-xs text-yellow-600">✨ Foil</p>
-                      <p className="font-black text-black">x{selectedCard.foil_quantity}</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  <button 
-                    onClick={async () => {
-                      await handleToggleLock(selectedCard.id);
-                      setSelectedCard({ ...selectedCard, is_locked: !selectedCard.is_locked });
-                    }}
-                    className={cn(
-                      "flex-1 py-3 font-black rounded-xl border-4 border-black transition-colors flex items-center justify-center gap-2",
-                      selectedCard.is_locked ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-600"
-                    )}
-                  >
-                    {selectedCard.is_locked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
-                    {selectedCard.is_locked ? 'Unlock Card' : 'Lock Card'}
-                  </button>
-                  <button onClick={() => setSelectedCard(null)} className="flex-1 py-3 bg-black text-white font-black rounded-xl border-4 border-black hover:bg-gray-800 transition-colors">Close</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card3DModal
+          card={selectedCard}
+          cardBackUrl={profile?.card_back_url || null}
+          onClose={() => setSelectedCard(null)}
+        />
       )}
       {isBatchMode && selectedCardIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[var(--surface)] border-4 border-[var(--border)] p-4 rounded-2xl shadow-[8px_8px_0px_0px_var(--border)] z-50 flex items-center gap-4">

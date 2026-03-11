@@ -243,15 +243,21 @@ export function Store() {
               className={cn("bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col", !canAfford && "opacity-60")}
             >
               <div className="aspect-[4/3] bg-blue-100 flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]">
-                <div className="w-32 h-48 bg-red-500 rounded-xl border-4 border-[var(--border)] flex items-center justify-center transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)] overflow-hidden">
-                  <img 
-                    src={pack.image_url} 
+                <div className="w-32 aspect-[3/4] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gradient-to-b from-slate-700 to-slate-900 relative transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)]">
+                  <img
+                    src={pack.image_url}
                     alt={pack.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/fallback-card.png'; }}
+                    className="w-full h-full object-cover relative z-10"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                     referrerPolicy="no-referrer"
                     loading="lazy"
                   />
+                  {/* Fallback pack art shown when image fails */}
+                  <div className="absolute inset-0 flex items-center justify-center z-0">
+                    <PackageOpen className="w-16 h-16 text-white/30" />
+                  </div>
                 </div>
               </div>
 
@@ -420,12 +426,12 @@ export function Store() {
                 {inventory.map(inv => (
                   <div key={inv.pack_type_id} className="border-4 border-[var(--border)] bg-[var(--bg)] rounded-xl p-3 text-center transition-all">
                     <div className="aspect-[3/4] rounded overflow-hidden mb-2 border-2 border-[var(--border)] bg-gray-200">
-                      <img src={inv.image_url} alt={inv.name} className="w-full h-full object-cover" />
+                      <img src={(inv.pack_types as any)?.image_url} alt={(inv.pack_types as any)?.name} className="w-full h-full object-cover" />
                     </div>
-                    <p className="text-xs font-black uppercase text-[var(--text)]">{inv.name}</p>
+                    <p className="text-xs font-black uppercase text-[var(--text)]">{(inv.pack_types as any)?.name}</p>
                     <p className="text-xs font-bold text-slate-500 mb-2">Quantity: {inv.quantity}</p>
                     <button 
-                      onClick={() => handleOpenFromInventory(inv.pack_type_id, inv.image_url)}
+                      onClick={() => handleOpenFromInventory(inv.pack_type_id, (inv.pack_types as any)?.image_url)}
                       disabled={opening}
                       className="w-full py-2 bg-red-500 text-white text-xs font-black rounded border-2 border-black hover:bg-red-600 disabled:opacity-50"
                     >

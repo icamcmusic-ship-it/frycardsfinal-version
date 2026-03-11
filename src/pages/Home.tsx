@@ -190,23 +190,34 @@ export function Home() {
           <p className="text-xl text-black font-bold mb-8 bg-white/50 inline-block px-3 py-1 border-2 border-black rounded-lg transform -rotate-1">
             Level {profile.level} • {profile.xp} XP
           </p>
+          
+          {profile.daily_streak > 0 && (
+            <p className="text-sm font-bold text-black bg-orange-300 inline-flex items-center gap-1 px-3 py-1 border-2 border-black rounded-lg mt-1 mb-8 transform rotate-1">
+              🔥 {profile.daily_streak} Day Streak
+            </p>
+          )}
 
           <div className="flex flex-wrap gap-4 mt-8">
             <Link 
-              to="/packs"
+              to="/store"
               className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
             >
               <PackageOpen className="w-6 h-6" />
               Open Packs
             </Link>
             {isDailyClaimable() && (
-              <button 
-                onClick={handleClaimDailyReward}
-                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
-              >
-                <Trophy className="w-6 h-6" />
-                Claim Daily Reward
-              </button>
+              <div className="flex flex-col items-start gap-1">
+                {profile.daily_streak > 0 && (
+                  <p className="text-xs font-black text-black">🔥 {profile.daily_streak} day streak — keep it going!</p>
+                )}
+                <button 
+                  onClick={handleClaimDailyReward}
+                  className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+                >
+                  <Trophy className="w-6 h-6" />
+                  Claim Daily Reward
+                </button>
+              </div>
             )}
           </div>
         </div>

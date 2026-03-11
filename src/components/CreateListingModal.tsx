@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Loader2, Coins, Gem, Clock, Package } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { CardDisplay } from './CardDisplay';
 import toast from 'react-hot-toast';
 
 interface CreateListingModalProps {
@@ -91,14 +92,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
             {loading ? <Loader2 className="animate-spin text-[var(--text)]" /> : collection.map(card => (
               <button key={card.id} onClick={() => setSelectedCard(card)} className="relative border-2 border-[var(--border)] rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 bg-[var(--bg)]">
-                {card.foil_quantity > 0 && (
-                  <span className="absolute top-1 left-1 bg-yellow-400 text-black text-[8px] font-black px-1 rounded z-10">FOIL</span>
-                )}
-                {card.is_video ? (
-                  <video src={card.image_url} autoPlay muted loop playsInline className="w-full aspect-[3/4] object-cover rounded" />
-                ) : (
-                  <img src={card.image_url} alt={card.name} className="w-full aspect-[3/4] object-cover rounded" />
-                )}
+                <CardDisplay card={card} showQuantity={false} showNewBadge={false} />
                 <p className="text-xs font-bold mt-1 truncate text-[var(--text)]">{card.name}</p>
               </button>
             ))}

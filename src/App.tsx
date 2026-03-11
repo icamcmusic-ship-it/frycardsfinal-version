@@ -23,11 +23,12 @@ import { Loader2 } from 'lucide-react';
 
 export default function App() {
   const { user, initialized, setUser, setSession, setInitialized } = useAuthStore();
-  const { theme } = useThemeStore();
+  const { theme, gameStyle } = useThemeStore();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-style', gameStyle);
+  }, [theme, gameStyle]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

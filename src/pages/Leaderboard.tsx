@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { ClickableUsername } from '../components/ClickableUsername';
 import { Loader2, Trophy, Package, LayoutGrid } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -56,7 +57,7 @@ export function Leaderboard() {
               {entry.avatar_url && (
                 <img src={entry.avatar_url} className="w-8 h-8 rounded-full border-2 border-[var(--border)]" />
               )}
-              <span className="flex-1 font-black text-lg">{entry.username || 'Unknown'}</span>
+              <ClickableUsername userId={entry.user_id} username={entry.username || 'Unknown'} className="flex-1 font-black text-lg" />
               <span className="font-mono font-black text-blue-600">
                 {(entry.score ?? 0).toLocaleString()} {activeType.scoreLabel}
               </span>
