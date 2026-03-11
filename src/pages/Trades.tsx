@@ -17,6 +17,7 @@ export function Trades() {
   const [requestedIds, setRequestedIds] = useState<string[]>([]);
   const [offeredGold, setOfferedGold] = useState(0);
   const [offeredGems, setOfferedGems] = useState(0);
+  const [tradeMessage, setTradeMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchTrades(); fetchFriends(); fetchMyCards(); }, []);
@@ -66,7 +67,7 @@ export function Trades() {
     if (offeredIds.length === 0 && offeredGold === 0) { toast.error('Offer at least one card or gold'); return; }
     setSubmitting(true);
     try {
-      const { error } = await supabase.rpc('create_trade_rpc', {
+      const { data: tradeId, error } = await supabase.rpc('create_trade_rpc', {
         p_receiver_id: receiverId,
         p_offered_card_ids: offeredIds,
         p_requested_card_ids: requestedIds,
@@ -76,12 +77,32 @@ export function Trades() {
         p_requested_gems: 0,
       });
       if (error) throw error;
+      
+      // If we have a message and the RPC returned the trade ID, update it
+      if (tradeMessage && tradeId) {
+        await supabase.from('trade_offers').update({ message: tradeMessage }).eq('id', tradeId);
+      } else if (tradeMessage) {
+        // Fallback: try to find the most recent trade offer we just created
+        const { data: recentTrade } = await supabase
+          .from('trade_offers')
+          .select('id')
+          .eq('receiver_id', receiverId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+          
+        if (recentTrade) {
+          await supabase.from('trade_offers').update({ message: tradeMessage }).eq('id', recentTrade.id);
+        }
+      }
+
       toast.success('Trade offer sent!');
       setShowCreate(false);
       setOfferedIds([]);
       setRequestedIds([]);
       setOfferedGold(0);
       setOfferedGems(0);
+      setTradeMessage('');
       setReceiverId('');
       fetchTrades();
     } catch (err: any) {
@@ -143,6 +164,15 @@ export function Trades() {
                 className="border-4 border-[var(--border)] p-3 rounded-xl font-bold w-40 bg-[var(--bg)] text-[var(--text)]" />
             </div>
           </div>
+          <div>
+            <label className="font-black block mb-1 text-[var(--text)]">Message (optional):</label>
+            <textarea
+              value={tradeMessage}
+              onChange={e => setTradeMessage(e.target.value)}
+              placeholder="Add a message to your trade offer..."
+              className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)] resize-none h-24"
+            />
+          </div>
           <button onClick={submitTrade} disabled={submitting}
             className="w-full py-3 bg-emerald-500 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] disabled:opacity-50">
             {submitting ? 'Sending...' : 'Send Trade Offer'}
@@ -168,6 +198,11 @@ export function Trades() {
                 <p className="text-sm font-bold text-slate-500 capitalize">Status: {trade.status}</p>
                 {trade.sender_gold > 0 && <p className="text-sm font-bold text-yellow-600">+{trade.sender_gold} gold offered</p>}
                 {trade.sender_gems > 0 && <p className="text-sm font-bold text-emerald-600">+{trade.sender_gems} gems offered</p>}
+                {trade.message && (
+                  <div className="mt-2 p-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl">
+                    <p className="text-sm font-bold text-[var(--text)] whitespace-pre-wrap">"{trade.message}"</p>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 {trade.status === 'pending' && (

@@ -24,6 +24,7 @@ export function Collection() {
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>('rarity');
   const [elementType, setElementType] = useState<string>('all');
+  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
     if (profile) {
@@ -32,8 +33,18 @@ export function Collection() {
       } else {
         fetchWishlist();
       }
+      fetchStats();
     }
   }, [profile, activeTab]);
+
+  const fetchStats = async () => {
+    try {
+      const { data } = await supabase.rpc('get_my_collection_stats');
+      if (data) setStats(data);
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
 
   const fetchCollection = async () => {
     try {
@@ -67,7 +78,13 @@ export function Collection() {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_wishlist');
       if (error) throw error;
-      setWishlist(data || []);
+      setWishlist((data || []).map((c: any) => ({
+        ...c,
+        quantity: c.is_owned ? 1 : 0,
+        foil_quantity: 0,
+        is_locked: false,
+        is_new: false,
+      })));
     } catch (err) {
       console.error('Error fetching wishlist:', err);
     } finally {
@@ -100,9 +117,14 @@ export function Collection() {
       });
       if (error) throw error;
       
-      setCards(cards.map(c => 
-        c.id === userCardId ? { ...c, is_locked: !c.is_locked } : c
-      ));
+      setCards(cards.map(c => {
+        if (c.id === userCardId) {
+          const newLockedState = !c.is_locked;
+          toast.success(newLockedState ? 'Card locked!' : 'Card unlocked!');
+          return { ...c, is_locked: newLockedState };
+        }
+        return c;
+      }));
     } catch (err) {
       console.error('Error toggling lock:', err);
     }
@@ -198,8 +220,76 @@ export function Collection() {
   }
 
   return (
-    <>
-      <div className="sticky top-16 z-30 bg-[var(--bg)]/90 backdrop-blur-sm py-4 border-b-2 border-[var(--border)] -mx-4 px-4">
+    <div className="space-y-8">
+      {stats && (
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-4 shadow-[4px_4px_0px_0px_var(--border)]">
+          <div className="flex justify-between mb-2">
+            <span className="font-black uppercase">Collection Progress</span>
+            <span className="font-mono font-bold">{stats.unique_cards} / {stats.total_cards_in_db}</span>
+          </div>
+          <div className="h-3 bg-gray-200 rounded-full overflow-hidden border-2 border-[var(--border)]">
+            <div
+              className="h-full bg-blue-500 rounded-full"
+              style={{ width: `${stats.completion_percentage ?? 0}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Collection</h1>
+          <p className="text-slate-600 font-bold mt-1">{cards.length} cards collected</p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl p-1 shadow-[4px_4px_0px_0px_var(--border)]">
+            <button
+              onClick={() => setActiveTab('collection')}
+              className={cn(
+                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+                activeTab === 'collection' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              Collection
+            </button>
+            <button
+              onClick={() => setActiveTab('wishlist')}
+              className={cn(
+                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+                activeTab === 'wishlist' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              Wishlist
+            </button>
+          </div>
+
+          {activeTab === 'collection' && !isBatchMode && (
+            <>
+              <button
+                onClick={async () => {
+                  await supabase.rpc('mark_cards_seen');
+                  setCards(prev => prev.map(c => ({ ...c, is_new: false })));
+                  toast.success('All cards marked as seen!');
+                }}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+              >
+                <Check className="w-5 h-5" />
+                Clear "New"
+              </button>
+              <button
+                onClick={handleBulkMill}
+                className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+              >
+                <Coins className="w-5 h-5" />
+                Mill All Duplicates
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="sticky top-16 z-30 bg-[var(--bg)]/90 backdrop-blur-sm py-4 border-b-2 border-[var(--border)] -mx-4 px-4 md:-mx-8 md:px-8">
         <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-nowrap items-center">
           <button
             onClick={() => setIsBatchMode(!isBatchMode)}
@@ -239,48 +329,6 @@ export function Collection() {
             <option value="mythic">Mythic</option>
             <option value="divine">Divine</option>
           </select>
-        </div>
-      </div>
-
-      <div className="space-y-8 pt-8">
-      
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Collection</h1>
-          <p className="text-slate-600 font-bold mt-1">{cards.length} cards collected</p>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl p-1 shadow-[4px_4px_0px_0px_var(--border)]">
-            <button
-              onClick={() => setActiveTab('collection')}
-              className={cn(
-                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
-                activeTab === 'collection' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
-              )}
-            >
-              Collection
-            </button>
-            <button
-              onClick={() => setActiveTab('wishlist')}
-              className={cn(
-                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
-                activeTab === 'wishlist' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
-              )}
-            >
-              Wishlist
-            </button>
-          </div>
-
-          {activeTab === 'collection' && !isBatchMode && (
-            <button
-              onClick={handleBulkMill}
-              className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
-            >
-              <Coins className="w-5 h-5" />
-              Mill All Duplicates
-            </button>
-          )}
         </div>
       </div>
 
@@ -339,6 +387,14 @@ export function Collection() {
                     className="flex-1 py-1 bg-blue-500 text-white font-black rounded text-[10px] uppercase border border-black"
                   >
                     📋 List
+                  </button>
+                )}
+                {activeTab === 'wishlist' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleToggleWishlist(card.id); }}
+                    className="flex-1 py-1 bg-red-500 text-white font-black rounded text-[10px] uppercase border border-black"
+                  >
+                    Remove
                   </button>
                 )}
               </div>
@@ -444,7 +500,12 @@ export function Collection() {
               if (!confirm(`Are you sure you want to quicksell ${selectedCardIds.length} cards?`)) return;
               try {
                 for (const cardId of selectedCardIds) {
-                  await supabase.rpc('quicksell_card', { p_card_id: cardId, p_is_foil: false, p_quantity: 1 });
+                  const card = cards.find(c => c.id === cardId);
+                  if (card?.foil_quantity > 0) {
+                    await supabase.rpc('quicksell_card', { p_card_id: cardId, p_is_foil: true, p_quantity: 1 });
+                  } else {
+                    await supabase.rpc('quicksell_card', { p_card_id: cardId, p_is_foil: false, p_quantity: 1 });
+                  }
                 }
                 toast.success('Successfully sold cards!');
                 setSelectedCardIds([]);
@@ -469,7 +530,6 @@ export function Collection() {
         onSuccess={fetchCollection}
         initialCard={cardToList}
       />
-      </div>
-    </>
+    </div>
   );
 }

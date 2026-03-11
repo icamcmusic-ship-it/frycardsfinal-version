@@ -4,7 +4,10 @@ import { useThemeStore } from '../stores/themeStore';
 import { Loader2, Palette, RefreshCw, AlertTriangle, Volume2, VolumeX, Music } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+import { useProfileStore } from '../stores/profileStore';
+
 export function Settings() {
+  const { profile } = useProfileStore();
   const { theme, setTheme } = useThemeStore();
   const [resetting, setResetting] = useState(false);
   const [settings, setSettings] = useState({
@@ -135,19 +138,21 @@ export function Settings() {
         </div>
       </div>
 
-      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] space-y-6">
-        <h2 className="text-2xl font-black uppercase flex items-center gap-2 text-red-600">
-          <AlertTriangle className="w-6 h-6" /> Danger Zone
-        </h2>
-        <button
-          onClick={handleReset}
-          disabled={resetting}
-          className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          {resetting ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
-          Reset Account
-        </button>
-      </div>
+      {profile?.is_admin && (
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] space-y-6">
+          <h2 className="text-2xl font-black uppercase flex items-center gap-2 text-red-600">
+            <AlertTriangle className="w-6 h-6" /> Danger Zone
+          </h2>
+          <button
+            onClick={handleReset}
+            disabled={resetting}
+            className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_var(--border)] flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {resetting ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
+            Reset Account (Admin)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

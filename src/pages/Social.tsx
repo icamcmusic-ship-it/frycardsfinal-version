@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { useProfileStore } from '../stores/profileStore';
 import { Loader2, Search, UserPlus, UserMinus, Check, X, Users, UserCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 
 export function Social() {
+  const { profile } = useProfileStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [friends, setFriends] = useState<any[]>([]);
@@ -25,7 +27,7 @@ export function Social() {
   };
 
   const fetchSocialCounts = async () => {
-    const { data } = await supabase.rpc('get_social_counts');
+    const { data } = await supabase.rpc('get_social_counts', { p_user_id: profile?.id });
     if (data) setSocialCounts(data);
   };
 

@@ -18,6 +18,7 @@ import { Settings } from './pages/Settings';
 import { Profile } from './pages/Profile';
 import { PublicProfile } from './pages/PublicProfile';
 import { Notifications } from './pages/Notifications';
+import { Decks } from './pages/Decks';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/social" element={<Social />} />
             <Route path="/trades" element={<Trades />} />
+            <Route path="/decks" element={<Decks />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/season-pass" element={<SeasonPass />} />
             <Route path="/settings" element={<Settings />} />

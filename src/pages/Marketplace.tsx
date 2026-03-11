@@ -16,8 +16,9 @@ export function Marketplace() {
   const [buying, setBuying] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'all' | 'watchlist'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'watchlist' | 'my_listings'>('all');
   const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [myListings, setMyListings] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [rarityFilter, setRarityFilter] = useState('all');
@@ -27,10 +28,25 @@ export function Marketplace() {
   useEffect(() => {
     if (activeTab === 'all') {
       fetchListings();
-    } else {
+    } else if (activeTab === 'watchlist') {
       fetchWatchlist();
+    } else if (activeTab === 'my_listings') {
+      fetchMyListings();
     }
   }, [activeTab, rarityFilter, elementFilter]);
+
+  const fetchMyListings = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc('get_my_listings');
+      if (error) throw error;
+      setMyListings(data || []);
+    } catch (err) {
+      console.error('Error fetching my listings:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchListings = async () => {
     try {
@@ -98,6 +114,20 @@ export function Marketplace() {
     }
   };
 
+  const handleCancelListing = async (listingId: string) => {
+    if (!confirm('Are you sure you want to cancel this listing?')) return;
+    try {
+      const { error } = await supabase.rpc('cancel_listing', {
+        p_listing_id: listingId
+      });
+      if (error) throw error;
+      toast.success('Listing cancelled!');
+      fetchMyListings();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel listing');
+    }
+  };
+
   const handleBuy = async (listing: any) => {
     if (buying || !profile) return;
     
@@ -148,7 +178,7 @@ export function Marketplace() {
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 
-  const filteredListings = (activeTab === 'all' ? listings : watchlist)
+  const filteredListings = (activeTab === 'all' ? listings : activeTab === 'watchlist' ? watchlist : myListings)
     .filter(listing => {
       if (filter !== 'all' && listing.type !== filter) return false;
       if (search && !listing.card_name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -170,8 +200,57 @@ export function Marketplace() {
   }
 
   return (
-    <>
-      <div className="sticky top-16 z-30 bg-[var(--bg)]/90 backdrop-blur-sm py-4 border-b-2 border-[var(--border)] -mx-4 px-4">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Marketplace</h1>
+          <p className="text-slate-600 font-bold mt-1">Buy and sell cards with other players</p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl p-1 shadow-[4px_4px_0px_0px_var(--border)] w-fit">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={cn(
+                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+                activeTab === 'all' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              All Listings
+            </button>
+            <button
+              onClick={() => setActiveTab('watchlist')}
+              className={cn(
+                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+                activeTab === 'watchlist' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              Watchlist
+            </button>
+            <button
+              onClick={() => setActiveTab('my_listings')}
+              className={cn(
+                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+                activeTab === 'my_listings' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              My Listings
+            </button>
+          </div>
+
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Create Listing
+          </button>
+        </div>
+      </div>
+      
+      <CreateListingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchListings} />
+
+      <div className="sticky top-16 z-30 bg-[var(--bg)]/90 backdrop-blur-sm py-4 border-b-2 border-[var(--border)] -mx-4 px-4 md:-mx-8 md:px-8">
         <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-nowrap items-center">
           <select
             value={sortBy}
@@ -226,48 +305,6 @@ export function Marketplace() {
           </select>
         </div>
       </div>
-      
-      <div className="space-y-8 pt-8">
-      
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Marketplace</h1>
-          <p className="text-slate-600 font-bold mt-1">Buy and sell cards with other players</p>
-        </div>
-        
-        <div className="flex gap-4">
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Create Listing
-          </button>
-        </div>
-      </div>
-      
-      <CreateListingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchListings} />
-
-      <div className="flex bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl p-1 shadow-[4px_4px_0px_0px_var(--border)] w-fit">
-        <button
-          onClick={() => setActiveTab('all')}
-          className={cn(
-            "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
-            activeTab === 'all' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
-          )}
-        >
-          All Listings
-        </button>
-        <button
-          onClick={() => setActiveTab('watchlist')}
-          className={cn(
-            "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
-            activeTab === 'watchlist' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
-          )}
-        >
-          Watchlist
-        </button>
-      </div>
 
       {filteredListings.length === 0 ? (
         <div className="text-center py-20 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[8px_8px_0px_0px_var(--border)]">
@@ -275,10 +312,10 @@ export function Marketplace() {
             <Store className="w-10 h-10 text-slate-400" />
           </div>
           <h3 className="text-2xl font-black text-[var(--text)] mb-2 uppercase">
-            {activeTab === 'all' ? 'Market is empty' : 'Watchlist is empty'}
+            {activeTab === 'all' ? 'Market is empty' : activeTab === 'watchlist' ? 'Watchlist is empty' : 'No listings found'}
           </h3>
           <p className="text-slate-600 font-bold">
-            {activeTab === 'all' ? 'Check back later for new listings' : 'Add items to your watchlist to track them'}
+            {activeTab === 'all' ? 'Check back later for new listings' : activeTab === 'watchlist' ? 'Add items to your watchlist to track them' : 'Create a listing to sell your cards'}
           </p>
         </div>
       ) : (
@@ -379,10 +416,27 @@ export function Marketplace() {
                 )}
               </div>
 
-              {listing.type === 'fixed_price' ? (
+              {activeTab === 'my_listings' ? (
+                listing.status === 'active' ? (
+                  <button 
+                    onClick={() => handleCancelListing(listing.id)}
+                    className="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                  >
+                    Cancel Listing
+                  </button>
+                ) : (
+                  <div className="w-full py-3 bg-slate-200 text-slate-500 font-black rounded-xl border-4 border-[var(--border)] flex items-center justify-center uppercase">
+                    {listing.status}
+                  </div>
+                )
+              ) : listing.seller_id === profile?.id ? (
+                <div className="w-full py-3 bg-slate-200 text-slate-500 font-black rounded-xl border-4 border-[var(--border)] flex items-center justify-center uppercase">
+                  Your Listing
+                </div>
+              ) : listing.type === 'fixed_price' ? (
                 <button 
                   onClick={() => handleBuy(listing)}
-                  disabled={buying === listing.id || profile?.id === listing.seller_id}
+                  disabled={buying === listing.id}
                   className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
                 >
                   {buying === listing.id ? (
@@ -439,7 +493,6 @@ export function Marketplace() {
           ))}
         </div>
       )}
-      </div>
-    </>
+    </div>
   );
 }

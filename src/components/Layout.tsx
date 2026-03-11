@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function Layout() {
@@ -11,6 +11,7 @@ export function Layout() {
   const { profile, fetchProfile, setProfile } = useProfileStore();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const fetchUnreadCount = async () => {
     if (!user) return;
@@ -74,11 +75,15 @@ export function Layout() {
     { name: 'Store', path: '/store', icon: Store },
     { name: 'Social', path: '/social', icon: Users },
     { name: 'Trades', path: '/trades', icon: ArrowRightLeft },
+    { name: 'Decks', path: '/decks', icon: Layers },
     { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
     { name: 'Season Pass', path: '/season-pass', icon: Gift },
     { name: 'Settings', path: '/settings', icon: SettingsIcon },
     { name: 'Profile', path: '/profile', icon: UserIcon },
   ];
+
+  const primaryNav = navItems.slice(0, 4);
+  const secondaryNav = navItems.slice(4);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-red-400/30">
@@ -94,6 +99,12 @@ export function Layout() {
 
           {profile && (
             <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 bg-blue-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]">
+                <Zap className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-bold font-mono text-black">
+                  {profile.energy}/{profile.max_energy}
+                </span>
+              </div>
               <div className="flex items-center gap-1.5 bg-yellow-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]">
                 <Coins className="w-4 h-4 text-yellow-600" />
                 <span className="text-sm font-bold font-mono text-black">{profile.gold_balance?.toLocaleString() || 0}</span>
@@ -159,13 +170,14 @@ export function Layout() {
         {/* Mobile Bottom Nav */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t-4 border-[var(--border)] bg-[var(--surface)] pb-safe z-50">
           <div className="flex justify-around items-center h-16 px-2">
-            {navItems.map((item) => {
+            {primaryNav.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
               return (
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
                     "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors",
                     isActive ? "text-blue-600 font-bold" : "text-[var(--text)] opacity-70 hover:opacity-100"
@@ -176,8 +188,49 @@ export function Layout() {
                 </Link>
               );
             })}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className={cn(
+                "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors",
+                isMobileMenuOpen ? "text-blue-600 font-bold" : "text-[var(--text)] opacity-70 hover:opacity-100"
+              )}
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5 text-blue-600" /> : <Menu className="w-5 h-5" />}
+              <span className="text-[10px]">More</span>
+            </button>
           </div>
         </nav>
+
+        {/* Mobile Secondary Nav Drawer */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsMobileMenuOpen(false)}>
+            <div 
+              className="absolute bottom-16 left-0 right-0 bg-[var(--surface)] border-t-4 border-[var(--border)] rounded-t-2xl p-4 flex flex-col gap-2"
+              onClick={e => e.stopPropagation()}
+            >
+              {secondaryNav.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2",
+                      isActive 
+                        ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold" 
+                        : "text-[var(--text)] hover:text-black hover:bg-blue-50 border-transparent hover:border-[var(--border)] font-medium"
+                    )}
+                  >
+                    <Icon className={cn("w-5 h-5", isActive && "text-black")} />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

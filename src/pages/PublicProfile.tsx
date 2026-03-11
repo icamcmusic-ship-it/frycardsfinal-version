@@ -2,12 +2,45 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Loader2, Trophy, UserPlus, UserCheck } from 'lucide-react';
+import { CardDisplay } from '../components/CardDisplay';
+
+function OtherUserCollection({ userId }: { userId: string }) {
+  const [cards, setCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.rpc('get_other_user_collection', { p_target_user_id: userId }).then(({ data }) => {
+      setCards(data || []);
+      setLoading(false);
+    });
+  }, [userId]);
+
+  if (loading) return <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;
+
+  return (
+    <div className="mt-8">
+      <h2 className="text-2xl font-black uppercase mb-4">Collection</h2>
+      {cards.length === 0 ? (
+        <p className="text-slate-500 font-bold">This user has no public cards or their collection is empty.</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {cards.map(card => (
+            <div key={card.id} className="relative group">
+              <CardDisplay card={card} showQuantity={true} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function PublicProfile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showCollection, setShowCollection] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -75,6 +108,15 @@ export function PublicProfile() {
             </div>
           ))}
         </div>
+        
+        <button
+          onClick={() => setShowCollection(!showCollection)}
+          className="mt-6 w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 transition-colors text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] uppercase tracking-wider"
+        >
+          {showCollection ? 'Hide Collection' : 'View Collection'}
+        </button>
+
+        {showCollection && userId && <OtherUserCollection userId={userId} />}
       </div>
     </div>
   );
