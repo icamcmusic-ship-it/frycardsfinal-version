@@ -327,7 +327,7 @@ export function Store() {
           <div className="h-10 w-24 bg-slate-200 animate-pulse rounded-t-xl"></div>
           <div className="h-10 w-24 bg-slate-200 animate-pulse rounded-t-xl"></div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative shadow-[8px_8px_0px_0px_var(--border)] flex flex-col h-[400px]">
               <div className="aspect-[4/3] bg-slate-200 animate-pulse border-b-4 border-[var(--border)]"></div>
@@ -400,7 +400,7 @@ export function Store() {
             ctaPath="/"
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {packs.map((pack) => {
               const canAffordGold = (pack.cost_gold != null && pack.cost_gold > 0)
                 ? (profile?.gold_balance ?? 0) >= pack.cost_gold

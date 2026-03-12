@@ -31,12 +31,21 @@ export const FlipCard: React.FC<FlipCardProps> = ({
     setTimeout(onReveal, 600); // wait for flip to complete
   };
 
+  const cardSize = {
+    'Divine':     'w-80 h-[426px]',
+    'Mythic':     'w-80 h-[426px]',
+    'Super-Rare': 'w-72 h-[384px]',
+    'Rare':       'w-64 h-[340px]',
+    'Uncommon':   'w-56 h-[298px]',
+    'Common':     'w-56 h-[298px]',
+  }[card.rarity] ?? 'w-64 h-[340px]';
+
   return (
     <motion.div
       initial={{ scale: 0, rotateZ: 10 }}
       animate={{ scale: 1, rotateZ: 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-      className="relative w-64 h-[340px] cursor-pointer select-none"
+      className={cn("relative cursor-pointer select-none transition-all duration-500", cardSize)}
       style={{ perspective: '1000px' }}
       onClick={handleClick}
       onMouseEnter={() => audioService.play('hover')}

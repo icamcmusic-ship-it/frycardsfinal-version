@@ -29,7 +29,9 @@ export function Collection() {
   const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>('rarity');
   const [elementType, setElementType] = useState<string>('all');
   const [stats, setStats] = useState<any>(null);
-  const [viewSize, setViewSize] = useState<'normal' | 'large'>('normal');
+  const [viewSize, setViewSize] = useState<'normal' | 'large'>('large');
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -40,7 +42,7 @@ export function Collection() {
       }
       fetchStats();
     }
-  }, [profile, activeTab]);
+  }, [profile, activeTab, sortBy, filter]);
 
   const fetchStats = async () => {
     try {
@@ -51,21 +53,37 @@ export function Collection() {
     }
   };
 
-  const fetchCollection = async () => {
+  const fetchCollection = async (isLoadMore = false) => {
     try {
-      setLoading(true);
+      if (!isLoadMore) setLoading(true);
+      else setLoadingMore(true);
+
+      const rarityForApi = filter === 'all' ? null : 
+        filter.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-');
+        
+      const nextOffset = isLoadMore ? cards.length : 0;
       const { data, error } = await supabase.rpc('get_user_collection', {
         p_user_id: profile?.id,
-        p_rarity: null, // Fetch all, filter client-side
-        p_sort_by: 'newest', // Fetch all, sort client-side
-        p_limit: 5000,
-        p_offset: 0
+        p_rarity: rarityForApi,
+        p_sort_by: sortBy,
+        p_limit: 20,
+        p_offset: nextOffset
       });
       
       if (error) throw error;
       
       const fetchedCards = data || [];
-      setCards(fetchedCards);
+      if (isLoadMore) {
+        setCards(prev => [...prev, ...fetchedCards]);
+      } else {
+        setCards(fetchedCards);
+      }
+
+      if (fetchedCards.length < 20) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
 
       // Mark unseen cards as seen
       const unseenCardIds = fetchedCards.filter((c: any) => c.is_new === true).map((c: any) => c.id);
@@ -76,24 +94,34 @@ export function Collection() {
       console.error('Error fetching collection:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   // Infinite scroll listener
   useEffect(() => {
     const handleScroll = () => {
-      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 100) {
-        setVisibleCount(prev => prev + 20);
+      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
+        if (hasMore && !loadingMore && activeTab === 'collection') {
+          fetchCollection(true);
+        } else if (activeTab === 'wishlist') {
+          setVisibleCount(prev => prev + 20);
+        }
       }
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [hasMore, loadingMore, cards.length, activeTab]);
 
   const fetchWishlist = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_wishlist');
+      const rarityForApi = filter === 'all' ? null : 
+        filter.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-');
+        
+      const { data, error } = await supabase.rpc('get_wishlist', {
+        p_rarity: rarityForApi
+      });
       if (error) throw error;
       setWishlist((data || []).map((c: any) => ({
         ...c,
@@ -247,13 +275,6 @@ export function Collection() {
       if (elementType !== 'all' && c.element?.toLowerCase() !== elementType) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      if (sortBy === 'price') return calculateMillValue(b) - calculateMillValue(a);
-      // Rarity sort (simplified)
-      const rarityOrder: Record<string, number> = { 'Divine': 6, 'Mythic': 5, 'Super-Rare': 4, 'Rare': 3, 'Uncommon': 2, 'Common': 1 };
-      return rarityOrder[b.rarity] - rarityOrder[a.rarity];
     });
 
   if (loading) {
@@ -265,7 +286,7 @@ export function Collection() {
             <div className="h-5 w-32 bg-slate-200 animate-pulse rounded-lg"></div>
           </div>
         </div>
-        <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
+        <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
           {Array.from({ length: 10 }).map((_, i) => (
             <CardSkeleton key={i} />
           ))}
@@ -284,6 +305,9 @@ export function Collection() {
               <h2 className="text-3xl font-black text-[var(--text)]">
                 {stats.unique_cards} <span className="text-lg text-slate-400">/ {stats.total_possible}</span>
               </h2>
+              {stats.foil_cards > 0 && (
+                <p className="text-xs font-black text-yellow-600 mt-1 uppercase tracking-wider">✨ {stats.foil_cards} Foil Cards</p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-3xl font-black text-blue-500">{Math.round(stats.completion_pct ?? 0)}%</p>
@@ -421,8 +445,8 @@ export function Collection() {
         </div>
       </div>
 
-      <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
-        {filteredCards.slice(0, visibleCount).map((card) => (
+      <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
+        {(activeTab === 'collection' ? cards : wishlist.slice(0, visibleCount)).map((card) => (
           <CollectionCard 
             key={card.id}
             card={card}
@@ -448,6 +472,12 @@ export function Collection() {
         ))}
       </div>
       
+      {loadingMore && (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      )}
+
       {filteredCards.length === 0 && (
         <EmptyState 
           icon={PackageOpen}
@@ -546,48 +576,11 @@ function CollectionCard({ card, isBatchMode, isSelected, activeTab, onSelect, on
       
       <CardDisplay card={card} />
 
-      {/* Hover Actions */}
+      {/* Hover Information */}
       <div className="absolute inset-x-0 bottom-0 bg-black/85 backdrop-blur-sm translate-y-full group-hover:translate-y-0 transition-transform duration-300 p-3 z-30 rounded-b-xl">
         <p className="text-white font-black text-xs uppercase tracking-wide">{card.name}</p>
         <p className="text-gray-300 text-[10px] font-bold">{card.rarity} · {card.card_type}</p>
         {card.element && <p className="text-blue-300 text-[10px]">{card.element}</p>}
-        <div className="flex gap-2 mt-2">
-          {activeTab === 'collection' && (
-            <button 
-              onClick={onToggleLock}
-              className={cn(
-                "flex-1 py-1 font-black rounded text-[10px] uppercase border border-black flex items-center justify-center gap-1",
-                card.is_locked ? "bg-slate-600 text-white" : "bg-yellow-400 text-black"
-              )}
-            >
-              {card.is_locked ? <><Lock className="w-3 h-3" /> Unlock</> : <><Unlock className="w-3 h-3" /> Lock</>}
-            </button>
-          )}
-          {activeTab === 'collection' && !card.is_locked && (
-            <button 
-              onClick={onQuicksell}
-              className="flex-1 py-1 bg-emerald-500 text-white font-black rounded text-[10px] uppercase border border-black"
-            >
-              💰 Sell
-            </button>
-          )}
-          {activeTab === 'collection' && !card.is_locked && (
-            <button 
-              onClick={onList}
-              className="flex-1 py-1 bg-blue-500 text-white font-black rounded text-[10px] uppercase border border-black"
-            >
-              📋 List
-            </button>
-          )}
-          {activeTab === 'wishlist' && (
-            <button
-              onClick={onToggleWishlist}
-              className="flex-1 py-1 bg-red-500 text-white font-black rounded text-[10px] uppercase border border-black"
-            >
-              Remove
-            </button>
-          )}
-        </div>
       </div>
     </motion.div>
   );

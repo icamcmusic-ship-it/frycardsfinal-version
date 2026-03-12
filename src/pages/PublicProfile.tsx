@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Loader2, Trophy, UserPlus, UserCheck } from 'lucide-react';
 import { CardDisplay } from '../components/CardDisplay';
 import { getAvatarUrl, getBannerUrl } from '../lib/utils';
+import toast from 'react-hot-toast';
 
 function OtherUserCollection({ userId }: { userId: string }) {
   const [cards, setCards] = useState<any[]>([]);
@@ -80,20 +81,40 @@ export function PublicProfile() {
             {profile.bio && <p className="text-slate-600 mt-1">{profile.bio}</p>}
             <p className="text-sm font-bold text-slate-400 mt-1">Level {profile.level}</p>
             {userId !== undefined && (
-              profile.friendship_status === 'accepted' ? (
-                <span className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-green-500 rounded-xl font-bold text-green-700">
-                  <UserCheck className="w-4 h-4" /> Friends
-                </span>
-              ) : profile.friendship_status === 'pending' ? (
-                <span className="mt-3 inline-flex px-4 py-2 bg-yellow-100 border-2 border-yellow-400 rounded-xl font-bold text-yellow-700">
-                  Request Pending
-                </span>
-              ) : (
-                <button onClick={sendRequest}
-                  className="mt-3 flex items-center gap-2 px-4 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  <UserPlus className="w-4 h-4" /> Add Friend
+              <div className="flex items-center gap-3 mt-3">
+                {profile.friendship_status === 'accepted' ? (
+                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-green-500 rounded-xl font-bold text-green-700">
+                    <UserCheck className="w-4 h-4" /> Friends
+                  </span>
+                ) : profile.friendship_status === 'pending' ? (
+                  <span className="inline-flex px-4 py-2 bg-yellow-100 border-2 border-yellow-400 rounded-xl font-bold text-yellow-700">
+                    Request Pending
+                  </span>
+                ) : (
+                  <button onClick={sendRequest}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                    <UserPlus className="w-4 h-4" /> Add Friend
+                  </button>
+                )}
+                
+                <button 
+                  onClick={async () => {
+                    if (window.confirm(`Are you sure you want to block ${profile.username}?`)) {
+                      try {
+                        const { error } = await supabase.rpc('block_user', { p_blocked_user_id: userId });
+                        if (error) throw error;
+                        toast.success(`${profile.username} has been blocked.`);
+                        navigate('/social');
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to block user');
+                      }
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 font-black text-sm uppercase rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
+                >
+                  Block
                 </button>
-              )
+              </div>
             )}
           </div>
         </div>

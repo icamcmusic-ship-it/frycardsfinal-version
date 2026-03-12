@@ -215,7 +215,7 @@ export function Marketplace() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({ length: 8 }).map((_, i) => (
           <CardSkeleton key={i} />
         ))}
@@ -343,7 +343,7 @@ export function Marketplace() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredListings.map((listing) => (
             <motion.div 
               key={listing.id}
@@ -361,25 +361,30 @@ export function Marketplace() {
               )}
             >
               <div className="flex justify-between items-start">
-                <div>
-                  <div className={cn(
-                    "text-xs font-black uppercase tracking-wider px-2 py-1 rounded-full border-2 shadow-[2px_2px_0px_0px_var(--border)] inline-block mb-2",
-                    getRarityStyles(listing.card_rarity, listing.card.is_foil)
-                  )}>
-                    {listing.card_rarity}
+                <div className="flex gap-3">
+                  <div className="w-12 h-16 shrink-0 rounded-lg overflow-hidden border-2 border-[var(--border)] bg-slate-100 shadow-[2px_2px_0px_0px_var(--border)]">
+                    <img src={listing.card?.image_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
-                  <h3 className="font-black text-[var(--text)] text-lg leading-tight uppercase">{listing.card_name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <p className="text-sm text-slate-500 font-bold">Seller: {listing.seller_name}</p>
-                    {profile?.id !== listing.seller_id && (
-                      <button 
-                        onClick={() => handleBlockUser(listing.seller_id, listing.seller_name)}
-                        className="text-xs text-red-500 hover:text-red-700 font-bold underline"
-                        title="Block Seller"
-                      >
-                        Block
-                      </button>
-                    )}
+                  <div>
+                    <div className={cn(
+                      "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border-2 shadow-[2px_2px_0px_0px_var(--border)] inline-block mb-1",
+                      getRarityStyles(listing.card_rarity, listing.card.is_foil)
+                    )}>
+                      {listing.card_rarity}
+                    </div>
+                    <h3 className="font-black text-[var(--text)] text-base leading-tight uppercase">{listing.card_name}</h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-[10px] text-slate-500 font-bold">Seller: {listing.seller_name}</p>
+                      {profile?.id !== listing.seller_id && (
+                        <button 
+                          onClick={() => handleBlockUser(listing.seller_id, listing.seller_name)}
+                          className="text-[10px] text-red-500 hover:text-red-700 font-bold underline"
+                          title="Block Seller"
+                        >
+                          Block
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">

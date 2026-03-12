@@ -25,7 +25,7 @@ export function Profile() {
   useEffect(() => {
     fetchAchievements();
     supabase.rpc('get_user_cosmetics').then(({ data }) => {
-      setOwnedBanners((data || []).filter((c: any) => c.item_type === 'profile_banner'));
+      setOwnedBanners((data || []).filter((c: any) => c.item_type === 'profile_banner' || c.item_type === 'profile_avatar'));
     });
   }, []);
 
@@ -199,20 +199,38 @@ export function Profile() {
               </div>
 
               {editing && (
-                <div className="mb-6">
-                  <p className="font-black mb-2 text-[var(--text)]">Select Banner:</p>
-                  <div className="flex gap-3 flex-wrap">
-                    {ownedBanners.length === 0
-                      ? <p className="text-sm text-slate-500 font-bold">No banners owned. Visit the Shop!</p>
-                      : ownedBanners.map(b => (
-                          <button key={b.item_id}
-                            onClick={() => setBannerUrl(b.image_url)}
-                            className={cn("w-24 h-14 rounded-lg border-4 overflow-hidden",
-                              bannerUrl === b.image_url ? "border-blue-500" : "border-[var(--border)]")}>
-                            <img src={b.image_url} className="w-full h-full object-cover" />
-                          </button>
-                        ))
-                    }
+                <div className="mb-6 space-y-6">
+                  <div>
+                    <p className="font-black mb-2 text-[var(--text)]">Select Avatar:</p>
+                    <div className="flex gap-3 flex-wrap">
+                      {ownedBanners.filter(b => b.item_type === 'profile_avatar').length === 0
+                        ? <p className="text-sm text-slate-500 font-bold">No avatars owned. Visit the Shop!</p>
+                        : ownedBanners.filter(b => b.item_type === 'profile_avatar').map(b => (
+                            <button key={b.item_id}
+                              onClick={() => setAvatarUrl(b.image_url)}
+                              className={cn("w-16 h-16 rounded-xl border-4 overflow-hidden",
+                                avatarUrl === b.image_url ? "border-blue-500" : "border-[var(--border)]")}>
+                              <img src={b.image_url} className="w-full h-full object-cover" />
+                            </button>
+                          ))
+                      }
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-black mb-2 text-[var(--text)]">Select Banner:</p>
+                    <div className="flex gap-3 flex-wrap">
+                      {ownedBanners.filter(b => b.item_type === 'profile_banner').length === 0
+                        ? <p className="text-sm text-slate-500 font-bold">No banners owned. Visit the Shop!</p>
+                        : ownedBanners.filter(b => b.item_type === 'profile_banner').map(b => (
+                            <button key={b.item_id}
+                              onClick={() => setBannerUrl(b.image_url)}
+                              className={cn("w-24 h-14 rounded-lg border-4 overflow-hidden",
+                                bannerUrl === b.image_url ? "border-blue-500" : "border-[var(--border)]")}>
+                              <img src={b.image_url} className="w-full h-full object-cover" />
+                            </button>
+                          ))
+                      }
+                    </div>
                   </div>
                 </div>
               )}

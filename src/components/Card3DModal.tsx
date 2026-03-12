@@ -70,8 +70,8 @@ export function Card3DModal({ card, cardBackUrl, onClose }: Card3DModalProps) {
                 style={{ backfaceVisibility: 'hidden' }}
               >
                 {card.is_video
-                  ? <video src={card.image_url} autoPlay muted loop className="w-full h-full object-contain bg-black" />
-                  : <img src={card.image_url} alt={card.name} className="w-full h-full object-contain bg-black" />}
+                  ? <video src={card.image_url} autoPlay muted loop className="w-full h-full object-cover bg-black" />
+                  : <img src={card.image_url} alt={card.name} className="w-full h-full object-cover bg-black" />}
               </div>
               {/* Back */}
               <div

@@ -154,20 +154,30 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setListingType('fixed_price')} className={cn("p-4 border-4 rounded-xl font-black text-[var(--text)]", listingType === 'fixed_price' ? "border-[var(--border)] bg-blue-400 text-black" : "border-[var(--border)] bg-[var(--bg)]")}>Fixed Price</button>
-              <button onClick={() => setListingType('auction')} className={cn("p-4 border-4 rounded-xl font-black text-[var(--text)]", listingType === 'auction' ? "border-[var(--border)] bg-blue-400 text-black" : "border-[var(--border)] bg-[var(--bg)]")}>Auction</button>
+              <button onClick={() => setListingType('fixed_price')} className={cn("p-4 border-4 rounded-xl font-black transition-colors", listingType === 'fixed_price' ? "border-[var(--border)] bg-blue-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}>Fixed Price</button>
+              <button onClick={() => setListingType('auction')} className={cn("p-4 border-4 rounded-xl font-black transition-colors", listingType === 'auction' ? "border-[var(--border)] bg-blue-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}>Auction</button>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <input type="number" placeholder="Gold" onChange={e => setPriceGold(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)]" />
-              <input type="number" placeholder="Gems" onChange={e => setPriceGems(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)]" />
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">{listingType === 'auction' ? 'Starting Bid (Gold)' : 'Price (Gold)'}</label>
+                <input type="number" min="0" placeholder="0" value={priceGold || ''} onChange={e => setPriceGold(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">{listingType === 'auction' ? 'Starting Bid (Gems)' : 'Price (Gems)'}</label>
+                <input type="number" min="0" placeholder="0" value={priceGems || ''} onChange={e => setPriceGems(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500" />
+              </div>
             </div>
 
-            <select onChange={e => setDuration(Number(e.target.value))} className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)]">
-              <option value={24}>24 Hours</option>
-              <option value={48}>48 Hours</option>
-              <option value={72}>72 Hours</option>
-            </select>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-slate-500 uppercase">Duration</label>
+              <select value={duration} onChange={e => setDuration(Number(e.target.value))} className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500">
+                <option value={12}>12 Hours</option>
+                <option value={24}>24 Hours</option>
+                <option value={48}>48 Hours</option>
+                <option value={72}>72 Hours</option>
+              </select>
+            </div>
 
             {selectedCard.foil_quantity > 0 && (
               <label className="flex items-center gap-2 font-bold text-[var(--text)] cursor-pointer">

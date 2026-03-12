@@ -8,10 +8,22 @@ interface NeoCardProps {
 }
 
 export const NeoCard: React.FC<NeoCardProps> = ({ card, onQuickSell, onClick }) => {
+  const rarityGlow: Record<string, string> = {
+    'Divine':     'border-red-500 shadow-[0_0_24px_rgba(239,68,68,0.9),0_0_50px_rgba(239,68,68,0.4)] hover:shadow-[0_0_40px_rgba(239,68,68,1)]',
+    'Mythic':     'border-yellow-400 shadow-[0_0_20px_rgba(234,179,8,0.8)] hover:shadow-[0_0_35px_rgba(234,179,8,1)]',
+    'Super-Rare': 'border-purple-500 shadow-[0_0_14px_rgba(168,85,247,0.7)] hover:shadow-[0_0_24px_rgba(168,85,247,0.9)]',
+    'Rare':       'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]',
+    'Uncommon':   'border-green-500',
+    'Common':     'border-[var(--border)]',
+  };
+
   return (
     <div 
       onClick={onClick}
-      className="group relative w-full aspect-[3/4] rounded-xl overflow-hidden border-4 border-[var(--border)] shadow-[6px_6px_0px_0px_var(--border)] transition-all duration-300 hover:scale-105 cursor-pointer bg-[var(--surface)]"
+      className={cn(
+        "group relative w-full aspect-[3/4] rounded-xl overflow-hidden border-4 transition-all duration-300 hover:scale-105 cursor-pointer bg-[var(--surface)]",
+        rarityGlow[card.rarity] ?? rarityGlow['Common']
+      )}
     >
       {/* Card Art */}
       <img 
@@ -20,6 +32,10 @@ export const NeoCard: React.FC<NeoCardProps> = ({ card, onQuickSell, onClick }) 
         className="absolute inset-0 w-full h-full object-cover"
         loading="lazy" 
       />
+
+      {(card.rarity === 'Divine' || card.rarity === 'Mythic') && (
+        <div className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-tr from-transparent via-white/10 to-transparent animate-[foilShimmer_3s_linear_infinite]" />
+      )}
 
       {/* Rarity Badge - Top Left */}
       <div className={cn(

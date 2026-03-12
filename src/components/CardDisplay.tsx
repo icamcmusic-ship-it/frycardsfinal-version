@@ -27,69 +27,86 @@ interface CardDisplayProps {
 }
 
 export function CardDisplay({ card, showQuantity = true, showNewBadge = true, className }: CardDisplayProps) {
-  
-  const rarityConfig: Record<string, { badge: string; icon: string }> = {
-    'Divine':     { badge: 'bg-red-500 text-white',          icon: '👁' },
-    'Mythic':     { badge: 'bg-yellow-400 text-black',       icon: '⚡' },
-    'Super-Rare': { badge: 'bg-purple-500 text-white',       icon: '✦' },
-    'Rare':       { badge: 'bg-blue-500 text-white',         icon: '◆' },
-    'Uncommon':   { badge: 'bg-green-500 text-white',        icon: '●' },
-    'Common':     { badge: 'bg-slate-600 text-white',        icon: '○' },
+  const rarityBorder: Record<string, string> = {
+    'Divine':     'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.8),0_0_40px_rgba(239,68,68,0.4)]',
+    'Mythic':     'border-yellow-400 shadow-[0_0_16px_rgba(234,179,8,0.8),0_0_30px_rgba(234,179,8,0.4)]',
+    'Super-Rare': 'border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.7)]',
+    'Rare':       'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]',
+    'Uncommon':   'border-green-500',
+    'Common':     'border-slate-400',
   };
 
-  const cfg = rarityConfig[card.rarity] ?? rarityConfig['Common'];
+  const border = rarityBorder[card.rarity] ?? rarityBorder['Common'];
 
   return (
     <div className={cn(
-      'flex flex-col w-full aspect-[5/7] bg-white border-4 border-pink-300 rounded-2xl overflow-hidden p-1 shadow-lg group',
+      'relative w-full aspect-[3/4] rounded-xl overflow-hidden border-4 group cursor-pointer',
+      'transition-all duration-300 hover:scale-105',
+      border,
       className
     )}>
-      {/* Top: Header */}
-      <div className="bg-sky-200 p-2 border-b-2 border-black rounded-t-lg">
-        <h2 className="font-black text-sm uppercase leading-tight truncate">{card.name}</h2>
-        <div className="flex items-center gap-1 text-[10px] font-bold mt-1">
-          <span>{cfg.icon}</span>
-          <span>Type: {card.element || card.card_type}</span>
-        </div>
+      {/* Full bleed artwork */}
+      {card.is_video ? (
+        <video src={card.image_url} autoPlay muted loop playsInline
+          className="absolute inset-0 w-full h-full object-cover" />
+      ) : (
+        <img src={card.image_url} alt={card.name}
+          className="absolute inset-0 w-full h-full object-cover"
+          loading="lazy"
+          onError={(e) => { e.currentTarget.src = '/fallback-card.png'; }} />
+      )}
+
+      {/* Foil shimmer overlay */}
+      {(card.is_foil || (card.foil_quantity ?? 0) > 0) && (
+        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent animate-[foilShimmer_2s_linear_infinite] pointer-events-none z-10" />
+      )}
+
+      {/* Divine/Mythic animated glow border overlay */}
+      {(card.rarity === 'Divine' || card.rarity === 'Mythic') && (
+        <div className={cn(
+          "absolute inset-0 pointer-events-none z-10 rounded-xl",
+          card.rarity === 'Divine'
+            ? 'animate-[divinePulse_2s_ease-in-out_infinite] border-4 border-red-400/60'
+            : 'animate-[mythicPulse_2.5s_ease-in-out_infinite] border-4 border-yellow-300/60'
+        )} />
+      )}
+
+      {/* Rarity badge — top left */}
+      <div className={cn(
+        "absolute top-2 left-2 z-20 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]",
+        getRarityStyles(card.rarity, card.is_foil ?? false)
+      )}>
+        {card.is_foil ? '✨ Foil' : card.rarity}
       </div>
 
-      {/* Middle: Art */}
-      <div className="flex-grow bg-orange-50 relative overflow-hidden border-b-2 border-black">
-        {card.is_video ? (
-          <video src={card.image_url} autoPlay muted loop playsInline
-            className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
-          <img src={card.image_url} alt={card.name}
-            className="absolute inset-0 w-full h-full object-cover"
-            onError={(e) => { e.currentTarget.src = '/fallback-card.png'; }} />
-        )}
-      </div>
-
-      {/* Bottom: Rarity + Description */}
-      <div className="bg-orange-50 p-2">
-        <div className="flex items-center gap-1 font-bold text-xs mb-1">
-          <span className={cn("w-4 h-4 rounded-full flex items-center justify-center text-[8px]", cfg.badge)}>{cfg.icon}</span>
-          <span className="uppercase">{card.rarity}</span>
-        </div>
-        <p className="text-[10px] leading-tight line-clamp-2 font-medium text-slate-700">
-          {card.flavor_text || card.ability_text}
-        </p>
-      </div>
-
-      {/* Overlays (Quantity, New, Foil) */}
+      {/* Quantity badge — top right */}
       {showQuantity && card.quantity != null && card.quantity > 1 && (
-        <div className="absolute top-2 left-2 bg-black/80 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md border border-white/30 z-20">
+        <div className="absolute top-2 right-2 z-20 bg-black/80 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md border border-white/30">
           ×{card.quantity}
         </div>
       )}
+
+      {/* NEW badge */}
       {showNewBadge && card.is_new && (
-        <div className="absolute top-1 left-1 bg-green-500 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full z-20 uppercase">
-          New
+        <div className="absolute top-8 left-2 z-20 bg-green-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-black animate-bounce uppercase">
+          New!
         </div>
       )}
-      {(card.is_foil || (card.foil_quantity ?? 0) > 0) && (
-        <div className="absolute inset-0 pointer-events-none z-10 border-4 border-yellow-400 rounded-2xl animate-pulse" />
-      )}
+
+      {/* Bottom gradient + name overlay */}
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-8 pb-2 px-2 z-20">
+        <p className="text-white font-black text-xs uppercase tracking-wide truncate leading-tight">{card.name}</p>
+        <p className="text-white/60 text-[10px] font-bold">{card.element || card.card_type}</p>
+      </div>
+
+      {/* Hover overlay with quick-actions */}
+      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30 flex flex-col items-center justify-center gap-2 p-3">
+        <p className="text-white font-black text-sm uppercase tracking-wide text-center">{card.name}</p>
+        <p className="text-gray-300 text-[11px] font-bold">{card.rarity}</p>
+        {card.flavor_text && (
+          <p className="text-gray-400 text-[10px] italic text-center line-clamp-3">"{card.flavor_text}"</p>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2 } from 'lucide-react';
+import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -41,7 +41,7 @@ export function Home() {
   }, [profile]);
 
   useEffect(() => {
-    if (currentEnergy < 20 && profile?.energy_last_regen) {
+    if (currentEnergy < (profile?.max_energy ?? 20) && profile?.energy_last_regen) {
       const regenTime = new Date(profile.energy_last_regen).getTime() + 15 * 60 * 1000;
       setNextRegen(regenTime);
       
@@ -56,7 +56,7 @@ export function Home() {
     } else {
       setNextRegen(null);
     }
-  }, [currentEnergy, profile?.energy_last_regen]);
+  }, [currentEnergy, profile?.energy_last_regen, profile?.max_energy]);
 
   const fetchEnergy = async () => {
     if (!profile) return;
@@ -156,10 +156,9 @@ export function Home() {
 
   const isDailyClaimable = () => {
     if (!profile?.last_daily_claim) return true;
-    const lastClaim = new Date(profile.last_daily_claim + 'T00:00:00Z');
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    return today.getTime() > lastClaim.getTime();
+    const lastClaim = profile.last_daily_claim; // e.g. "2026-03-12"
+    const today = new Date().toISOString().split('T')[0]; // "2026-03-12"
+    return today > lastClaim;
   };
 
   if (!profile) {
@@ -203,17 +202,51 @@ export function Home() {
               Open Packs
             </Link>
             {isDailyClaimable() && (
-              <div className="flex flex-col items-start gap-1">
-                {profile.daily_streak > 0 && (
-                  <p className="text-xs font-black text-black">🔥 {profile.daily_streak} day streak — keep it going!</p>
-                )}
-                <button 
-                  onClick={handleClaimDailyReward}
-                  className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
-                >
-                  <Trophy className="w-6 h-6" />
-                  Claim Daily Reward
-                </button>
+              <div className="flex flex-col items-start gap-3">
+                <div className="flex flex-col gap-1">
+                  {profile.daily_streak >= 3 && (
+                    <div className="flex items-center gap-1 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase animate-bounce">
+                      <Sparkles className="w-3 h-3" />
+                      Streak Bonus Active
+                    </div>
+                  )}
+                  <p className="text-xs font-black text-black/60 uppercase tracking-wider">
+                    {profile.daily_streak >= 7 ? '💎 Tier 3 Rewards Available' : 
+                     profile.daily_streak >= 3 ? '✨ Tier 2 Rewards Available' : 
+                     '🎁 Tier 1 Rewards Available'}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={handleClaimDailyReward}
+                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+                  >
+                    <Trophy className="w-6 h-6" />
+                    Claim Daily Reward
+                  </button>
+                  
+                  <div className="hidden sm:flex items-center gap-2 bg-white/30 backdrop-blur-sm border-2 border-black/20 rounded-xl px-3 py-2">
+                    <div className="text-[10px] font-black uppercase text-black/60 leading-none">
+                      Potential<br/>Rewards
+                    </div>
+                    <div className="flex gap-1">
+                      <div className="w-6 h-6 rounded bg-yellow-400 border border-black flex items-center justify-center" title="Gold">
+                        <Coins className="w-3 h-3 text-black" />
+                      </div>
+                      {profile.daily_streak >= 3 && (
+                        <div className="w-6 h-6 rounded bg-emerald-400 border border-black flex items-center justify-center" title="Gems">
+                          <Gem className="w-3 h-3 text-black" />
+                        </div>
+                      )}
+                      {profile.daily_streak >= 7 && (
+                        <div className="w-6 h-6 rounded bg-purple-400 border border-black flex items-center justify-center" title="Packs/Rare Cards">
+                          <PackageOpen className="w-3 h-3 text-black" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -249,8 +282,8 @@ export function Home() {
           <div>
             <p className="text-sm text-slate-600 font-bold uppercase">Energy</p>
             <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-black text-[var(--text)] font-mono">{currentEnergy} / 20</p>
-              {currentEnergy < 20 && nextRegen && (
+              <p className="text-3xl font-black text-[var(--text)] font-mono">{currentEnergy} / {profile?.max_energy ?? 20}</p>
+              {currentEnergy < (profile?.max_energy ?? 20) && nextRegen && (
                 <span className="text-xs font-bold text-slate-500">
                   +1 in {Math.max(0, Math.ceil((nextRegen - Date.now()) / 60000))}m
                 </span>

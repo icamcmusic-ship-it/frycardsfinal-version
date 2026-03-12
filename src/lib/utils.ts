@@ -23,14 +23,14 @@ export function getBannerUrl(url: string | null | undefined) {
 }
 
 export function getRarityStyles(rarity: string, isFoil: boolean) {
-  if (isFoil) return "bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 animate-[foilShimmer_2s_linear_infinite] text-white";
+  if (isFoil) return "bg-gradient-to-r from-pink-500 via-yellow-400 via-green-400 via-blue-500 to-purple-500 text-white border-white animate-[foilShimmer_2s_linear_infinite]";
   switch (rarity) {
-    case 'Common': return "bg-white text-black border-black";
-    case 'Uncommon': return "bg-green-500 text-white border-black";
-    case 'Rare': return "bg-blue-500 text-white border-black";
-    case 'Super-Rare': return "bg-purple-500 text-white border-black";
-    case 'Mythic': return "bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-600 animate-[foilShimmer_2s_linear_infinite] text-black border-black";
-    case 'Divine': return "bg-gradient-to-r from-red-700 via-orange-500 to-red-700 animate-[foilShimmer_1.5s_linear_infinite] text-white border-red-400 shadow-[0_0_12px_rgba(239,68,68,0.8)]";
-    default: return "bg-slate-400 text-white border-black";
+    case 'Common':     return "bg-slate-600 text-white border-slate-800";
+    case 'Uncommon':   return "bg-green-500 text-white border-green-700";
+    case 'Rare':       return "bg-blue-500 text-white border-blue-700";
+    case 'Super-Rare': return "bg-gradient-to-r from-purple-600 to-violet-500 text-white border-purple-800 shadow-[0_0_8px_rgba(168,85,247,0.6)]";
+    case 'Mythic':     return "bg-gradient-to-r from-yellow-500 via-amber-400 to-yellow-500 text-black border-yellow-600 shadow-[0_0_12px_rgba(234,179,8,0.8)] animate-[foilShimmer_2s_linear_infinite]";
+    case 'Divine':     return "bg-gradient-to-r from-red-600 via-rose-400 to-red-600 text-white border-red-800 shadow-[0_0_16px_rgba(239,68,68,0.9)] animate-[foilShimmer_1.5s_linear_infinite]";
+    default:           return "bg-slate-400 text-white border-black";
   }
 }
