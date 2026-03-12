@@ -151,12 +151,28 @@ body { background-color: var(--bg); color: var(--text); }
   100% { background-position: 200% center; }
 }
 
-@keyframes divinePulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
+@keyframes sweep {
+  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+  100% { transform: translateX(200%) translateY(200%) rotate(45deg); }
 }
 
-@keyframes mythicPulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.9; }
+@keyframes mythicAura {
+  0%, 100% { box-shadow: 0 0 15px rgba(234,179,8,0.6), inset 0 0 10px rgba(234,179,8,0.4); }
+  50% { box-shadow: 0 0 30px rgba(250,204,21,1), inset 0 0 20px rgba(250,204,21,0.8); }
+}
+
+@keyframes holographic {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes loreScroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+
+@keyframes particleFloat {
+  0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+  50% { transform: translateY(-20px) translateX(10px); opacity: 1; }
 }

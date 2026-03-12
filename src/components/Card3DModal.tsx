@@ -28,6 +28,17 @@ export function Card3DModal({ card, cardBackUrl, onClose }: Card3DModalProps) {
 
   const handleMouseLeave = () => { setRotateX(0); setRotateY(0); };
 
+  const rarityBorder: Record<string, string> = {
+    'Divine':     'border-red-500',
+    'Mythic':     'border-yellow-400',
+    'Super-Rare': 'border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.7)]',
+    'Rare':       'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]',
+    'Uncommon':   'border-green-500',
+    'Common':     'border-slate-400',
+  };
+
+  const border = rarityBorder[card.rarity] ?? rarityBorder['Common'];
+
   return (
     <AnimatePresence>
       <motion.div
@@ -66,12 +77,46 @@ export function Card3DModal({ card, cardBackUrl, onClose }: Card3DModalProps) {
             >
               {/* Front */}
               <div
-                className="absolute inset-0 rounded-2xl overflow-hidden border-4 border-white/30 shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
+                className={cn("absolute inset-0 rounded-2xl overflow-hidden border-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)]", border)}
                 style={{ backfaceVisibility: 'hidden' }}
               >
+                {/* Divine God Rays */}
+                {card.rarity === 'Divine' && (
+                  <div className="absolute -inset-12 -z-10 rounded-full animate-[spin_15s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(239,68,68,0.3)_30deg,transparent_60deg,rgba(239,68,68,0.3)_90deg,transparent_120deg,rgba(239,68,68,0.3)_150deg,transparent_180deg,rgba(239,68,68,0.3)_210deg,transparent_240deg,rgba(239,68,68,0.3)_270deg,transparent_300deg,rgba(239,68,68,0.3)_330deg,transparent_360deg)] opacity-60 blur-xl" />
+                )}
+
+                {/* Mythic Particle Effect */}
+                {card.rarity === 'Mythic' && (
+                  <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+                    {[...Array(10)].map((_, i) => (
+                      <div 
+                        key={i} 
+                        className="absolute w-1 h-1 bg-yellow-400 rounded-full animate-[particleFloat_2s_infinite]"
+                        style={{ 
+                          left: `${Math.random() * 100}%`, 
+                          top: `${Math.random() * 100}%`,
+                          animationDelay: `${Math.random() * 2}s`
+                        }} 
+                      />
+                    ))}
+                  </div>
+                )}
+
                 {card.is_video
                   ? <video src={card.image_url} autoPlay muted loop className="w-full h-full object-cover bg-black" />
                   : <img src={card.image_url} alt={card.name} className="w-full h-full object-cover bg-black" />}
+
+                {/* Foil shimmer overlay */}
+                {(card.is_foil || (card.foil_quantity ?? 0) > 0) && (
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent animate-[foilShimmer_2s_linear_infinite] pointer-events-none z-10" />
+                )}
+
+                {/* Super-Rare Prismatic Sweep */}
+                {card.rarity === 'Super-Rare' && (
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none z-30 mix-blend-overlay">
+                    <div className="w-[200%] h-[200%] absolute top-0 left-0 bg-gradient-to-r from-transparent via-purple-300/40 to-transparent animate-[sweep_4s_ease-in-out_infinite]" />
+                  </div>
+                )}
               </div>
               {/* Back */}
               <div
@@ -103,11 +148,11 @@ export function Card3DModal({ card, cardBackUrl, onClose }: Card3DModalProps) {
             </div>
 
             {/* Stats */}
-            {(card.hp || card.attack || card.defense) && (
+            {(card.hp != null || card.attack != null || card.defense != null) && (
               <div className="grid grid-cols-3 gap-3 mb-4">
-                {card.hp && <div className="text-center bg-red-50 border-2 border-red-200 rounded-xl p-2"><p className="text-xs text-red-400 font-bold">HP</p><p className="text-xl font-black text-red-600">{card.hp}</p></div>}
-                {card.attack && <div className="text-center bg-orange-50 border-2 border-orange-200 rounded-xl p-2"><p className="text-xs text-orange-400 font-bold">ATK</p><p className="text-xl font-black text-orange-600">{card.attack}</p></div>}
-                {card.defense && <div className="text-center bg-blue-50 border-2 border-blue-200 rounded-xl p-2"><p className="text-xs text-blue-400 font-bold">DEF</p><p className="text-xl font-black text-blue-600">{card.defense}</p></div>}
+                {card.hp != null && <div className="text-center bg-red-50 border-2 border-red-200 rounded-xl p-2"><p className="text-xs text-red-400 font-bold">HP</p><p className="text-xl font-black text-red-600">{card.hp}</p></div>}
+                {card.attack != null && <div className="text-center bg-orange-50 border-2 border-orange-200 rounded-xl p-2"><p className="text-xs text-orange-400 font-bold">ATK</p><p className="text-xl font-black text-orange-600">{card.attack}</p></div>}
+                {card.defense != null && <div className="text-center bg-blue-50 border-2 border-blue-200 rounded-xl p-2"><p className="text-xs text-blue-400 font-bold">DEF</p><p className="text-xl font-black text-blue-600">{card.defense}</p></div>}
               </div>
             )}
 
