@@ -8,6 +8,7 @@ import { cn, getRarityStyles } from '../lib/utils';
 import { CreateListingModal } from '../components/CreateListingModal';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { CardDisplay } from '../components/CardDisplay';
+import { CardTooltip } from '../components/CardTooltip';
 
 export function Marketplace() {
   const { profile } = useProfileStore();
@@ -18,22 +19,35 @@ export function Marketplace() {
 
   const [activeTab, setActiveTab] = useState<'all' | 'watchlist' | 'my_listings'>('all');
   const [watchlist, setWatchlist] = useState<any[]>([]);
+  const [watchlistedIds, setWatchlistedIds] = useState<Set<string>>(new Set());
   const [myListings, setMyListings] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [rarityFilter, setRarityFilter] = useState('all');
   const [elementFilter, setElementFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'price' | 'newest'>('newest');
+  const [hoveredListing, setHoveredListing] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeTab === 'all') {
       fetchListings();
+      fetchWatchlistedIds();
     } else if (activeTab === 'watchlist') {
       fetchWatchlist();
     } else if (activeTab === 'my_listings') {
       fetchMyListings();
     }
   }, [activeTab, rarityFilter, elementFilter]);
+
+  const fetchWatchlistedIds = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_watchlist');
+      if (error) throw error;
+      setWatchlistedIds(new Set((data || []).map((item: any) => item.id)));
+    } catch (err) {
+      console.error('Error fetching watchlisted ids:', err);
+    }
+  };
 
   const fetchMyListings = async () => {
     try {
@@ -89,7 +103,17 @@ export function Marketplace() {
       if (activeTab === 'watchlist') {
         fetchWatchlist();
       } else {
-        toast.success('Watchlist updated!', { icon: '✨' });
+        setWatchlistedIds(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(listingId)) {
+            newSet.delete(listingId);
+            toast.success('Removed from watchlist');
+          } else {
+            newSet.add(listingId);
+            toast.success('Added to watchlist', { icon: '✨' });
+          }
+          return newSet;
+        });
       }
     } catch (err) {
       console.error('Error toggling watchlist:', err);
@@ -324,6 +348,8 @@ export function Marketplace() {
             <motion.div 
               key={listing.id}
               whileHover={{ y: -4, rotate: -1 }}
+              onMouseEnter={() => setHoveredListing(listing.id)}
+              onMouseLeave={() => setHoveredListing(null)}
               className={cn(
                 "bg-[var(--surface)] border-4 rounded-2xl p-4 flex flex-col gap-4 shadow-[6px_6px_0px_0px_var(--border)] transition-all duration-300 group relative overflow-hidden",
                 listing.card_rarity === 'Divine' ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' :
@@ -360,9 +386,9 @@ export function Marketplace() {
                   <button 
                     onClick={() => handleToggleWatchlist(listing.id)}
                     className="p-1 hover:bg-gray-100 rounded-full transition-colors border-2 border-transparent hover:border-[var(--border)]"
-                    title={activeTab === 'watchlist' ? "Remove from Watchlist" : "Add to Watchlist"}
+                    title={(activeTab === 'watchlist' || watchlistedIds.has(listing.id)) ? "Remove from Watchlist" : "Add to Watchlist"}
                   >
-                    <Star className={cn("w-5 h-5", activeTab === 'watchlist' ? "fill-yellow-400 text-yellow-500" : "text-slate-400")} />
+                    <Star className={cn("w-5 h-5", (activeTab === 'watchlist' || watchlistedIds.has(listing.id)) ? "fill-yellow-400 text-yellow-500" : "text-slate-400")} />
                   </button>
                   {listing.is_foil && (
                     <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-700 text-xs font-black px-2 py-1 rounded-lg">
@@ -372,7 +398,8 @@ export function Marketplace() {
                 </div>
               </div>
               
-              <div className="flex-1 flex items-center justify-center py-4">
+              <div className="flex-1 flex items-center justify-center py-4 relative">
+                <CardTooltip card={listing.card} isVisible={hoveredListing === listing.id} />
                 <div className="w-full max-w-[200px]">
                   <CardDisplay card={{ ...listing.card, is_foil: listing.is_foil }} showQuantity={false} showNewBadge={false} />
                 </div>

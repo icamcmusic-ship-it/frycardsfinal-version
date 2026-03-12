@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, getCardBackUrl } from '../lib/utils';
 
 interface Card3DModalProps {
   card: any;
@@ -79,7 +79,7 @@ export function Card3DModal({ card, cardBackUrl, onClose }: Card3DModalProps) {
                 style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
               >
                 <img
-                  src={cardBackUrl || 'https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?w=400&q=80'}
+                  src={getCardBackUrl(cardBackUrl)}
                   alt="Card Back"
                   className="w-full h-full object-cover"
                 />

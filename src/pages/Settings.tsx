@@ -5,26 +5,29 @@ import { Loader2, Palette, RefreshCw, AlertTriangle, Volume2, VolumeX, Music } f
 import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import { useProfileStore } from '../stores/profileStore';
+import { useAudioStore } from '../stores/audioStore';
 
 export function Settings() {
   const { profile } = useProfileStore();
   const { theme, setTheme } = useThemeStore();
   const { gameStyle, setGameStyle } = useThemeStore();
+  const { 
+    masterVolume, setMasterVolume,
+    musicVolume, setMusicVolume,
+    sfxVolume, setSfxVolume,
+    audioEnabled, setAudioEnabled,
+    musicEnabled, setMusicEnabled,
+    sfxEnabled, setSfxEnabled
+  } = useAudioStore();
+
   const [resetting, setResetting] = useState(false);
   const [settings, setSettings] = useState({
-    master_volume: 80,
-    music_volume: 60,
-    sfx_volume: 70,
-    audio_enabled: true,
-    sfx_enabled: true,
-    music_enabled: true,
     low_perf_mode: false,
     notifications_enabled: true,
     trade_notifications: true,
     auction_notifications: true,
     friend_notifications: true,
     show_online_status: true,
-    game_style: 'retro',
   });
 
   const GAME_STYLES = [
@@ -44,8 +47,23 @@ export function Settings() {
       const { data, error } = await supabase.rpc('get_user_settings');
       if (error) throw error;
       if (data) {
-        setSettings(data);
+        setSettings({
+          low_perf_mode: data.low_perf_mode,
+          notifications_enabled: data.notifications_enabled,
+          trade_notifications: data.trade_notifications,
+          auction_notifications: data.auction_notifications,
+          friend_notifications: data.friend_notifications,
+          show_online_status: data.show_online_status,
+        });
         if (data.game_style) setGameStyle(data.game_style as any);
+        
+        // Sync audio settings if they exist in DB
+        if (data.master_volume !== undefined) setMasterVolume(data.master_volume);
+        if (data.music_volume !== undefined) setMusicVolume(data.music_volume);
+        if (data.sfx_volume !== undefined) setSfxVolume(data.sfx_volume);
+        if (data.audio_enabled !== undefined) setAudioEnabled(data.audio_enabled);
+        if (data.music_enabled !== undefined) setMusicEnabled(data.music_enabled);
+        if (data.sfx_enabled !== undefined) setSfxEnabled(data.sfx_enabled);
       }
     } catch (err) {
       console.error('Error fetching settings:', err);
@@ -53,8 +71,26 @@ export function Settings() {
   };
 
   const updateSetting = async (key: string, value: any) => {
-    const newSettings = { ...settings, [key]: value };
-    setSettings(newSettings);
+    const newSettings = { 
+      ...settings, 
+      master_volume: masterVolume,
+      music_volume: musicVolume,
+      sfx_volume: sfxVolume,
+      audio_enabled: audioEnabled,
+      music_enabled: musicEnabled,
+      sfx_enabled: sfxEnabled,
+      game_style: gameStyle,
+      [key]: value 
+    };
+    
+    if (key === 'master_volume') setMasterVolume(value);
+    else if (key === 'music_volume') setMusicVolume(value);
+    else if (key === 'sfx_volume') setSfxVolume(value);
+    else if (key === 'audio_enabled') setAudioEnabled(value);
+    else if (key === 'music_enabled') setMusicEnabled(value);
+    else if (key === 'sfx_enabled') setSfxEnabled(value);
+    else setSettings(prev => ({ ...prev, [key]: value }));
+
     try {
       const { error } = await supabase.rpc('upsert_user_settings', { p_settings: newSettings });
       if (error) throw error;
@@ -147,21 +183,21 @@ export function Settings() {
           <div className="flex items-center justify-between">
             <span className="font-bold text-[var(--text)]">Enable Audio</span>
             <button 
-              onClick={() => updateSetting('audio_enabled', !settings.audio_enabled)}
-              className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${settings.audio_enabled ? 'bg-green-400' : 'bg-slate-300'}`}
+              onClick={() => updateSetting('audio_enabled', !audioEnabled)}
+              className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${audioEnabled ? 'bg-green-400' : 'bg-slate-300'}`}
             >
-              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${settings.audio_enabled ? 'left-6' : 'left-1'}`} />
+              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${audioEnabled ? 'left-6' : 'left-1'}`} />
             </button>
           </div>
 
           <div className="space-y-2">
             <div className="flex justify-between text-sm font-bold text-[var(--text)]">
               <span>Master Volume</span>
-              <span>{settings.master_volume}%</span>
+              <span>{masterVolume}%</span>
             </div>
             <input 
               type="range" min="0" max="100" 
-              value={settings.master_volume}
+              value={masterVolume}
               onChange={(e) => updateSetting('master_volume', parseInt(e.target.value))}
               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
             />
@@ -170,11 +206,11 @@ export function Settings() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm font-bold text-[var(--text)]">
               <span>Music Volume</span>
-              <span>{settings.music_volume}%</span>
+              <span>{musicVolume}%</span>
             </div>
             <input 
               type="range" min="0" max="100" 
-              value={settings.music_volume}
+              value={musicVolume}
               onChange={(e) => updateSetting('music_volume', parseInt(e.target.value))}
               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
             />
@@ -183,11 +219,11 @@ export function Settings() {
           <div className="space-y-2">
             <div className="flex justify-between text-sm font-bold text-[var(--text)]">
               <span>SFX Volume</span>
-              <span>{settings.sfx_volume}%</span>
+              <span>{sfxVolume}%</span>
             </div>
             <input 
               type="range" min="0" max="100" 
-              value={settings.sfx_volume}
+              value={sfxVolume}
               onChange={(e) => updateSetting('sfx_volume', parseInt(e.target.value))}
               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
             />
@@ -202,22 +238,22 @@ export function Settings() {
         </h2>
         <div className="space-y-4">
           {[
-            { key: 'sfx_enabled', label: 'SFX Enabled' },
-            { key: 'music_enabled', label: 'Music Enabled' },
-            { key: 'low_perf_mode', label: 'Low Performance Mode' },
-            { key: 'notifications_enabled', label: 'Enable Notifications' },
-            { key: 'trade_notifications', label: 'Trade Notifications' },
-            { key: 'auction_notifications', label: 'Auction Notifications' },
-            { key: 'friend_notifications', label: 'Friend Notifications' },
-            { key: 'show_online_status', label: 'Show Online Status' },
-          ].map(({ key, label }) => (
+            { key: 'sfx_enabled', label: 'SFX Enabled', value: sfxEnabled },
+            { key: 'music_enabled', label: 'Music Enabled', value: musicEnabled },
+            { key: 'low_perf_mode', label: 'Low Performance Mode', value: settings.low_perf_mode },
+            { key: 'notifications_enabled', label: 'Enable Notifications', value: settings.notifications_enabled },
+            { key: 'trade_notifications', label: 'Trade Notifications', value: settings.trade_notifications },
+            { key: 'auction_notifications', label: 'Auction Notifications', value: settings.auction_notifications },
+            { key: 'friend_notifications', label: 'Friend Notifications', value: settings.friend_notifications },
+            { key: 'show_online_status', label: 'Show Online Status', value: settings.show_online_status },
+          ].map(({ key, label, value }) => (
             <div key={key} className="flex items-center justify-between">
               <span className="font-bold text-[var(--text)]">{label}</span>
               <button 
-                onClick={() => updateSetting(key, !(settings as any)[key])}
-                className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${(settings as any)[key] ? 'bg-green-400' : 'bg-slate-300'}`}
+                onClick={() => updateSetting(key, !value)}
+                className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${value ? 'bg-green-400' : 'bg-slate-300'}`}
               >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${(settings as any)[key] ? 'left-6' : 'left-1'}`} />
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${value ? 'left-6' : 'left-1'}`} />
               </button>
             </div>
           ))}

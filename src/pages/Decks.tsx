@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Loader2, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { CardDisplay } from '../components/CardDisplay';
+import { CardSkeleton } from '../components/CardSkeleton';
 import { cn } from '../lib/utils';
 
 export function Decks() {
@@ -105,7 +106,29 @@ export function Decks() {
     );
   };
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">My Decks</h1>
+          <div className="w-32 h-12 bg-slate-200 animate-pulse rounded-xl border-4 border-[var(--border)]"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] h-48 animate-pulse">
+              <div className="h-8 bg-slate-200 rounded w-1/2 mb-4"></div>
+              <div className="h-4 bg-slate-200 rounded w-1/4 mb-8"></div>
+              <div className="flex -space-x-4">
+                {[1, 2, 3, 4, 5].map(j => (
+                  <div key={j} className="w-12 h-16 rounded border-2 border-[var(--border)] bg-slate-200 shrink-0"></div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (editingDeck !== null) {
     return (

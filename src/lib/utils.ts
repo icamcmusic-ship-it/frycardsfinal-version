@@ -5,6 +5,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export const DEFAULT_CARD_BACK = 'https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?w=400&q=80';
+
+export function getCardBackUrl(url: string | null | undefined) {
+  if (!url || url === 'default') return DEFAULT_CARD_BACK;
+  return url;
+}
+
+export function getAvatarUrl(url: string | null | undefined, username?: string) {
+  if (!url || url === 'default') return null;
+  return url;
+}
+
+export function getBannerUrl(url: string | null | undefined) {
+  if (!url || url === 'default') return null;
+  return url;
+}
+
 export function getRarityStyles(rarity: string, isFoil: boolean) {
   if (isFoil) return "bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 animate-[foilShimmer_2s_linear_infinite] text-white";
   switch (rarity) {

@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import { useAuthStore } from './stores/authStore';
 import { useThemeStore } from './stores/themeStore';
 import { Toaster } from 'react-hot-toast';
+import { audioService } from './services/AudioService';
 import { Layout } from './components/Layout';
 import { Auth } from './pages/Auth';
 import { Home } from './pages/Home';
@@ -19,6 +20,7 @@ import { Profile } from './pages/Profile';
 import { PublicProfile } from './pages/PublicProfile';
 import { Notifications } from './pages/Notifications';
 import { Decks } from './pages/Decks';
+import { Quests } from './pages/Quests';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -39,6 +41,7 @@ export default function App() {
   }, [theme, gameStyle]);
 
   useEffect(() => {
+    audioService.preload().catch(console.error);
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -82,6 +85,7 @@ export default function App() {
             <Route path="/social" element={<Social />} />
             <Route path="/trades" element={<Trades />} />
             <Route path="/decks" element={<Decks />} />
+            <Route path="/quests" element={<Quests />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/season-pass" element={<SeasonPass />} />
             <Route path="/settings" element={<Settings />} />

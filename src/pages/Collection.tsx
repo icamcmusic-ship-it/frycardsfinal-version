@@ -7,6 +7,7 @@ import { motion } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import { EmptyState } from '../components/EmptyState';
 import { CardDisplay } from '../components/CardDisplay';
+import { CardSkeleton } from '../components/CardSkeleton';
 import { CreateListingModal } from '../components/CreateListingModal';
 import { Card3DModal } from '../components/Card3DModal';
 
@@ -14,6 +15,8 @@ export function Collection() {
   const { profile } = useProfileStore();
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visibleCount, setVisibleCount] = useState(20);
+
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'collection' | 'wishlist'>('collection');
@@ -26,6 +29,7 @@ export function Collection() {
   const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>('rarity');
   const [elementType, setElementType] = useState<string>('all');
   const [stats, setStats] = useState<any>(null);
+  const [viewSize, setViewSize] = useState<'normal' | 'large'>('normal');
 
   useEffect(() => {
     if (profile) {
@@ -52,11 +56,12 @@ export function Collection() {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_user_collection', {
         p_user_id: profile?.id,
-        p_rarity: filter === 'all' ? null : filter.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-'),
-        p_sort_by: 'rarity',
-        p_limit: 1000,
+        p_rarity: null, // Fetch all, filter client-side
+        p_sort_by: 'newest', // Fetch all, sort client-side
+        p_limit: 5000,
         p_offset: 0
       });
+      
       if (error) throw error;
       
       const fetchedCards = data || [];
@@ -73,6 +78,17 @@ export function Collection() {
       setLoading(false);
     }
   };
+
+  // Infinite scroll listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 100) {
+        setVisibleCount(prev => prev + 20);
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const fetchWishlist = async () => {
     try {
@@ -170,16 +186,40 @@ export function Collection() {
   };
 
   const handleQuicksell = async (card: any) => {
-    const value = { Common: 10, Uncommon: 25, Rare: 100, 'Super-Rare': 250, Mythic: 500, Divine: 1000 }[card.rarity] ?? 10;
+    const baseValue = { Common: 10, Uncommon: 25, Rare: 100, 'Super-Rare': 250, Mythic: 500, Divine: 1000 }[card.rarity] ?? 10;
+    const value = card.is_foil ? baseValue * 3 : baseValue;
+    
     if (!confirm(`Quicksell ${card.name} for ${value} Gold?`)) return;
+    
+    // Optimistic update
+    const previousCards = [...cards];
+    setCards(cards.filter(c => c.id !== card.id));
+    
+    if (profile) {
+      useProfileStore.getState().setProfile({
+        ...profile,
+        gold_balance: profile.gold_balance + value
+      });
+    }
+
     const { data, error } = await supabase.rpc('quicksell_card', {
       p_card_id: card.id,
-      p_is_foil: false,
+      p_is_foil: card.is_foil || false,
       p_quantity: 1,
     });
-    if (error) { toast.error(error.message); return; }
+    
+    if (error) { 
+      toast.error(error.message); 
+      // Revert optimistic update
+      setCards(previousCards);
+      if (profile) {
+        useProfileStore.getState().setProfile(profile);
+      }
+      return; 
+    }
+    
     toast.success(`Sold for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
-    fetchCollection(); // refresh
+    fetchStats(); // Update stats in background
   };
 
   const handleBulkMill = async () => {
@@ -196,6 +236,10 @@ export function Collection() {
       toast.error(err.message || 'Failed to bulk mill');
     }
   };
+
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [filter, search, sortBy, activeTab, elementType]);
 
   const filteredCards = (activeTab === 'collection' ? cards : wishlist)
     .filter(c => {
@@ -214,8 +258,18 @@ export function Collection() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+      <div className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="h-10 w-48 bg-slate-200 animate-pulse rounded-lg mb-2"></div>
+            <div className="h-5 w-32 bg-slate-200 animate-pulse rounded-lg"></div>
+          </div>
+        </div>
+        <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -223,15 +277,24 @@ export function Collection() {
   return (
     <div className="space-y-8">
       {stats && (
-        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-4 shadow-[4px_4px_0px_0px_var(--border)]">
-          <div className="flex justify-between mb-2">
-            <span className="font-black uppercase">Collection Progress</span>
-            <span className="font-mono font-bold">{stats.unique_cards} / {stats.total_cards_in_db}</span>
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] mb-8">
+          <div className="flex justify-between items-end mb-4">
+            <div>
+              <p className="text-sm font-black uppercase text-slate-500 mb-1">Collection Completion</p>
+              <h2 className="text-3xl font-black text-[var(--text)]">
+                {stats.unique_cards} <span className="text-lg text-slate-400">/ {stats.total_possible}</span>
+              </h2>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-black text-blue-500">{Math.round(stats.completion_pct ?? 0)}%</p>
+            </div>
           </div>
-          <div className="h-3 bg-gray-200 rounded-full overflow-hidden border-2 border-[var(--border)]">
-            <div
-              className="h-full bg-blue-500 rounded-full"
-              style={{ width: `${stats.completion_percentage ?? 0}%` }}
+          <div className="h-4 bg-[var(--bg)] rounded-full border-4 border-[var(--border)] overflow-hidden shadow-[inner_0_2px_4px_rgba(0,0,0,0.1)]">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${stats.completion_pct ?? 0}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="h-full bg-gradient-to-r from-blue-500 to-cyan-400"
             />
           </div>
         </div>
@@ -348,77 +411,40 @@ export function Collection() {
             <option value="mythic">Mythic</option>
             <option value="divine">Divine</option>
           </select>
+          <button
+            onClick={() => setViewSize(prev => prev === 'normal' ? 'large' : 'normal')}
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+          >
+            <LayoutGrid className="w-5 h-5" />
+            {viewSize === 'normal' ? 'Large Grid' : 'Normal Grid'}
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-        {filteredCards.map((card) => (
-          <motion.div 
+      <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
+        {filteredCards.slice(0, visibleCount).map((card) => (
+          <CollectionCard 
             key={card.id}
-            layout
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ y: -4, rotate: -2 }}
-            onClick={() => {
+            card={card}
+            isBatchMode={isBatchMode}
+            isSelected={selectedCardIds.includes(card.id)}
+            activeTab={activeTab}
+            onSelect={() => {
               if (isBatchMode) {
                 setSelectedCardIds(prev => prev.includes(card.id) ? prev.filter(id => id !== card.id) : [...prev, card.id]);
               } else {
                 setSelectedCard(card);
               }
             }}
-            className={cn(
-              "relative overflow-hidden group cursor-pointer transition-all duration-300",
-              selectedCardIds.includes(card.id) ? "ring-4 ring-blue-500/50 rounded-xl" : ""
-            )}
-          >
-            {isBatchMode && (
-              <div className={cn(
-                "absolute top-2 right-2 z-40 w-6 h-6 rounded-full border-2 border-[var(--border)] flex items-center justify-center",
-                selectedCardIds.includes(card.id) ? "bg-blue-500 text-white" : "bg-[var(--surface)]"
-              )}>
-                {selectedCardIds.includes(card.id) && <Check className="w-4 h-4" />}
-              </div>
-            )}
-            
-            <CardDisplay card={card} />
-
-            {/* Hover Actions */}
-            <div className="absolute inset-x-0 bottom-0 bg-black/85 backdrop-blur-sm translate-y-full group-hover:translate-y-0 transition-transform duration-300 p-3 z-30 rounded-b-xl">
-              <p className="text-white font-black text-xs uppercase tracking-wide">{card.name}</p>
-              <p className="text-gray-300 text-[10px] font-bold">{card.rarity} · {card.card_type}</p>
-              {card.element && <p className="text-blue-300 text-[10px]">{card.element}</p>}
-              <div className="flex gap-2 mt-2">
-                {activeTab === 'collection' && !card.is_locked && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleQuicksell(card); }}
-                    className="flex-1 py-1 bg-emerald-500 text-white font-black rounded text-[10px] uppercase border border-black"
-                  >
-                    💰 Sell
-                  </button>
-                )}
-                {activeTab === 'collection' && !card.is_locked && (
-                  <button 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setCardToList(card);
-                      setIsListingModalOpen(true);
-                    }}
-                    className="flex-1 py-1 bg-blue-500 text-white font-black rounded text-[10px] uppercase border border-black"
-                  >
-                    📋 List
-                  </button>
-                )}
-                {activeTab === 'wishlist' && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleToggleWishlist(card.id); }}
-                    className="flex-1 py-1 bg-red-500 text-white font-black rounded text-[10px] uppercase border border-black"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-          </motion.div>
+            onToggleLock={(e) => { e.stopPropagation(); handleToggleLock(card.id); }}
+            onQuicksell={(e) => { e.stopPropagation(); handleQuicksell(card); }}
+            onList={(e) => { 
+              e.stopPropagation(); 
+              setCardToList(card);
+              setIsListingModalOpen(true);
+            }}
+            onToggleWishlist={(e) => { e.stopPropagation(); handleToggleWishlist(card.id); }}
+          />
         ))}
       </div>
       
@@ -474,5 +500,95 @@ export function Collection() {
         initialCard={cardToList}
       />
     </div>
+  );
+}
+
+function CollectionCard({ card, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist }: any) {
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const tiltX = ((y - centerY) / centerY) * -10;
+    const tiltY = ((x - centerX) / centerX) * 10;
+    setTilt({ x: tiltX, y: tiltY });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+  };
+
+  return (
+    <motion.div 
+      layout
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1, rotateX: tilt.x, rotateY: tilt.y }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onClick={onSelect}
+      style={{ perspective: 1000 }}
+      className={cn(
+        "relative overflow-hidden group cursor-pointer transition-all duration-300",
+        isSelected ? "ring-4 ring-blue-500/50 rounded-xl" : ""
+      )}
+    >
+      {isBatchMode && (
+        <div className={cn(
+          "absolute top-2 right-2 z-40 w-6 h-6 rounded-full border-2 border-[var(--border)] flex items-center justify-center",
+          isSelected ? "bg-blue-500 text-white" : "bg-[var(--surface)]"
+        )}>
+          {isSelected && <Check className="w-4 h-4" />}
+        </div>
+      )}
+      
+      <CardDisplay card={card} />
+
+      {/* Hover Actions */}
+      <div className="absolute inset-x-0 bottom-0 bg-black/85 backdrop-blur-sm translate-y-full group-hover:translate-y-0 transition-transform duration-300 p-3 z-30 rounded-b-xl">
+        <p className="text-white font-black text-xs uppercase tracking-wide">{card.name}</p>
+        <p className="text-gray-300 text-[10px] font-bold">{card.rarity} · {card.card_type}</p>
+        {card.element && <p className="text-blue-300 text-[10px]">{card.element}</p>}
+        <div className="flex gap-2 mt-2">
+          {activeTab === 'collection' && (
+            <button 
+              onClick={onToggleLock}
+              className={cn(
+                "flex-1 py-1 font-black rounded text-[10px] uppercase border border-black flex items-center justify-center gap-1",
+                card.is_locked ? "bg-slate-600 text-white" : "bg-yellow-400 text-black"
+              )}
+            >
+              {card.is_locked ? <><Lock className="w-3 h-3" /> Unlock</> : <><Unlock className="w-3 h-3" /> Lock</>}
+            </button>
+          )}
+          {activeTab === 'collection' && !card.is_locked && (
+            <button 
+              onClick={onQuicksell}
+              className="flex-1 py-1 bg-emerald-500 text-white font-black rounded text-[10px] uppercase border border-black"
+            >
+              💰 Sell
+            </button>
+          )}
+          {activeTab === 'collection' && !card.is_locked && (
+            <button 
+              onClick={onList}
+              className="flex-1 py-1 bg-blue-500 text-white font-black rounded text-[10px] uppercase border border-black"
+            >
+              📋 List
+            </button>
+          )}
+          {activeTab === 'wishlist' && (
+            <button
+              onClick={onToggleWishlist}
+              className="flex-1 py-1 bg-red-500 text-white font-black rounded text-[10px] uppercase border border-black"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { cn, getRarityStyles } from '../lib/utils';
+import { cn, getRarityStyles, getCardBackUrl } from '../lib/utils';
+import { audioService } from '../services/AudioService';
 
 const RARITY_GLOW: Record<string, string> = {
   Divine: 'shadow-[0_0_60px_rgba(239,68,68,1)]',
@@ -9,29 +10,36 @@ const RARITY_GLOW: Record<string, string> = {
   Rare: 'shadow-[0_0_20px_rgba(59,130,246,0.7)]',
 };
 
-export function FlipCard({
-  card,
-  cardBackUrl,
-  onReveal,
-}: {
+interface FlipCardProps {
   card: any;
   cardBackUrl: string | null;
   onReveal: () => void;
-}) {
+}
+
+export const FlipCard: React.FC<FlipCardProps> = ({
+  card,
+  cardBackUrl,
+  onReveal,
+}) => {
   const [flipped, setFlipped] = useState(false);
   const glowClass = RARITY_GLOW[card.rarity] ?? '';
 
   const handleClick = () => {
     if (flipped) return;
+    audioService.play('click');
     setFlipped(true);
     setTimeout(onReveal, 600); // wait for flip to complete
   };
 
   return (
     <motion.div
-      className="relative w-44 h-64 cursor-pointer select-none"
+      initial={{ scale: 0, rotateZ: 10 }}
+      animate={{ scale: 1, rotateZ: 0 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+      className="relative w-64 h-[340px] cursor-pointer select-none"
       style={{ perspective: '1000px' }}
       onClick={handleClick}
+      onMouseEnter={() => audioService.play('hover')}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       onDragEnd={(_, info) => {
@@ -40,8 +48,54 @@ export function FlipCard({
         }
       }}
     >
+      {/* Rarity-specific effects when flipped */}
+      {flipped && (card.rarity === 'Divine' || card.rarity === 'Mythic') && (
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <motion.div
+            initial={{ opacity: 1, scale: 1 }}
+            animate={{ opacity: 0, scale: 3 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className={cn(
+              "absolute inset-0 rounded-xl",
+              card.rarity === 'Divine' ? "bg-red-500" : "bg-yellow-400"
+            )}
+          />
+          {[...Array(12)].map((_, i) => (
+            <motion.div
+              key={i}
+              className={cn(
+                "absolute w-2 h-2 rounded-full",
+                card.rarity === 'Divine' ? "bg-red-500" : "bg-yellow-400"
+              )}
+              style={{ left: '50%', top: '50%' }}
+              initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+              animate={{
+                x: (Math.random() - 0.5) * 400,
+                y: (Math.random() - 0.5) * 400,
+                opacity: 0,
+                scale: 0,
+              }}
+              transition={{ duration: 1, ease: "easeOut" }}
+            />
+          ))}
+        </div>
+      )}
+      {flipped && (card.rarity === 'Super-Rare' || card.rarity === 'Rare') && (
+        <div className="absolute inset-0 pointer-events-none z-0">
+          <motion.div
+            initial={{ opacity: 0.8, scale: 1 }}
+            animate={{ opacity: 0, scale: 1.5 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className={cn(
+              "absolute inset-0 rounded-xl",
+              card.rarity === 'Super-Rare' ? "bg-purple-500" : "bg-blue-500"
+            )}
+          />
+        </div>
+      )}
+
       <motion.div
-        className="relative w-full h-full"
+        className="relative w-full h-full z-10"
         style={{ transformStyle: 'preserve-3d' }}
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.55, ease: 'easeInOut' }}
@@ -51,13 +105,7 @@ export function FlipCard({
           className="absolute inset-0 rounded-xl border-4 border-[var(--border)] overflow-hidden"
           style={{ backfaceVisibility: 'hidden' }}
         >
-          {cardBackUrl ? (
-            <img src={cardBackUrl} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-blue-700 via-indigo-800 to-purple-900 flex items-center justify-center">
-              <span className="text-7xl font-black text-white/20 select-none">F</span>
-            </div>
-          )}
+          <img src={getCardBackUrl(cardBackUrl)} className="w-full h-full object-cover" />
           {/* Tap hint */}
           {!flipped && (
             <div className="absolute inset-0 flex items-end justify-center pb-4">

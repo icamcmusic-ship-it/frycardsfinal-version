@@ -4,6 +4,15 @@ import { Loader2, Bell, Check, Trash2, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { MessageSquare, UserPlus, ShoppingCart, Trophy, Info } from 'lucide-react';
+
+const NOTIFICATION_TYPES: Record<string, { icon: any, color: string, bg: string }> = {
+  trade_offer: { icon: MessageSquare, color: 'text-purple-500', bg: 'bg-purple-100' },
+  friend_request: { icon: UserPlus, color: 'text-green-500', bg: 'bg-green-100' },
+  marketplace_sale: { icon: ShoppingCart, color: 'text-yellow-500', bg: 'bg-yellow-100' },
+  achievement: { icon: Trophy, color: 'text-orange-500', bg: 'bg-orange-100' },
+  default: { icon: Bell, color: 'text-blue-500', bg: 'bg-blue-100' },
+};
 
 export function Notifications() {
   const navigate = useNavigate();
@@ -93,12 +102,20 @@ export function Notifications() {
                 notification.is_read ? "bg-gray-50" : "bg-white"
               )}
             >
-              <div className={cn(
-                "w-12 h-12 rounded-full border-2 border-black flex items-center justify-center shrink-0",
-                notification.is_read ? "bg-gray-200" : "bg-blue-100"
-              )}>
-                <Bell className={cn("w-6 h-6", notification.is_read ? "text-slate-400" : "text-blue-500")} />
-              </div>
+              {(() => {
+                const type = notification.type || 'default';
+                const config = NOTIFICATION_TYPES[type] || NOTIFICATION_TYPES.default;
+                const Icon = config.icon;
+                
+                return (
+                  <div className={cn(
+                    "w-12 h-12 rounded-full border-2 border-black flex items-center justify-center shrink-0",
+                    notification.is_read ? "bg-gray-200" : config.bg
+                  )}>
+                    <Icon className={cn("w-6 h-6", notification.is_read ? "text-slate-400" : config.color)} />
+                  </div>
+                );
+              })()}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="font-black text-black text-lg uppercase truncate">{notification.title}</h3>

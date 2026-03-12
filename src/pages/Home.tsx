@@ -23,7 +23,7 @@ export function Home() {
   });
   const [nextRegen, setNextRegen] = useState<number | null>(null);
 
-  const [stats, setStats] = useState<{ unique_cards: number; total_possible: number } | null>(null);
+  const [stats, setStats] = useState<{ unique_cards: number; total_possible: number; total_cards: number } | null>(null);
   const [reward, setReward] = useState<any>(null);
 
   useEffect(() => {
@@ -61,13 +61,9 @@ export function Home() {
   const fetchEnergy = async () => {
     if (!profile) return;
     try {
-      const { data, error } = await supabase.rpc('get_current_energy', { user_id: profile.id });
+      const { data, error } = await supabase.rpc('get_current_energy', { p_user_id: profile.id });
       if (!error && data !== null) {
-        // If data is an object, extract the energy property, otherwise assume it's the energy value
-        const energyValue = (typeof data === 'object' && data !== null && 'energy' in data) 
-          ? (data as any).energy 
-          : data;
-        setCurrentEnergy(energyValue);
+        setCurrentEnergy(data);
       }
     } catch (err) {
       console.error('Error fetching energy:', err);
@@ -160,9 +156,10 @@ export function Home() {
 
   const isDailyClaimable = () => {
     if (!profile?.last_daily_claim) return true;
-    const lastClaim = new Date(profile.last_daily_claim);
+    const lastClaim = new Date(profile.last_daily_claim + 'T00:00:00Z');
     const today = new Date();
-    return lastClaim.toDateString() !== today.toDateString();
+    today.setUTCHours(0, 0, 0, 0);
+    return today.getTime() > lastClaim.getTime();
   };
 
   if (!profile) {
@@ -231,7 +228,7 @@ export function Home() {
           </div>
           <div>
             <p className="text-sm text-slate-600 font-bold uppercase">Collection Score</p>
-            <p className="text-3xl font-black text-[var(--text)] font-mono">1,240</p>
+            <p className="text-3xl font-black text-[var(--text)] font-mono">{(stats?.total_cards ?? 0).toLocaleString()}</p>
           </div>
         </div>
         
@@ -320,11 +317,15 @@ export function Home() {
       </div>
 
       {reward && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => setReward(null)}
+        >
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0px_0px_var(--border)] text-center"
+            onClick={(e) => e.stopPropagation()}
           >
             <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
             <h2 className="text-3xl font-black text-[var(--text)] uppercase mb-2">

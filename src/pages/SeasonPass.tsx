@@ -4,6 +4,7 @@ import { Loader2, Gift, Lock, Check, Gem, Coins, Zap } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
+import { useProfileStore } from '../stores/profileStore';
 
 const REWARD_ICONS: Record<string, React.ReactNode> = {
   gold:  <Coins className="w-5 h-5 text-yellow-500" />,
@@ -53,28 +54,26 @@ export function SeasonPass() {
     if (!confirm('Upgrade to Premium Season Pass for 500 Gems?')) return;
     
     try {
-      // First check if user has enough gems
-      const { data: profileData } = await supabase.from('profiles').select('gem_balance').single();
-      if ((profileData?.gem_balance || 0) < 500) {
-        toast.error('Not enough gems!');
-        return;
-      }
-
-      // Deduct gems
-      const { error: deductError } = await supabase.rpc('deduct_gems', { p_amount: 500 });
-      if (deductError) {
-        throw new Error(deductError.message || 'Failed to deduct gems');
-      }
-
-      const { error } = await supabase
-        .from('user_season_pass')
-        .update({ is_premium: true })
-        .eq('id', passData.id);
-        
+      const { data, error } = await supabase.rpc('upgrade_season_pass_premium', { p_cost: 500 });
       if (error) throw error;
       
-      toast.success('Upgraded to Premium!');
+      if (data && data.success === false) {
+        throw new Error(data.error || 'Failed to upgrade');
+      }
+      
+      toast.success('Upgraded to Premium!', { icon: '✨' });
       fetchData();
+      
+      // Refresh profile to update gems
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', passData.user_id)
+        .single();
+        
+      if (profileData) {
+        useProfileStore.getState().setProfile(profileData);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to upgrade');
     }

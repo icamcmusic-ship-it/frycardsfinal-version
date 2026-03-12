@@ -10,6 +10,7 @@ import { FlipCard } from '../components/FlipCard';
 import { EmptyState } from '../components/EmptyState';
 
 import { useLocation } from 'react-router-dom';
+import { audioService } from '../services/AudioService';
 
 const PACK_ODDS = [
   { rarity: 'Common',     pct: '55%', color: 'text-slate-500' },
@@ -40,6 +41,12 @@ export function Store() {
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
   const [inventory, setInventory] = useState<any[]>([]);
   const [useGems, setUseGems] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   const tabLabels: Record<string, string> = {
     packs: 'Packs',
@@ -104,23 +111,30 @@ export function Store() {
     setInventory(data || []);
   };
 
-  const handleBuyItem = async (itemId: string, priceGold: number, priceGems: number) => {
-    if (!confirm('Are you sure you want to buy this item?')) return;
-    try {
-      const { data, error } = await supabase.rpc('buy_shop_item', { p_item_id: itemId, p_use_gems: useGems });
-      if (error) throw error;
-      if (data?.success === false) {
-        toast.error(data.error || 'Purchase failed');
-        return;
+  const handleBuyItem = async (itemId: string, priceGold: number, priceGems: number, itemName: string) => {
+    audioService.play('click');
+    setConfirmModal({
+      isOpen: true,
+      title: 'Confirm Purchase',
+      message: `Are you sure you want to buy ${itemName} for ${priceGems > 0 ? `${priceGems} Gems` : `${priceGold} Gold`}?`,
+      onConfirm: async () => {
+        try {
+          const { data, error } = await supabase.rpc('buy_shop_item', { p_item_id: itemId, p_use_gems: useGems });
+          if (error) throw error;
+          if (data?.success === false) {
+            toast.error(data.error || 'Purchase failed');
+            return;
+          }
+          toast.success(`${data?.item_name || 'Item'} purchased!`, { icon: '✨' });
+          fetchUserCosmetics();
+          
+          const { data: profileData } = await supabase.from('profiles').select('*').eq('id', profile!.id).single();
+          if (profileData) useProfileStore.getState().setProfile(profileData);
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to buy item');
+        }
       }
-      toast.success(`${data?.item_name || 'Item'} purchased!`, { icon: '✨' });
-      fetchUserCosmetics();
-      
-      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', profile!.id).single();
-      if (profileData) useProfileStore.getState().setProfile(profileData);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to buy item');
-    }
+    });
   };
 
   const handleEquip = async (userItemId: string) => {
@@ -153,59 +167,87 @@ export function Store() {
     }
   };
 
-  const handleOpenPack = async (packId: string, useGems: boolean, packImageUrl: string) => {
+  const handleOpenPack = async (packId: string, useGems: boolean, packImageUrl: string, packName: string, cost: number, count: number = 1) => {
     if (opening || !profile) return;
-    setOpening(true);
-    setOpeningPackImageUrl(packImageUrl);
-    setPackOpeningStep('shaking');
+    audioService.play('click');
+    
+    setConfirmModal({
+      isOpen: true,
+      title: count > 1 ? `Open ${count} Packs` : 'Open Pack',
+      message: `Are you sure you want to open ${count > 1 ? `${count}x ` : ''}${packName} for ${cost * count} ${useGems ? 'Gems' : 'Gold'}?`,
+      onConfirm: async () => {
+        setOpening(true);
+        setOpeningPackImageUrl(packImageUrl);
+        setPackOpeningStep('shaking');
+        audioService.play('pack_shake');
 
-    try {
-      const { data, error } = await supabase.rpc('open_pack', {
-        p_pack_type_id: packId,
-        p_use_gems: useGems
-      });
+        try {
+          let allCards: any[] = [];
+          let totalXp = 0;
+          let totalNew = 0;
 
-      if (error) throw error;
-      
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile.id)
-        .single();
-        
-      if (profileData) {
-        useProfileStore.getState().setProfile(profileData);
+          for (let i = 0; i < count; i++) {
+            const { data, error } = await supabase.rpc('open_pack', {
+              p_pack_type_id: packId,
+              p_use_gems: useGems
+            });
+            if (error) throw error;
+            allCards = [...allCards, ...data.cards];
+            totalXp += data.xp_gained;
+            totalNew += data.new_card_count;
+          }
+          
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', profile.id)
+            .single();
+            
+          if (profileData) {
+            useProfileStore.getState().setProfile(profileData);
+          }
+          
+          setOpenedCards(allCards);
+          setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
+          setCurrentCardIndex(0);
+          setRevealedCards([]);
+          setPackOpeningStep('revealing');
+          audioService.play('pack_open');
+
+          fetchPacks(); // Refresh pity counter
+
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to open pack');
+          setOpening(false);
+          setPackOpeningStep('idle');
+          audioService.play('error');
+        }
       }
-      
-      setOpenedCards(data.cards);
-      setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
-      setCurrentCardIndex(0);
-      setRevealedCards([]);
-      setPackOpeningStep('revealing');
-
-      fetchPacks(); // Refresh pity counter
-
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to open pack');
-      setOpening(false);
-      setPackOpeningStep('idle');
-    }
+    });
   };
 
-  const handleBuyToInventory = async (packId: string, useGems: boolean) => {
+  const handleBuyToInventory = async (packId: string, useGems: boolean, packName: string, cost: number) => {
     if (!profile) return;
-    try {
-      const { error } = await supabase.rpc('buy_pack_to_inventory', {
-        p_pack_type_id: packId,
-        p_use_gems: useGems
-      });
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Stash Pack',
+      message: `Are you sure you want to stash ${packName} for ${cost} ${useGems ? 'Gems' : 'Gold'}?`,
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.rpc('buy_pack_to_inventory', {
+            p_pack_type_id: packId,
+            p_use_gems: useGems
+          });
 
-      if (error) throw error;
-      
-      toast.success('Pack added to inventory!', { icon: '📦' });
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to buy pack');
-    }
+          if (error) throw error;
+          
+          toast.success('Pack added to inventory!', { icon: '📦' });
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to buy pack');
+        }
+      }
+    });
   };
 
   const handleOpenFromInventory = async (packTypeId: string, packImageUrl: string) => {
@@ -239,7 +281,71 @@ export function Store() {
   };
 
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
+  const handleOpenAllFromInventory = async () => {
+    if (opening || !profile || inventory.length === 0) return;
+    setOpening(true);
+    setPackOpeningStep('shaking');
+    
+    try {
+      let allCards: any[] = [];
+      let totalXp = 0;
+      let totalNew = 0;
+      
+      // Open all packs in inventory
+      for (const inv of inventory) {
+        for (let i = 0; i < inv.quantity; i++) {
+          const { data, error } = await supabase.rpc('open_pack_from_inventory_by_type', {
+            p_pack_type_id: inv.pack_type_id
+          });
+          if (error) throw error;
+          allCards = [...allCards, ...data.cards];
+          totalXp += data.xp_gained;
+          totalNew += data.new_card_count;
+        }
+      }
+      
+      fetchInventory();
+      setOpenedCards(allCards);
+      setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
+      setCurrentCardIndex(0);
+      setRevealedCards([]);
+      setPackOpeningStep('revealing');
+      fetchPacks();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to open all packs');
+      setOpening(false);
+      setPackOpeningStep('idle');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="h-10 w-48 bg-slate-200 animate-pulse rounded-lg mb-2"></div>
+        <div className="flex gap-4 border-b-4 border-[var(--border)] pb-4">
+          <div className="h-10 w-24 bg-slate-200 animate-pulse rounded-t-xl"></div>
+          <div className="h-10 w-24 bg-slate-200 animate-pulse rounded-t-xl"></div>
+          <div className="h-10 w-24 bg-slate-200 animate-pulse rounded-t-xl"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative shadow-[8px_8px_0px_0px_var(--border)] flex flex-col h-[400px]">
+              <div className="aspect-[4/3] bg-slate-200 animate-pulse border-b-4 border-[var(--border)]"></div>
+              <div className="p-6 flex flex-col flex-1 gap-4">
+                <div className="h-8 w-3/4 bg-slate-200 animate-pulse rounded"></div>
+                <div className="h-4 w-full bg-slate-200 animate-pulse rounded"></div>
+                <div className="h-4 w-5/6 bg-slate-200 animate-pulse rounded"></div>
+                <div className="mt-auto flex gap-2">
+                  <div className="h-12 flex-[2] bg-slate-200 animate-pulse rounded-xl"></div>
+                  <div className="h-12 flex-1 bg-slate-200 animate-pulse rounded-xl"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -258,6 +364,32 @@ export function Store() {
       </div>
 
       {/* Content based on activeTab */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 max-w-sm w-full shadow-[8px_8px_0px_0px_var(--border)]">
+            <h3 className="text-2xl font-black uppercase text-[var(--text)] mb-2">{confirmModal.title}</h3>
+            <p className="text-slate-600 font-bold mb-6">{confirmModal.message}</p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 py-3 bg-slate-200 hover:bg-slate-300 text-slate-600 font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                  confirmModal.onConfirm();
+                }}
+                className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)]"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'packs' && (
         packs.length === 0 ? (
           <EmptyState 
@@ -335,42 +467,60 @@ export function Store() {
                     
                     <div className="flex flex-col gap-3 mt-auto">
                       {pack.cost_gold > 0 && (
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => handleOpenPack(pack.id, false, pack.image_url, pack.name, pack.cost_gold)}
+                              disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
+                              className="flex-[2] bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                            >
+                              <Coins className="w-5 h-5 text-yellow-700" />
+                              Open
+                            </button>
+                            <button 
+                              onClick={() => handleBuyToInventory(pack.id, false, pack.name, pack.cost_gold)}
+                              disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
+                              className="flex-1 bg-[var(--bg)] hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text)] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center"
+                              title="Buy to Inventory"
+                            >
+                              Stash
+                            </button>
+                          </div>
                           <button 
-                            onClick={() => handleOpenPack(pack.id, false, pack.image_url)}
-                            disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
-                            className="flex-[2] bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                            onClick={() => handleOpenPack(pack.id, false, pack.image_url, pack.name, pack.cost_gold, 5)}
+                            disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold * 5}
+                            className="w-full bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
                           >
-                            <Coins className="w-5 h-5 text-yellow-700" />
-                            Open
-                          </button>
-                          <button 
-                            onClick={() => handleBuyToInventory(pack.id, false)}
-                            disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
-                            className="flex-1 bg-[var(--bg)] hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text)] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center"
-                            title="Buy to Inventory"
-                          >
-                            Stash
+                            Open 5x
                           </button>
                         </div>
                       )}
                       {pack.cost_gems > 0 && (
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => handleOpenPack(pack.id, true, pack.image_url, pack.name, pack.cost_gems)}
+                              disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
+                              className="flex-[2] bg-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                            >
+                              <Gem className="w-5 h-5 text-emerald-700" />
+                              Open
+                            </button>
+                            <button 
+                              onClick={() => handleBuyToInventory(pack.id, true, pack.name, pack.cost_gems)}
+                              disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
+                              className="flex-1 bg-[var(--bg)] hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text)] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center"
+                              title="Buy to Inventory"
+                            >
+                              Stash
+                            </button>
+                          </div>
                           <button 
-                            onClick={() => handleOpenPack(pack.id, true, pack.image_url)}
-                            disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
-                            className="flex-[2] bg-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                            onClick={() => handleOpenPack(pack.id, true, pack.image_url, pack.name, pack.cost_gems, 5)}
+                            disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems * 5}
+                            className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
                           >
-                            <Gem className="w-5 h-5 text-emerald-700" />
-                            Open
-                          </button>
-                          <button 
-                            onClick={() => handleBuyToInventory(pack.id, true)}
-                            disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
-                            className="flex-1 bg-[var(--bg)] hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--text)] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center"
-                            title="Buy to Inventory"
-                          >
-                            Stash
+                            Open 5x
                           </button>
                         </div>
                       )}
@@ -410,7 +560,7 @@ export function Store() {
                   </button>
                 ) : (
                   <button 
-                    onClick={() => handleBuyItem(item.id, item.cost_gold, item.cost_gems)}
+                    onClick={() => handleBuyItem(item.id, item.cost_gold, item.cost_gems, item.name)}
                     className="px-4 py-2 bg-yellow-400 text-black font-black rounded-lg border-2 border-[var(--border)]"
                   >
                     Buy
@@ -449,7 +599,7 @@ export function Store() {
                   </button>
                 ) : (
                   <button 
-                    onClick={() => handleBuyItem(item.id, item.cost_gold, item.cost_gems)}
+                    onClick={() => handleBuyItem(item.id, item.cost_gold, item.cost_gems, item.name)}
                     className="px-4 py-2 bg-yellow-400 text-black font-black rounded-lg border-2 border-[var(--border)]"
                   >
                     Buy
@@ -468,28 +618,12 @@ export function Store() {
           <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
             {inventory.length > 0 && (
               <button 
-                onClick={async () => {
-                  if (opening) return;
-                  const packsToOpen = [...inventory];
-                  for (const inv of packsToOpen) {
-                    for (let i = 0; i < inv.quantity; i++) {
-                      await handleOpenFromInventory(inv.pack_type_id, (inv.pack_types as any)?.image_url);
-                      // Wait for user to click "Done" or implement a way to auto-continue
-                      // Actually, "Open All" usually means opening them one by one or in a batch.
-                      // If I loop here, it will trigger the animation for each.
-                      // Maybe I should just open one and let them know?
-                      // The request says "loops through handleOpenFromInventory sequentially".
-                      // But handleOpenFromInventory sets state that triggers a modal.
-                      // This is tricky without changing the whole flow.
-                      // Let's just implement it for one type at a time or just the first one.
-                    }
-                  }
-                }}
+                onClick={handleOpenAllFromInventory}
                 disabled={opening}
-                className="mb-4 px-4 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+                className="mb-6 w-full py-4 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] uppercase tracking-widest transition-all active:translate-y-1 active:shadow-none flex items-center justify-center gap-2"
               >
-                <PackageOpen className="w-5 h-5" />
-                Open All Packs
+                <PackageOpen className="w-6 h-6" />
+                Open All ({inventory.reduce((acc, inv) => acc + inv.quantity, 0)} Packs)
               </button>
             )}
             <h3 className="font-black uppercase mb-4 text-[var(--text)]">Packs</h3>
@@ -591,73 +725,94 @@ export function Store() {
           )}
 
           {packOpeningStep === 'shaking' && (
-            <div className="flex flex-col items-center gap-6">
+            <div 
+              className="flex flex-col items-center gap-6 cursor-pointer group"
+              onClick={() => {
+                if (openedCards && openedCards.length > 0) {
+                  setPackOpeningStep('revealing');
+                }
+              }}
+            >
               <motion.div
                 animate={{ 
                   rotate: [-3, 3, -3, 3, -3, 3, 0],
                   scale: [1, 1.05, 1, 1.05, 1, 1.05, 1.1],
                 }}
                 transition={{ duration: 0.6, repeat: Infinity, repeatType: 'loop' }}
-                className="w-40 h-56 rounded-xl border-4 border-yellow-400 overflow-hidden shadow-[0_0_40px_rgba(250,204,21,0.6)]"
+                className="w-40 h-56 rounded-xl border-4 border-yellow-400 overflow-hidden shadow-[0_0_40px_rgba(250,204,21,0.6)] relative"
               >
                 <img src={openingPackImageUrl} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                  <p className="text-white font-black text-xs uppercase opacity-0 group-hover:opacity-100 transition-opacity">Click to Skip</p>
+                </div>
               </motion.div>
               <motion.p 
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: 0.8, repeat: Infinity }}
                 className="text-yellow-400 font-black text-2xl uppercase tracking-widest"
               >
-                Opening...
+                {openedCards && openedCards.length > 0 ? 'Ready!' : 'Opening...'}
               </motion.p>
               <p className="text-white/40 text-sm font-bold">tap to skip</p>
             </div>
           )}
 
           {packOpeningStep === 'revealing' && openedCards && (
-            <div className="flex flex-col items-center gap-8 w-full max-w-2xl">
+            <div className="flex flex-col items-center gap-8 w-full max-w-4xl">
               
               {currentCardIndex < openedCards.length ? (
-                <>
-                  {currentCardIndex < openedCards.length && (
-                    <button
-                      onClick={() => {
-                        const remaining = openedCards.slice(currentCardIndex);
-                        setRevealedCards(prev => [...prev, ...remaining]);
-                        setCurrentCardIndex(openedCards.length);
-                      }}
-                      className="absolute bottom-10 right-10 px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-black rounded-xl border-2 border-white/40 transition-colors z-50"
-                    >
-                      Skip All
-                    </button>
-                  )}
+                <div className="relative w-full flex flex-col items-center">
+                  <button
+                    onClick={() => {
+                      audioService.play('click');
+                      const remaining = openedCards.slice(currentCardIndex);
+                      setRevealedCards(prev => [...prev, ...remaining]);
+                      setCurrentCardIndex(openedCards.length);
+                    }}
+                    className="absolute top-0 right-0 px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-black rounded-xl border-2 border-white/40 transition-colors z-50"
+                  >
+                    Skip All
+                  </button>
                   
-                  <p className="text-white/60 font-black text-sm uppercase tracking-widest">
+                  <p className="text-white/60 font-black text-sm uppercase tracking-widest mb-4">
                     Card {currentCardIndex + 1} of {openedCards.length}
                   </p>
                   
-                  {/* 3D Flip Card */}
-                  <FlipCard
-                    card={openedCards[currentCardIndex]}
-                    cardBackUrl={profile?.card_back_url || null}
-                    onReveal={() => {
-                      setRevealedCards(prev => [...prev, openedCards[currentCardIndex]]);
-                      setCurrentCardIndex(prev => prev + 1);
-                    }}
-                  />
-                </>
+                  {/* Card Stack Effect */}
+                  <div className="relative w-64 h-[340px]">
+                    {/* Next card preview (blurred) */}
+                    {currentCardIndex + 1 < openedCards.length && (
+                      <div className="absolute inset-0 translate-x-2 translate-y-2 opacity-40 blur-[2px] scale-95">
+                        <div className="w-full h-full bg-slate-800 rounded-xl border-4 border-white/20" />
+                      </div>
+                    )}
+                    
+                    {/* Current Card */}
+                    <FlipCard
+                      key={currentCardIndex}
+                      card={openedCards[currentCardIndex]}
+                      cardBackUrl={profile?.card_back_url || null}
+                      onReveal={() => {
+                        audioService.play(openedCards[currentCardIndex].rarity === 'Divine' || openedCards[currentCardIndex].rarity === 'Mythic' ? 'rare_reveal' : 'card_reveal');
+                        setRevealedCards(prev => [...prev, openedCards[currentCardIndex]]);
+                        setCurrentCardIndex(prev => prev + 1);
+                      }}
+                    />
+                  </div>
+                </div>
               ) : (
                 // All revealed — show grid + summary
                 <div className="flex flex-col items-center gap-6 w-full">
-                  <p className="text-white font-black text-2xl uppercase tracking-widest">🎉 Pack Complete!</p>
+                  <p className="text-white font-black text-3xl uppercase tracking-widest mb-4">🎉 Pack Complete!</p>
                   
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 w-full max-w-xl">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 w-full">
                     {revealedCards.map((card, i) => (
                       <motion.div
                         key={i}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: i * 0.05 }}
-                        className="aspect-[3/4]"
+                        initial={{ scale: 0, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="aspect-[5/7]"
                       >
                         <CardDisplay card={card} showQuantity={false} />
                       </motion.div>

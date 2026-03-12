@@ -65,18 +65,24 @@
   --surface: #ffffff;
   --text: #0f172a;
   --border: #000000;
+  --muted: #64748b;
+  --accent: #3b82f6;
 }
 [data-theme="dark"] {
   --bg: #0f172a;
   --surface: #1e293b;
   --text: #f8fafc;
   --border: #334155;
+  --muted: #94a3b8;
+  --accent: #60a5fa;
 }
 [data-theme="neon"] {
   --bg: #050011;
   --surface: #0d0025;
   --text: #00ffcc;
   --border: #ff00ff;
+  --muted: #7c3aed;
+  --accent: #ff00ff;
 }
 
 /* === OCEAN === */
@@ -86,6 +92,7 @@
   --border: #1e4080;
   --text: #e0f0ff;
   --accent: #00b4d8;
+  --muted: #4a6fa5;
 }
 
 /* === SUNSET === */
@@ -95,6 +102,7 @@
   --border: #7c2d12;
   --text: #fff7ed;
   --accent: #f97316;
+  --muted: #9a3412;
 }
 
 /* === FOREST === */
@@ -104,6 +112,7 @@
   --border: #166534;
   --text: #f0fdf4;
   --accent: #22c55e;
+  --muted: #15803d;
 }
 
 /* === MONOCHROME === */
@@ -113,6 +122,7 @@
   --border: #333333;
   --text: #ffffff;
   --accent: #888888;
+  --muted: #666666;
 }
 
 /* === CANDY === */
@@ -122,12 +132,18 @@
   --border: #f472b6;
   --text: #1a001a;
   --accent: #ec4899;
+  --muted: #db2777;
 }
 body { background-color: var(--bg); color: var(--text); }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-  100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+  0%, 100% { opacity: 0.3; filter: hue-rotate(0deg); }
+  50% { opacity: 0.6; filter: hue-rotate(90deg); }
+}
+
+@keyframes glint {
+  0%, 100% { transform: translateX(-100%) rotate(15deg); }
+  50% { transform: translateX(100%) rotate(15deg); }
 }
 
 @keyframes foilShimmer {

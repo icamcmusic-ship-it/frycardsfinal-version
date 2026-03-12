@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers, Target } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function Layout() {
@@ -76,6 +76,7 @@ export function Layout() {
     { name: 'Social', path: '/social', icon: Users },
     { name: 'Trades', path: '/trades', icon: ArrowRightLeft },
     { name: 'Decks', path: '/decks', icon: Layers },
+    { name: 'Quests', path: '/quests', icon: Target },
     { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
     { name: 'Season Pass', path: '/season-pass', icon: Gift },
     { name: 'Settings', path: '/settings', icon: SettingsIcon },
@@ -205,7 +206,7 @@ export function Layout() {
         {isMobileMenuOpen && (
           <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsMobileMenuOpen(false)}>
             <div 
-              className="absolute bottom-16 left-0 right-0 bg-[var(--surface)] border-t-4 border-[var(--border)] rounded-t-2xl p-4 flex flex-col gap-2"
+              className="absolute bottom-16 left-0 right-0 bg-[var(--surface)] border-t-4 border-[var(--border)] rounded-t-2xl p-4 flex flex-col gap-2 max-h-[70vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               {secondaryNav.map((item) => {

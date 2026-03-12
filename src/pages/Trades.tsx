@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import { EmptyState } from '../components/EmptyState';
 import { CardDisplay } from '../components/CardDisplay';
+import { CardSkeleton } from '../components/CardSkeleton';
 
 export function Trades() {
   const [trades, setTrades] = useState<any[]>([]);
@@ -36,7 +37,12 @@ export function Trades() {
   };
 
   const fetchMyCards = async () => {
-    const { data } = await supabase.rpc('get_user_collection');
+    const { data } = await supabase.rpc('get_user_collection', {
+      p_user_id: null, // Uses auth.uid() in the function
+      p_rarity: null,
+      p_sort_by: 'name',
+      p_limit: 500
+    });
     setMyCards(data || []);
   };
 
@@ -100,7 +106,25 @@ export function Trades() {
     setList(list.includes(id) ? list.filter(x => x !== id) : [...list, id]);
   };
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Trades</h1>
+          <div className="w-32 h-12 bg-slate-200 animate-pulse rounded-xl border-4 border-[var(--border)]"></div>
+        </div>
+        <div className="grid gap-6">
+          {[1, 2].map(i => (
+            <div key={i} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] h-40 animate-pulse">
+              <div className="h-6 bg-slate-200 rounded w-1/3 mb-4"></div>
+              <div className="h-4 bg-slate-200 rounded w-1/4 mb-2"></div>
+              <div className="h-4 bg-slate-200 rounded w-1/5"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

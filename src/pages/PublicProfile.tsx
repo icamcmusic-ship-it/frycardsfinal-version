@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Loader2, Trophy, UserPlus, UserCheck } from 'lucide-react';
 import { CardDisplay } from '../components/CardDisplay';
+import { getAvatarUrl, getBannerUrl } from '../lib/utils';
 
 function OtherUserCollection({ userId }: { userId: string }) {
   const [cards, setCards] = useState<any[]>([]);
@@ -61,15 +62,15 @@ export function PublicProfile() {
   return (
     <div className="space-y-8 max-w-2xl mx-auto">
       {/* Banner */}
-      {profile.banner_url && profile.banner_url !== 'default' && (
+      {getBannerUrl(profile.banner_url) && (
         <div className="w-full h-40 rounded-2xl border-4 border-black overflow-hidden">
-          <img src={profile.banner_url} className="w-full h-full object-cover" />
+          <img src={getBannerUrl(profile.banner_url)!} className="w-full h-full object-cover" />
         </div>
       )}
       <div className="bg-white border-4 border-black rounded-2xl p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
         <div className="flex items-start gap-6">
-          {profile.avatar_url
-            ? <img src={profile.avatar_url} className="w-24 h-24 rounded-full border-4 border-black" />
+          {getAvatarUrl(profile.avatar_url)
+            ? <img src={getAvatarUrl(profile.avatar_url)!} className="w-24 h-24 rounded-full border-4 border-black" />
             : <div className="w-24 h-24 rounded-full bg-blue-400 border-4 border-black flex items-center justify-center text-3xl font-black text-white">
                 {profile.username?.[0]?.toUpperCase()}
               </div>

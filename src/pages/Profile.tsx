@@ -3,7 +3,7 @@ import { useProfileStore } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings as SettingsIcon, Plus } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, getAvatarUrl, getBannerUrl, getCardBackUrl } from '../lib/utils';
 import toast from 'react-hot-toast';
 
 export function Profile() {
@@ -122,7 +122,7 @@ export function Profile() {
       <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_var(--border)]">
         {/* Banner */}
         <div className="h-48 bg-blue-400 relative border-b-4 border-[var(--border)]">
-          <img src={bannerUrl || profile.banner_url} alt="Banner" className="w-full h-full object-cover" />
+          <img src={getBannerUrl(bannerUrl || profile.banner_url) || ''} alt="Banner" className="w-full h-full object-cover" />
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
         </div>
 
@@ -132,8 +132,8 @@ export function Profile() {
             {/* Avatar */}
             <div className="-mt-16 relative">
               <div className="w-32 h-32 bg-yellow-300 rounded-2xl border-4 border-[var(--border)] flex items-center justify-center shadow-[4px_4px_0px_0px_var(--border)] transform -rotate-3 overflow-hidden">
-                {avatarUrl || profile.avatar_url || discordAvatar ? (
-                  <img src={avatarUrl || profile.avatar_url || discordAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                {getAvatarUrl(avatarUrl || profile.avatar_url) || discordAvatar ? (
+                  <img src={getAvatarUrl(avatarUrl || profile.avatar_url) || discordAvatar} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   <UserIcon className="w-16 h-16 text-black" />
                 )}
@@ -242,7 +242,7 @@ export function Profile() {
                 <p className="text-xs text-slate-500 font-bold uppercase mb-2">Equipped Card Back</p>
                 <div className="w-24 aspect-[3/4] rounded-xl border-4 border-[var(--border)] bg-gray-200 overflow-hidden shadow-[4px_4px_0px_0px_var(--border)]">
                   <img 
-                    src={profile.card_back_url || 'https://images.unsplash.com/photo-1605806616949-1e87b487cb2a?w=400&q=80'} 
+                    src={getCardBackUrl(profile.card_back_url)} 
                     alt="Card Back" 
                     className="w-full h-full object-cover" 
                   />
@@ -260,18 +260,37 @@ export function Profile() {
             <Trophy className="w-6 h-6 text-yellow-500 fill-yellow-500" />
             Achievements
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
             {achievements.map(ach => (
-              <div key={ach.id} className="flex items-center gap-4 p-4 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl shadow-[2px_2px_0px_0px_var(--border)]">
-                <div className="w-12 h-12 bg-yellow-100 border-2 border-[var(--border)] rounded-full flex items-center justify-center">
-                  <Trophy className="w-6 h-6 text-yellow-600" />
+              <div 
+                key={ach.id} 
+                className={cn(
+                  "flex items-center gap-4 p-4 border-2 rounded-xl shadow-[2px_2px_0px_0px_var(--border)] transition-all",
+                  ach.unlocked_at 
+                    ? "bg-yellow-50/50 border-yellow-400" 
+                    : "bg-[var(--bg)] border-[var(--border)] opacity-60 grayscale"
+                )}
+              >
+                <div className={cn(
+                  "w-12 h-12 border-2 border-[var(--border)] rounded-full flex items-center justify-center shrink-0",
+                  ach.unlocked_at ? "bg-yellow-400" : "bg-slate-200"
+                )}>
+                  <Trophy className={cn("w-6 h-6", ach.unlocked_at ? "text-white" : "text-slate-400")} />
                 </div>
-                <div>
-                  <h3 className="font-black text-[var(--text)] uppercase">{ach.name}</h3>
-                  <p className="text-sm text-slate-600 font-bold">{ach.description}</p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-black text-[var(--text)] uppercase truncate">{ach.name}</h3>
+                  <p className="text-sm text-slate-600 font-bold line-clamp-1">{ach.description}</p>
+                  {ach.unlocked_at && (
+                    <p className="text-[10px] font-black text-yellow-600 uppercase mt-1">
+                      Unlocked {new Date(ach.unlocked_at).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
+            {achievements.length === 0 && (
+              <p className="text-center text-slate-500 font-bold py-8">No achievements yet. Keep playing!</p>
+            )}
           </div>
         </div>
 
