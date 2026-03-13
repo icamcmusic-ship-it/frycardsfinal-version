@@ -8,7 +8,6 @@ import { cn, getRarityStyles } from '../lib/utils';
 import { CreateListingModal } from '../components/CreateListingModal';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { CardDisplay } from '../components/CardDisplay';
-import { CardTooltip } from '../components/CardTooltip';
 
 export function Marketplace() {
   const { profile } = useProfileStore();
@@ -404,7 +403,6 @@ export function Marketplace() {
               </div>
               
               <div className="flex-1 flex items-center justify-center py-4 relative">
-                <CardTooltip card={listing.card} isVisible={hoveredListing === listing.id} />
                 <div className="w-full max-w-[200px]">
                   <CardDisplay card={{ ...listing.card, is_foil: listing.is_foil }} showQuantity={false} showNewBadge={false} />
                 </div>

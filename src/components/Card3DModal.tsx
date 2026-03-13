@@ -148,7 +148,7 @@ export function Card3DModal({ card, cardBackUrl, onClose }: Card3DModalProps) {
             </div>
 
             {/* Stats */}
-            {(card.hp != null || card.attack != null || card.defense != null) && (
+            {!['Location', 'Artifact', 'Event', 'Leader'].includes(card.card_type || '') && (card.hp != null || card.attack != null || card.defense != null) && (
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {card.hp != null && <div className="text-center bg-red-50 border-2 border-red-200 rounded-xl p-2"><p className="text-xs text-red-400 font-bold">HP</p><p className="text-xl font-black text-red-600">{card.hp}</p></div>}
                 {card.attack != null && <div className="text-center bg-orange-50 border-2 border-orange-200 rounded-xl p-2"><p className="text-xs text-orange-400 font-bold">ATK</p><p className="text-xl font-black text-orange-600">{card.attack}</p></div>}

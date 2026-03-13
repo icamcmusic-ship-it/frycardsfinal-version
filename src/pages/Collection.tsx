@@ -575,13 +575,6 @@ function CollectionCard({ card, isBatchMode, isSelected, activeTab, onSelect, on
       )}
       
       <CardDisplay card={card} />
-
-      {/* Hover Information */}
-      <div className="absolute inset-x-0 bottom-0 bg-black/85 backdrop-blur-sm translate-y-full group-hover:translate-y-0 transition-transform duration-300 p-3 z-30 rounded-b-xl">
-        <p className="text-white font-black text-xs uppercase tracking-wide">{card.name}</p>
-        <p className="text-gray-300 text-[10px] font-bold">{card.rarity} · {card.card_type}</p>
-        {card.element && <p className="text-blue-300 text-[10px]">{card.element}</p>}
-      </div>
     </motion.div>
   );
 }

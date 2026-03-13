@@ -72,7 +72,7 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
   const border = rarityBorder[card.rarity] ?? rarityBorder['Common'];
   const elementGradient = elementGradients[card.element || ''] ?? 'from-black/90 via-black/50 to-transparent';
 
-  const isBattle = card.hp !== undefined || card.attack !== undefined || card.defense !== undefined;
+  const isBattle = (card.hp !== undefined || card.attack !== undefined || card.defense !== undefined) && !['Location', 'Artifact', 'Event', 'Leader'].includes(card.card_type || '');
   const isSpell = (card.ability_text || (card.keywords && card.keywords.length > 0)) && !isBattle;
   const isLore = card.flavor_text && !isBattle && !isSpell;
 
