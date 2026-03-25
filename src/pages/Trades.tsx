@@ -15,6 +15,8 @@ export function Trades() {
   const [friends, setFriends] = useState<any[]>([]);
   const [myCards, setMyCards] = useState<any[]>([]);
   const [receiverId, setReceiverId] = useState('');
+  const [receiverCards, setReceiverCards] = useState<any[]>([]);
+  const [loadingReceiverCards, setLoadingReceiverCards] = useState(false);
   const [offeredIds, setOfferedIds] = useState<string[]>([]);
   const [requestedIds, setRequestedIds] = useState<string[]>([]);
   const [offeredGold, setOfferedGold] = useState(0);
@@ -23,6 +25,30 @@ export function Trades() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchTrades(); fetchFriends(); fetchMyCards(); }, []);
+
+  useEffect(() => {
+    if (receiverId) {
+      fetchReceiverCards(receiverId);
+    } else {
+      setReceiverCards([]);
+    }
+  }, [receiverId]);
+
+  const fetchReceiverCards = async (uid: string) => {
+    setLoadingReceiverCards(true);
+    try {
+      const { data, error } = await supabase.rpc('get_other_user_collection', {
+        p_target_user_id: uid
+      });
+      if (error) throw error;
+      setReceiverCards(data || []);
+    } catch (err) {
+      console.error('Error fetching receiver cards:', err);
+      toast.error('Failed to fetch friend\'s collection');
+    } finally {
+      setLoadingReceiverCards(false);
+    }
+  };
 
   const fetchTrades = async () => {
     setLoading(true);
@@ -106,6 +132,13 @@ export function Trades() {
     setList(list.includes(id) ? list.filter(x => x !== id) : [...list, id]);
   };
 
+  const cardDataToDisplay = (c: any) => ({
+    ...c,
+    rarity: c.rarity || 'Common',
+    image_url: c.image_url || '',
+    name: c.name || 'Unknown Card'
+  });
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -146,16 +179,41 @@ export function Trades() {
           </select>
           <div>
             <p className="font-black mb-2 text-[var(--text)]">Cards you're offering (click to select):</p>
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto">
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto p-1">
               {myCards.map(c => (
                 <button key={c.id} onClick={() => toggleCard(c.id, offeredIds, setOfferedIds)}
-                  className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)]", offeredIds.includes(c.id) ? "border-blue-500 bg-blue-50" : "border-[var(--border)]")}>
+                  className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", offeredIds.includes(c.id) ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-[var(--border)]")}>
                   <CardDisplay card={c} showQuantity={false} showNewBadge={false} />
                   <p className="text-[10px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
                 </button>
               ))}
             </div>
           </div>
+
+          {receiverId && (
+            <div>
+              <p className="font-black mb-2 text-[var(--text)]">Cards you're requesting (click to select):</p>
+              {loadingReceiverCards ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                </div>
+              ) : receiverCards.length === 0 ? (
+                <p className="text-sm text-slate-500 font-bold italic py-4 text-center bg-[var(--bg)] rounded-xl border-2 border-dashed border-[var(--border)]">
+                  This user has no public cards available for trade.
+                </p>
+              ) : (
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto p-1">
+                  {receiverCards.map(c => (
+                    <button key={c.id} onClick={() => toggleCard(c.id, requestedIds, setRequestedIds)}
+                      className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", requestedIds.includes(c.id) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>
+                      <CardDisplay card={cardDataToDisplay(c)} showQuantity={false} showNewBadge={false} />
+                      <p className="text-[10px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex gap-4">
             <div>
               <label className="font-black block mb-1 text-[var(--text)]">Gold to offer:</label>

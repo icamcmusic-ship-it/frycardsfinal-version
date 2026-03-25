@@ -42,7 +42,7 @@ export function Collection() {
       }
       fetchStats();
     }
-  }, [profile, activeTab, sortBy, filter]);
+  }, [profile, activeTab, sortBy, filter, elementType]);
 
   const fetchStats = async () => {
     try {
@@ -66,6 +66,7 @@ export function Collection() {
         p_user_id: profile?.id,
         p_rarity: rarityForApi,
         p_sort_by: sortBy,
+        p_element_type: elementType === 'all' ? null : elementType,
         p_limit: 20,
         p_offset: nextOffset
       });
@@ -435,6 +436,19 @@ export function Collection() {
             <option value="mythic">Mythic</option>
             <option value="divine">Divine</option>
           </select>
+          <select
+            value={elementType}
+            onChange={(e) => setElementType(e.target.value)}
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_var(--border)]"
+          >
+            <option value="all">All Elements</option>
+            <option value="fire">Fire</option>
+            <option value="water">Water</option>
+            <option value="earth">Earth</option>
+            <option value="air">Air</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
           <button
             onClick={() => setViewSize(prev => prev === 'normal' ? 'large' : 'normal')}
             className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
@@ -446,30 +460,32 @@ export function Collection() {
       </div>
 
       <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
-        {(activeTab === 'collection' ? cards : wishlist.slice(0, visibleCount)).map((card) => (
+        {filteredCards.slice(0, visibleCount).map((card) => {
+          const selectionId = card.user_card_id || card.id;
+          return (
           <CollectionCard 
             key={card.id}
             card={card}
             isBatchMode={isBatchMode}
-            isSelected={selectedCardIds.includes(card.id)}
+            isSelected={selectedCardIds.includes(selectionId)}
             activeTab={activeTab}
             onSelect={() => {
               if (isBatchMode) {
-                setSelectedCardIds(prev => prev.includes(card.id) ? prev.filter(id => id !== card.id) : [...prev, card.id]);
+                setSelectedCardIds(prev => prev.includes(selectionId) ? prev.filter(id => id !== selectionId) : [...prev, selectionId]);
               } else {
                 setSelectedCard(card);
               }
             }}
-            onToggleLock={(e) => { e.stopPropagation(); handleToggleLock(card.id); }}
-            onQuicksell={(e) => { e.stopPropagation(); handleQuicksell(card); }}
-            onList={(e) => { 
+            onToggleLock={(e: any) => { e.stopPropagation(); handleToggleLock(card.id); }}
+            onQuicksell={(e: any) => { e.stopPropagation(); handleQuicksell(card); }}
+            onList={(e: any) => { 
               e.stopPropagation(); 
               setCardToList(card);
               setIsListingModalOpen(true);
             }}
-            onToggleWishlist={(e) => { e.stopPropagation(); handleToggleWishlist(card.id); }}
+            onToggleWishlist={(e: any) => { e.stopPropagation(); handleToggleWishlist(card.id); }}
           />
-        ))}
+        )})}
       </div>
       
       {loadingMore && (

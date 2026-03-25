@@ -29,8 +29,8 @@ export default function App() {
 
   useEffect(() => {
     supabase.rpc('get_user_settings').then(({ data }) => {
-      if (data?.game_style) {
-        setGameStyle(data.game_style);
+      if (data?.[0]?.game_style) {
+        setGameStyle(data[0].game_style);
       }
     });
   }, [setGameStyle]);

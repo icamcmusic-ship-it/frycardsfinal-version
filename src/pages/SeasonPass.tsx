@@ -82,11 +82,11 @@ export function SeasonPass() {
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-4xl font-black text-black tracking-tight uppercase">Season Pass</h1>
+        <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Season Pass</h1>
         
         {!isPremium && (
           <button onClick={upgradeToPremium}
-            className="px-8 py-4 bg-yellow-400 hover:bg-yellow-500 transition-colors text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2">
+            className="px-8 py-4 bg-yellow-400 hover:bg-yellow-500 transition-colors text-black font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2">
             <Gem className="w-5 h-5 text-emerald-600" />
             Upgrade to Premium — 500 Gems
           </button>
@@ -94,12 +94,12 @@ export function SeasonPass() {
       </div>
 
       {/* XP Progress Bar */}
-      <div className="bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
         <div className="flex justify-between items-center mb-3">
-          <p className="text-2xl font-black">Level {userLevel}</p>
+          <p className="text-2xl font-black text-[var(--text)]">Level {userLevel}</p>
           <p className="font-mono font-bold text-slate-500">{userXP.toLocaleString()} XP{xpToNext ? ` / ${xpToNext.toLocaleString()}` : ''}</p>
         </div>
-        <div className="w-full h-4 bg-gray-200 rounded-full border-2 border-black overflow-hidden">
+        <div className="w-full h-4 bg-[var(--bg)] rounded-full border-2 border-[var(--border)] overflow-hidden">
           <motion.div className="h-full bg-blue-500 rounded-full"
             initial={{ width: 0 }} animate={{ width: `${progressPct}%` }} transition={{ duration: 0.8 }} />
         </div>
@@ -113,7 +113,7 @@ export function SeasonPass() {
 
           return (
             <div key={tier.id}
-              className={cn("flex justify-between items-center p-5 bg-white border-4 border-black rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
+              className={cn("flex justify-between items-center p-5 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[4px_4px_0px_0px_var(--border)]",
                 isLocked && "opacity-50")}>
               <div className="flex items-center gap-4">
                 <div className="text-3xl font-black text-slate-300 w-10 text-center">#{tier.tier}</div>
@@ -121,19 +121,19 @@ export function SeasonPass() {
                   {REWARD_ICONS[tier.reward_type] ?? <Gift className="w-5 h-5" />}
                   <div>
                     {/* tier.reward_label is the correct column */}
-                    <h3 className="font-black text-base uppercase">{tier.reward_label}</h3>
+                    <h3 className="font-black text-base uppercase text-[var(--text)]">{tier.reward_label}</h3>
                     <p className="text-xs font-bold text-slate-500">{tier.xp_required.toLocaleString()} XP required</p>
                   </div>
                 </div>
               </div>
 
               {isClaimed ? (
-                <div className="p-3 bg-green-400 rounded-xl border-2 border-black"><Check className="w-5 h-5" /></div>
+                <div className="p-3 bg-green-400 rounded-xl border-2 border-[var(--border)]"><Check className="w-5 h-5" /></div>
               ) : isLocked ? (
-                <div className="p-3 bg-gray-200 rounded-xl border-2 border-black"><Lock className="w-5 h-5 text-slate-400" /></div>
+                <div className="p-3 bg-slate-200 rounded-xl border-2 border-[var(--border)]"><Lock className="w-5 h-5 text-slate-400" /></div>
               ) : (
                 <button onClick={() => claimTier(tier.tier)}
-                  className="px-5 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  className="px-5 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)]">
                   Claim!
                 </button>
               )}
@@ -142,7 +142,7 @@ export function SeasonPass() {
         })}
 
         {tiers.length === 0 && (
-          <div className="text-center py-16 bg-white border-4 border-black rounded-2xl font-bold text-slate-500">
+          <div className="text-center py-16 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl font-bold text-slate-500">
             No season pass tiers available yet.
           </div>
         )}

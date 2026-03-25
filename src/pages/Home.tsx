@@ -11,15 +11,7 @@ export function Home() {
   const [quests, setQuests] = useState<any[]>([]);
   const [loadingQuests, setLoadingQuests] = useState(true);
   const [currentEnergy, setCurrentEnergy] = useState(() => {
-    const energy = profile?.energy;
-    if (energy === null || energy === undefined) return 0;
-    
-    // If it's an object, check for 'energy' property
-    if (typeof energy === 'object') {
-        return Number((energy as any)?.energy || 0);
-    }
-    
-    return Number(energy);
+    return Number(profile?.energy || 0);
   });
   const [nextRegen, setNextRegen] = useState<number | null>(null);
 
@@ -226,7 +218,7 @@ export function Home() {
                     Claim Daily Reward
                   </button>
                   
-                  <div className="hidden sm:flex items-center gap-2 bg-white/30 backdrop-blur-sm border-2 border-black/20 rounded-xl px-3 py-2">
+                  <div className="hidden sm:flex items-center gap-2 bg-black/10 backdrop-blur-sm border-2 border-black/20 rounded-xl px-3 py-2">
                     <div className="text-[10px] font-black uppercase text-black/60 leading-none">
                       Potential<br/>Rewards
                     </div>
@@ -285,7 +277,12 @@ export function Home() {
               <p className="text-3xl font-black text-[var(--text)] font-mono">{currentEnergy} / {profile?.max_energy ?? 20}</p>
               {currentEnergy < (profile?.max_energy ?? 20) && nextRegen && (
                 <span className="text-xs font-bold text-slate-500">
-                  +1 in {Math.max(0, Math.ceil((nextRegen - Date.now()) / 60000))}m
+                  +1 in {(() => {
+                    const diff = Math.max(0, nextRegen - Date.now());
+                    const mins = Math.floor(diff / 60000);
+                    const secs = Math.floor((diff % 60000) / 1000);
+                    return `${mins}:${secs.toString().padStart(2, '0')}`;
+                  })()}
                 </span>
               )}
             </div>
@@ -317,8 +314,8 @@ export function Home() {
                     <Zap className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold text-black text-lg">{quest.quest_type.replace(/_/g, ' ').toUpperCase()}</p>
-                    <div className="w-full sm:w-48 h-3 bg-white border-2 border-[var(--border)] rounded-full mt-2 overflow-hidden">
+                    <p className="font-bold text-[var(--text)] text-lg">{quest.quest_type.replace(/_/g, ' ').toUpperCase()}</p>
+                    <div className="w-full sm:w-48 h-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-full mt-2 overflow-hidden">
                       <div 
                         className="h-full bg-green-400 border-r-2 border-[var(--border)] transition-all" 
                         style={{ width: `${Math.min(100, (quest.progress / quest.target_value) * 100)}%` }}
@@ -327,7 +324,7 @@ export function Home() {
                   </div>
                 </div>
                 <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
-                  <p className="text-lg font-black text-black">{quest.progress} / {quest.target_value}</p>
+                  <p className="text-lg font-black text-[var(--text)]">{quest.progress} / {quest.target_value}</p>
                   {quest.is_completed && !quest.is_claimed ? (
                     <button 
                       onClick={() => { console.log('Claim clicked'); handleClaimQuest(quest.id); }}

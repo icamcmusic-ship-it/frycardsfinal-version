@@ -27,6 +27,9 @@ export function Marketplace() {
   const [sortBy, setSortBy] = useState<'price' | 'newest'>('newest');
   const [hoveredListing, setHoveredListing] = useState<string | null>(null);
 
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   useEffect(() => {
     if (activeTab === 'all') {
       fetchListings();
@@ -36,7 +39,7 @@ export function Marketplace() {
     } else if (activeTab === 'my_listings') {
       fetchMyListings();
     }
-  }, [activeTab, rarityFilter, elementFilter]);
+  }, [activeTab, rarityFilter, elementFilter, filter, sortBy, search]);
 
   const fetchWatchlistedIds = async () => {
     try {
@@ -61,23 +64,55 @@ export function Marketplace() {
     }
   };
 
-  const fetchListings = async () => {
+  const fetchListings = async (isLoadMore = false) => {
     try {
-      setLoading(true);
+      if (!isLoadMore) setLoading(true);
+      else setLoadingMore(true);
+
+      const nextOffset = isLoadMore ? listings.length : 0;
       const { data, error } = await supabase.rpc('get_active_listings', {
-        p_limit: 50,
-        p_offset: 0,
+        p_limit: 20,
+        p_offset: nextOffset,
         p_rarity: rarityFilter === 'all' ? null : rarityFilter,
-        p_element: elementFilter === 'all' ? null : elementFilter
+        p_element: elementFilter === 'all' ? null : elementFilter,
+        p_listing_type: filter === 'all' ? null : filter,
+        p_search: search || null,
+        p_sort_by: sortBy
       });
       if (error) throw error;
-      setListings(data || []);
+      
+      const fetchedListings = data || [];
+      if (isLoadMore) {
+        setListings(prev => [...prev, ...fetchedListings]);
+      } else {
+        setListings(fetchedListings);
+      }
+
+      if (fetchedListings.length < 20) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
     } catch (err) {
       console.error('Error fetching listings:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
+
+  // Infinite scroll listener
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
+        if (hasMore && !loadingMore && activeTab === 'all') {
+          fetchListings(true);
+        }
+      }
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [hasMore, loadingMore, listings.length, activeTab]);
 
   const fetchWatchlist = async () => {
     try {
@@ -204,12 +239,9 @@ export function Marketplace() {
   const filteredListings = (activeTab === 'all' ? listings : activeTab === 'watchlist' ? watchlist : myListings)
     .filter(listing => {
       if (filter !== 'all' && listing.type !== filter) return false;
-      if (search && !listing.card_name.toLowerCase().includes(search.toLowerCase())) return false;
+      // Client-side search for watchlist/my_listings since they don't use the search RPC param
+      if (activeTab !== 'all' && search && !listing.card_name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      return a.price - b.price;
     });
 
   if (loading) {
@@ -329,7 +361,7 @@ export function Marketplace() {
         </div>
       </div>
 
-      {filteredListings.length === 0 ? (
+      {filteredListings.length === 0 && !loadingMore ? (
         <div className="text-center py-20 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[8px_8px_0px_0px_var(--border)]">
           <div className="w-20 h-20 mx-auto bg-[var(--bg)] rounded-full flex items-center justify-center mb-4 border-4 border-[var(--border)]">
             <Store className="w-10 h-10 text-slate-400" />
@@ -509,6 +541,12 @@ export function Marketplace() {
               )}
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {loadingMore && (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
       )}
     </div>

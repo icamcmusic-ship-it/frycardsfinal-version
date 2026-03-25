@@ -48,6 +48,18 @@ export function Social() {
     setFriends(data || []);
   };
 
+  const removeFriend = async (friendId: string) => {
+    if (!window.confirm('Are you sure you want to remove this friend?')) return;
+    try {
+      const { error } = await supabase.rpc('remove_friend', { p_friend_id: friendId });
+      if (error) throw error;
+      toast.success('Friend removed');
+      fetchFriends();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove friend');
+    }
+  };
+
   const fetchPendingRequests = async () => {
     const { data } = await supabase.rpc('get_pending_requests');
     setPendingRequests(data || []);
@@ -126,6 +138,13 @@ export function Social() {
           {friends.map(friend => (
             <div key={friend.id} className="flex justify-between items-center p-2 border-b-2 border-slate-100">
               <ClickableUsername userId={friend.friend_id} username={friend.username} className="text-blue-600" />
+              <button 
+                onClick={() => removeFriend(friend.friend_id)}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                title="Remove Friend"
+              >
+                <UserMinus className="w-5 h-5" />
+              </button>
             </div>
           ))}
         </div>

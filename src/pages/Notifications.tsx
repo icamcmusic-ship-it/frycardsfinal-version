@@ -67,14 +67,14 @@ export function Notifications() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-black text-black tracking-tight uppercase flex items-center gap-3">
+        <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase flex items-center gap-3">
           <Bell className="w-8 h-8 text-blue-500" />
           Notifications
         </h1>
         {notifications.some(n => !n.is_read) && (
           <button 
             onClick={markAllAsRead}
-            className="px-4 py-2 bg-white hover:bg-gray-100 text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+            className="px-4 py-2 bg-[var(--surface)] hover:bg-[var(--bg)] text-[var(--text)] font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
           >
             <Check className="w-5 h-5" />
             Mark All Read
@@ -83,11 +83,11 @@ export function Notifications() {
       </div>
 
       {notifications.length === 0 ? (
-        <div className="text-center py-20 bg-white border-4 border-black rounded-2xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-          <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4 border-4 border-black">
+        <div className="text-center py-20 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[8px_8px_0px_0px_var(--border)]">
+          <div className="w-20 h-20 mx-auto bg-[var(--bg)] rounded-full flex items-center justify-center mb-4 border-4 border-[var(--border)]">
             <Bell className="w-10 h-10 text-slate-400" />
           </div>
-          <h2 className="text-2xl font-black text-black uppercase mb-2">All Caught Up</h2>
+          <h2 className="text-2xl font-black text-[var(--text)] uppercase mb-2">All Caught Up</h2>
           <p className="text-slate-500 font-bold">You have no new notifications.</p>
         </div>
       ) : (
@@ -98,8 +98,8 @@ export function Notifications() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className={cn(
-                "p-4 rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-start gap-4 transition-colors",
-                notification.is_read ? "bg-gray-50" : "bg-white"
+                "p-4 rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] flex items-start gap-4 transition-colors",
+                notification.is_read ? "bg-[var(--bg)] opacity-75" : "bg-[var(--surface)]"
               )}
             >
               {(() => {
