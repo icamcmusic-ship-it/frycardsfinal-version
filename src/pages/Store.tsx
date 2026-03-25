@@ -6,6 +6,8 @@ import { motion } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { CardDisplay } from '../components/CardDisplay';
+import { CollectionCard } from '../components/CollectionCard';
+import { Card3DModal } from '../components/Card3DModal';
 import { FlipCard } from '../components/FlipCard';
 import { EmptyState } from '../components/EmptyState';
 
@@ -33,6 +35,7 @@ export function Store() {
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
   const [openingPackImageUrl, setOpeningPackImageUrl] = useState<string>('');
+  const [selectedCard, setSelectedCard] = useState<any>(null);
   const [packOpeningStep, setPackOpeningStep] = useState<'idle' | 'shaking' | 'revealing'>('idle');
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
   const [openingSummary, setOpeningSummary] = useState<{ xp_gained: number, new_card_count: number } | null>(null);
@@ -807,17 +810,22 @@ export function Store() {
                   
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 w-full">
                     {revealedCards.map((card, i) => (
-                      <motion.div
+                      <CollectionCard
                         key={i}
-                        initial={{ scale: 0, opacity: 0, y: 20 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.03 }}
+                        card={card}
                         className="aspect-[5/7]"
-                      >
-                        <CardDisplay card={card} showQuantity={false} />
-                      </motion.div>
+                        onSelect={() => setSelectedCard(card)}
+                      />
                     ))}
                   </div>
+
+                  {selectedCard && (
+                    <Card3DModal
+                      card={selectedCard}
+                      cardBackUrl={profile?.card_back_url || null}
+                      onClose={() => setSelectedCard(null)}
+                    />
+                  )}
 
                   {openingSummary && (
                     <div className="flex gap-6 bg-white/10 px-6 py-3 rounded-xl border-2 border-white/20">
