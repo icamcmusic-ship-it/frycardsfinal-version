@@ -223,6 +223,7 @@ export function Store() {
           toast.error(err.message || 'Failed to open pack');
           setOpening(false);
           setPackOpeningStep('idle');
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
           audioService.play('error');
         }
       }

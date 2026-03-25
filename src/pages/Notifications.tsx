@@ -4,6 +4,7 @@ import { Loader2, Bell, Check, Trash2, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useProfileStore } from '../stores/profileStore';
 import { MessageSquare, UserPlus, ShoppingCart, Trophy, Info } from 'lucide-react';
 
 const NOTIFICATION_TYPES: Record<string, { icon: any, color: string, bg: string }> = {
@@ -16,12 +17,34 @@ const NOTIFICATION_TYPES: Record<string, { icon: any, color: string, bg: string 
 
 export function Notifications() {
   const navigate = useNavigate();
+  const { profile } = useProfileStore();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+
+    // Realtime subscription for new notifications
+    const channel = supabase
+      .channel('notifications_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${profile?.id}`
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
 
   const fetchNotifications = async () => {
     try {

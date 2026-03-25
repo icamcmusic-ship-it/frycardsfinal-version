@@ -3,8 +3,9 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers, Target } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers, Target, MessageSquare } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { ChatSidebar } from './ChatSidebar';
 
 export function Layout() {
   const { user, setSession, setUser } = useAuthStore();
@@ -12,6 +13,7 @@ export function Layout() {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const fetchUnreadCount = async () => {
     if (!user) return;
@@ -127,6 +129,18 @@ export function Layout() {
                 )}
               </Link>
               <button 
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                className={cn(
+                  "p-2 rounded-full transition-all border-2",
+                  isChatOpen 
+                    ? "bg-blue-400 text-black border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]" 
+                    : "hover:bg-blue-100 text-[var(--text)] border-transparent hover:border-[var(--border)] hover:shadow-[2px_2px_0px_0px_var(--border)]"
+                )}
+                title="Global Chat"
+              >
+                <MessageSquare className="w-4 h-4" />
+              </button>
+              <button 
                 onClick={handleSignOut}
                 className="p-2 hover:bg-red-100 rounded-full transition-colors text-[var(--text)] border-2 border-transparent hover:border-[var(--border)] hover:shadow-[2px_2px_0px_0px_var(--border)]"
                 title="Sign Out"
@@ -164,7 +178,7 @@ export function Layout() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-8 pb-28 md:pb-8 overflow-x-hidden">
           <Outlet />
         </main>
 
@@ -232,6 +246,8 @@ export function Layout() {
             </div>
           </div>
         )}
+
+        <ChatSidebar isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       </div>
     </div>
   );

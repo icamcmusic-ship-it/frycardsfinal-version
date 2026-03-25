@@ -14,6 +14,7 @@ const REWARD_ICONS: Record<string, React.ReactNode> = {
 };
 
 export function SeasonPass() {
+  const { profile } = useProfileStore();
   const [passData, setPassData] = useState<any>(null);
   const [tiers, setTiers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +42,7 @@ export function SeasonPass() {
 
   if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-10 h-10 animate-spin" /></div>;
 
-  const userLevel = passData?.current_level ?? 0;
+  const userLevel = tiers.filter(t => t.xp_required <= (passData?.xp_earned ?? 0)).length;
   const userXP    = passData?.xp_earned ?? 0;
   const claimedTiers: number[] = passData?.claimed_tiers ?? [];
   const isPremium = passData?.is_premium ?? false;
@@ -68,7 +69,7 @@ export function SeasonPass() {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', passData.user_id)
+        .eq('id', profile?.id)
         .single();
         
       if (profileData) {

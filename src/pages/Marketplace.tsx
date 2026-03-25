@@ -31,6 +31,17 @@ export function Marketplace() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
+    const expireAuctions = async () => {
+      try {
+        await supabase.rpc('expire_old_auctions');
+      } catch (err) {
+        console.error('Error expiring auctions:', err);
+      }
+    };
+    expireAuctions();
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'all') {
       fetchListings();
       fetchWatchlistedIds();
@@ -66,10 +77,15 @@ export function Marketplace() {
 
   const fetchListings = async (isLoadMore = false) => {
     try {
-      if (!isLoadMore) setLoading(true);
-      else setLoadingMore(true);
-
       const nextOffset = isLoadMore ? listings.length : 0;
+      if (!isLoadMore) {
+        setListings([]);
+        setHasMore(true);
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
       const { data, error } = await supabase.rpc('get_active_listings', {
         p_limit: 20,
         p_offset: nextOffset,
@@ -403,6 +419,11 @@ export function Marketplace() {
                     )}>
                       {listing.card_rarity}
                     </div>
+                    {profile?.id === listing.seller_id && (
+                      <div className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-blue-500 text-white border-2 border-black shadow-[1px_1px_0px_0px_black] inline-block mb-1 ml-1">
+                        YOUR LISTING
+                      </div>
+                    )}
                     <h3 className="font-black text-[var(--text)] text-base leading-tight uppercase">{listing.card_name}</h3>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-[10px] text-slate-500 font-bold">Seller: {listing.seller_name}</p>

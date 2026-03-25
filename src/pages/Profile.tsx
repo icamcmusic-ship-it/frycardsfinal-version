@@ -23,6 +23,14 @@ export function Profile() {
   const discordAvatar = user?.user_metadata?.avatar_url;
 
   useEffect(() => {
+    if (profile) {
+      setUsername(profile.username || '');
+      setAvatarUrl(profile.avatar_url || '');
+      setBannerUrl(profile.banner_url || '');
+    }
+  }, [profile]);
+
+  useEffect(() => {
     fetchAchievements();
     supabase.rpc('get_user_cosmetics').then(({ data }) => {
       setOwnedBanners((data || []).filter((c: any) => c.item_type === 'profile_banner' || c.item_type === 'profile_avatar'));
@@ -296,7 +304,7 @@ export function Profile() {
                   <Trophy className={cn("w-6 h-6", ach.unlocked_at ? "text-white" : "text-slate-400")} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-black text-[var(--text)] uppercase truncate">{ach.name}</h3>
+                  <h3 className="font-black text-[var(--text)] uppercase truncate">{ach.title}</h3>
                   <p className="text-sm text-slate-600 font-bold line-clamp-1">{ach.description}</p>
                   {ach.unlocked_at && (
                     <p className="text-[10px] font-black text-yellow-600 uppercase mt-1">

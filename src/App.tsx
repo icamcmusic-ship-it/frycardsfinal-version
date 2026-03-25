@@ -21,6 +21,8 @@ import { PublicProfile } from './pages/PublicProfile';
 import { Notifications } from './pages/Notifications';
 import { Decks } from './pages/Decks';
 import { Quests } from './pages/Quests';
+import { Battle } from './pages/Battle';
+import { Admin } from './pages/Admin';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -29,8 +31,8 @@ export default function App() {
 
   useEffect(() => {
     supabase.rpc('get_user_settings').then(({ data }) => {
-      if (data?.[0]?.game_style) {
-        setGameStyle(data[0].game_style);
+      if (data?.game_style) {
+        setGameStyle(data.game_style);
       }
     });
   }, [setGameStyle]);
@@ -86,6 +88,8 @@ export default function App() {
             <Route path="/trades" element={<Trades />} />
             <Route path="/decks" element={<Decks />} />
             <Route path="/quests" element={<Quests />} />
+            <Route path="/battle" element={<Battle />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/season-pass" element={<SeasonPass />} />
             <Route path="/settings" element={<Settings />} />

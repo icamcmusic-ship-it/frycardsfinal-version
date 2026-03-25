@@ -92,6 +92,40 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
         className
       )}
     >
+      {/* Hover Stats Overlay */}
+      <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity z-30 flex flex-col items-center justify-center p-4 text-center rounded-lg pointer-events-none">
+        <h4 className="text-white font-black text-lg uppercase mb-2 leading-tight">{card.name}</h4>
+        
+        {isBattle && (
+          <div className="grid grid-cols-3 gap-2 w-full mb-3">
+            <div className="flex flex-col items-center">
+              <Heart className="w-4 h-4 text-red-400 mb-1" />
+              <span className="text-white font-black text-xs">{card.hp}</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <Sword className="w-4 h-4 text-orange-400 mb-1" />
+              <span className="text-white font-black text-xs">{card.attack}</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <Shield className="w-4 h-4 text-blue-400 mb-1" />
+              <span className="text-white font-black text-xs">{card.defense}</span>
+            </div>
+          </div>
+        )}
+
+        {card.element && (
+          <div className="bg-white/10 px-2 py-1 rounded border border-white/20 mb-2">
+            <span className="text-[10px] text-white font-black uppercase">{card.element}</span>
+          </div>
+        )}
+
+        {card.ability_text && (
+          <p className="text-[10px] text-gray-300 font-bold leading-tight line-clamp-4 italic">
+            {card.ability_text}
+          </p>
+        )}
+      </div>
+
       {/* Mythic Particle Effect */}
       {card.rarity === 'Mythic' && (
         <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">

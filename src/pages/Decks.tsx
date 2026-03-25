@@ -35,7 +35,10 @@ export function Decks() {
   };
 
   const fetchCollection = async () => {
-    const { data, error } = await supabase.rpc('get_user_collection');
+    const { data, error } = await supabase.rpc('get_user_collection', {
+      p_limit: 1000,
+      p_sort_by: 'name'
+    });
     if (error) {
       console.error('Error fetching collection:', error);
       return;

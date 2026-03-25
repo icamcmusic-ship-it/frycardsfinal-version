@@ -29,6 +29,7 @@ export function Collection() {
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>('rarity');
   const [elementType, setElementType] = useState<string>('all');
+  const [showFoilsOnly, setShowFoilsOnly] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [viewSize, setViewSize] = useState<'normal' | 'large'>('large');
   const [hasMore, setHasMore] = useState(true);
@@ -56,13 +57,18 @@ export function Collection() {
 
   const fetchCollection = async (isLoadMore = false) => {
     try {
-      if (!isLoadMore) setLoading(true);
-      else setLoadingMore(true);
+      const nextOffset = isLoadMore ? cards.length : 0;
+      if (!isLoadMore) {
+        setCards([]);
+        setHasMore(true);
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
 
       const rarityForApi = filter === 'all' ? null : 
         filter.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-');
         
-      const nextOffset = isLoadMore ? cards.length : 0;
       const { data, error } = await supabase.rpc('get_user_collection', {
         p_user_id: profile?.id,
         p_rarity: rarityForApi,
@@ -269,13 +275,14 @@ export function Collection() {
 
   useEffect(() => {
     setVisibleCount(20);
-  }, [filter, search, sortBy, activeTab, elementType]);
+  }, [filter, search, sortBy, activeTab, elementType, showFoilsOnly]);
 
   const filteredCards = (activeTab === 'collection' ? cards : wishlist)
     .filter(c => {
       if (filter !== 'all' && c.rarity.toLowerCase() !== filter) return false;
       if (elementType !== 'all' && c.element?.toLowerCase() !== elementType) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (showFoilsOnly && !c.is_foil) return false;
       return true;
     });
 
@@ -450,6 +457,15 @@ export function Collection() {
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
+          <button
+            onClick={() => setShowFoilsOnly(!showFoilsOnly)}
+            className={cn(
+              "shrink-0 px-4 py-2 font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)]",
+              showFoilsOnly ? "bg-yellow-400 text-black" : "bg-[var(--surface)] text-[var(--text)]"
+            )}
+          >
+            {showFoilsOnly ? '✨ Foils Only' : 'Show All'}
+          </button>
           <button
             onClick={() => setViewSize(prev => prev === 'normal' ? 'large' : 'normal')}
             className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
