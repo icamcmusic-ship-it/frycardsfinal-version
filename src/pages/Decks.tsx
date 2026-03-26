@@ -98,6 +98,7 @@ export function Decks() {
       if (error) throw error;
       toast.success('Deck created!');
       setEditingDeck(null);
+      setHasUnsavedChanges(false);
       fetchDecks();
     } catch (err: any) {
       toast.error(err.message || 'Failed to create deck');
@@ -119,6 +120,7 @@ export function Decks() {
       if (error) throw error;
       toast.success('Deck updated!');
       setEditingDeck(null);
+      setHasUnsavedChanges(false);
       fetchDecks();
     } catch (err: any) {
       toast.error(err.message || 'Failed to update deck');
@@ -146,7 +148,23 @@ export function Decks() {
     });
   };
 
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  useEffect(() => {
+    if (editingDeck) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        if (hasUnsavedChanges) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+  }, [editingDeck, hasUnsavedChanges]);
+
   const toggleCardSelection = (cardId: string) => {
+    setHasUnsavedChanges(true);
     setSelectedCards(prev => 
       prev.includes(cardId) 
         ? prev.filter(id => id !== cardId)
@@ -190,7 +208,13 @@ export function Decks() {
             )}>
               {selectedCards.length}/20
             </div>
-            <button onClick={() => setEditingDeck(null)} className="px-4 py-2 bg-[var(--bg)] text-[var(--text)] font-black rounded-xl border-2 border-[var(--border)] flex items-center gap-2">
+            <button 
+              onClick={() => {
+                setEditingDeck(null);
+                setHasUnsavedChanges(false);
+              }} 
+              className="px-4 py-2 bg-[var(--bg)] text-[var(--text)] font-black rounded-xl border-2 border-[var(--border)] flex items-center gap-2"
+            >
               <X className="w-4 h-4" /> Cancel
             </button>
             <button 
@@ -283,7 +307,7 @@ export function Decks() {
                     onClick={() => {
                       setEditingDeck(deck);
                       setDeckName(deck.name);
-                      setSelectedCards(deck.cards?.map((c: any) => c.id) || []);
+                      setSelectedCards(deck.cards?.map((c: any) => c.id) || deck.card_ids || []);
                       setLeaderId(deck.leader_id);
                     }}
                     className="p-2 bg-yellow-400 hover:bg-yellow-500 text-black rounded-lg border-2 border-[var(--border)]"

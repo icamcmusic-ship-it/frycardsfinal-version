@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, LayoutGrid, ShoppingBag, Plus, Coins, Trophy } from 'lucide-react';
+import { X, LayoutGrid, ShoppingBag, Plus, Coins, Trophy, Star } from 'lucide-react';
 import { cn, getCardBackUrl } from '../lib/utils';
 
 interface Card3DModalProps {
@@ -10,13 +10,22 @@ interface Card3DModalProps {
   onSell?: (card: any) => void;
   onList?: (card: any) => void;
   onAddToDeck?: (card: any) => void;
+  onToggleWishlist?: (cardId: string) => void;
+  isWishlisted?: boolean;
 }
 
-export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddToDeck }: Card3DModalProps) {
+export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddToDeck, onToggleWishlist, isWishlisted }: Card3DModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [localWishlisted, setLocalWishlisted] = useState(isWishlisted);
+
+  const handleToggleWishlist = async () => {
+    if (!onToggleWishlist) return;
+    setLocalWishlisted(!localWishlisted);
+    onToggleWishlist(card.id);
+  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = cardRef.current?.getBoundingClientRect();
@@ -144,7 +153,18 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddT
             animate={{ x: 0, opacity: 1 }}
             className="flex-1 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] min-w-0"
           >
-            <h2 className="text-3xl font-black uppercase text-[var(--text)] mb-1">{card.name}</h2>
+            <div className="flex justify-between items-start mb-1">
+              <h2 className="text-3xl font-black uppercase text-[var(--text)]">{card.name}</h2>
+              {onToggleWishlist && (
+                <button 
+                  onClick={handleToggleWishlist}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors border-2 border-transparent hover:border-[var(--border)]"
+                  title={localWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+                >
+                  <Star className={cn("w-6 h-6", localWishlisted ? "fill-yellow-400 text-yellow-500" : "text-slate-400")} />
+                </button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2 mb-4">
               <span className="text-xs font-black px-2 py-1 rounded border-2 border-[var(--border)] bg-gray-100 text-black">{card.rarity}</span>
               <span className="text-xs font-bold px-2 py-1 rounded border-2 border-[var(--border)] bg-gray-100 text-black">{card.card_type}</span>
@@ -168,8 +188,8 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddT
               </div>
             )}
 
-            {card.flavor_text && (
-              <p className="text-sm italic text-slate-500 mb-4">"{card.flavor_text}"</p>
+            {(card.flavor_text || (card as any).description) && (
+              <p className="text-sm italic text-slate-500 mb-4">"{card.flavor_text || (card as any).description}"</p>
             )}
 
             <div className="text-xs text-slate-400 font-bold">

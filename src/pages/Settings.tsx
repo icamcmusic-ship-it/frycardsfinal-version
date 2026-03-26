@@ -134,8 +134,9 @@ export function Settings() {
     try {
       const { error } = await supabase.rpc('upsert_user_settings', { p_settings: newSettings });
       if (error) throw error;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating settings:', err);
+      toast.error(err.message || 'Failed to save settings');
     }
   };
 

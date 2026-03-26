@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export function Auth() {
   const [loading, setLoading] = useState(false);
@@ -37,11 +38,18 @@ export function Auth() {
           <p className="text-slate-500 font-bold mt-2">Pop open some fresh packs!</p>
         </div>
 
-        {error && (
-          <div className="p-3 bg-red-100 border-2 border-red-500 rounded-xl text-red-700 font-bold text-sm text-center mb-4">
-            {error}
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="p-3 bg-red-100 border-2 border-red-500 rounded-xl text-red-700 font-bold text-sm text-center mb-4"
+            >
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <button
           onClick={handleDiscordAuth}

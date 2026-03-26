@@ -130,9 +130,12 @@ export function Layout() {
   const formatRegenTime = () => {
     if (!nextRegen) return null;
     const diff = Math.max(0, nextRegen - Date.now());
-    const mins = Math.floor(diff / 60000);
-    const secs = Math.floor((diff % 60000) / 1000);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   return (

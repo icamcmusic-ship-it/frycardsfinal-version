@@ -177,11 +177,9 @@ export function Marketplace() {
 
   const fetchWishlistCardIds = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_wishlist', {
-        p_rarity: null
-      });
+      const { data, error } = await supabase.rpc('get_wishlist_card_ids');
       if (error) throw error;
-      setWishlistCardIds(new Set((data || []).map((item: any) => item.card_id)));
+      setWishlistCardIds(new Set(data || []));
     } catch (err) {
       console.error('Error fetching wishlist card ids:', err);
     }
@@ -206,13 +204,18 @@ export function Marketplace() {
       // Normalize flat data into nested card object
       const normalized = (data || []).map((item: any) => ({
         ...item,
-        card: item.card || {
+        card_name: item.card_name,
+        card_rarity: item.card_rarity,
+        card: {
+          id: item.card_id,
           name: item.card_name,
           rarity: item.card_rarity,
           element: item.card_element,
+          card_type: item.card_type,
           image_url: item.card_image_url,
-          type: item.card_type,
-          flavor_text: item.card_flavor_text
+          is_video: item.card_is_video,
+          flavor_text: item.card_flavor_text,
+          is_foil: item.is_foil,
         }
       }));
       setMyListings(normalized);
@@ -223,6 +226,8 @@ export function Marketplace() {
     }
   };
 
+  const [totalCount, setTotalCount] = useState(0);
+
   const fetchListings = async (isLoadMore = false) => {
     try {
       const nextOffset = isLoadMore ? listings.length : 0;
@@ -232,6 +237,22 @@ export function Marketplace() {
         setLoading(true);
       } else {
         setLoadingMore(true);
+      }
+
+      // Fetch total count for pagination indicator
+      if (!isLoadMore) {
+        let countQuery = supabase
+          .from('market_listings')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'active');
+        
+        if (rarityFilter !== 'all') countQuery = countQuery.eq('card_rarity', rarityFilter);
+        if (elementFilter !== 'all') countQuery = countQuery.eq('card_element', elementFilter);
+        if (filter !== 'all') countQuery = countQuery.eq('listing_type', filter);
+        if (debouncedSearch) countQuery = countQuery.ilike('card_name', `%${debouncedSearch}%`);
+
+        const { count } = await countQuery;
+        setTotalCount(count || 0);
       }
 
       const { data, error } = await supabase.rpc('get_active_listings', {
@@ -248,13 +269,18 @@ export function Marketplace() {
       // Normalize flat data into nested card object
       const fetchedListings = (data || []).map((item: any) => ({
         ...item,
-        card: item.card || {
+        card_name: item.card_name,
+        card_rarity: item.card_rarity,
+        card: {
+          id: item.card_id,
           name: item.card_name,
           rarity: item.card_rarity,
           element: item.card_element,
+          card_type: item.card_type,
           image_url: item.card_image_url,
-          type: item.card_type,
-          flavor_text: item.card_flavor_text
+          is_video: item.card_is_video,
+          flavor_text: item.card_flavor_text,
+          is_foil: item.is_foil,
         }
       }));
       if (isLoadMore) {
@@ -303,13 +329,18 @@ export function Marketplace() {
       // Normalize flat data into nested card object
       const normalized = (data || []).map((item: any) => ({
         ...item,
-        card: item.card || {
+        card_name: item.card_name,
+        card_rarity: item.card_rarity,
+        card: {
+          id: item.card_id,
           name: item.card_name,
           rarity: item.card_rarity,
           element: item.card_element,
+          card_type: item.card_type,
           image_url: item.card_image_url,
-          type: item.card_type,
-          flavor_text: item.card_flavor_text
+          is_video: item.card_is_video,
+          flavor_text: item.card_flavor_text,
+          is_foil: item.is_foil,
         }
       }));
       setWatchlist(normalized);
@@ -454,6 +485,7 @@ export function Marketplace() {
 
   const filteredListings = (activeTab === 'all' ? listings : activeTab === 'watchlist' ? watchlist : myListings)
     .filter(listing => {
+      if (activeTab === 'my_listings' && listing.status !== 'active') return false;
       if (filter !== 'all' && listing.type !== filter) return false;
       // Client-side search for watchlist/my_listings since they don't use the search RPC param.
       // This is intentional: "All" tab uses server-side search via p_search, 
@@ -609,6 +641,14 @@ export function Marketplace() {
           </select>
         </div>
       </div>
+
+      {activeTab === 'all' && listings.length > 0 && (
+        <div className="mb-4 flex justify-between items-center px-2">
+          <p className="text-sm font-bold text-slate-500">
+            Showing <span className="text-[var(--text)]">{listings.length}</span> of <span className="text-[var(--text)]">{totalCount}</span> listings
+          </p>
+        </div>
+      )}
 
       {filteredListings.length === 0 && !loadingMore ? (
         <div className="text-center py-20 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[8px_8px_0px_0px_var(--border)]">

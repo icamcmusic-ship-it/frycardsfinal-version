@@ -48,6 +48,7 @@ export function Collection() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
+  const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
   const PAGE_SIZE = 20;
 
   useEffect(() => {
@@ -66,8 +67,19 @@ export function Collection() {
         fetchWishlist();
       }
       fetchStats();
+      fetchWishlistCardIds();
     }
   }, [profile, activeTab, sortBy, filter, elementType, debouncedSearch, showFoilsOnly]);
+
+  const fetchWishlistCardIds = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_wishlist_card_ids');
+      if (error) throw error;
+      setWishlistCardIds(new Set(data || []));
+    } catch (err) {
+      console.error('Error fetching wishlist card ids:', err);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -115,10 +127,16 @@ export function Collection() {
       setHasMore(fetchedCards.length === PAGE_SIZE);
       setOffset(targetOffset + fetchedCards.length);
 
-      // Mark unseen cards as seen
+      // Mark unseen cards as seen after 5 seconds
       const unseenCardIds = fetchedCards.filter((c: any) => c.is_new === true).map((c: any) => c.id);
       if (unseenCardIds.length > 0) {
-        await supabase.rpc('mark_cards_seen', { p_card_ids: unseenCardIds });
+        setTimeout(async () => {
+          try {
+            await supabase.rpc('mark_cards_seen', { p_card_ids: unseenCardIds });
+          } catch (err) {
+            console.error('Error marking cards as seen:', err);
+          }
+        }, 5000);
       }
     } catch (err) {
       console.error('Error fetching collection:', err);
@@ -190,16 +208,12 @@ export function Collection() {
       });
       if (error) throw error;
       
-      setCards(cards.map(c => {
-        if (c.user_card_id === userCardId) {
-          const newLockedState = !c.is_locked;
-          toast.success(newLockedState ? 'Card locked!' : 'Card unlocked!');
-          return { ...c, is_locked: newLockedState };
-        }
-        return c;
-      }));
+      const newLockedState = data;
+      toast.success(newLockedState ? 'Card locked!' : 'Card unlocked!');
+      setCards(cards.map(c => c.user_card_id === userCardId ? { ...c, is_locked: newLockedState } : c));
     } catch (err) {
       console.error('Error toggling lock:', err);
+      toast.error('Failed to toggle lock');
     }
   };
 
@@ -259,7 +273,11 @@ export function Collection() {
       onConfirm: async () => {
         // Optimistic update
         const previousCards = [...cards];
-        setCards(cards.filter(c => c.id !== card.id));
+        setCards(prev => prev.map(c => {
+          if (c.id !== card.id) return c;
+          const newQty = (c.quantity || 1) - 1;
+          return newQty <= 0 ? null : { ...c, quantity: newQty };
+        }).filter(Boolean) as any[]);
         
         if (profile) {
           useProfileStore.getState().setProfile({
@@ -564,11 +582,23 @@ export function Collection() {
             setCardToList(card);
             setIsListingModalOpen(true);
           } : undefined}
+          onToggleWishlist={handleToggleWishlist}
+          isWishlisted={wishlistCardIds.has(selectedCard.id)}
         />
       )}
       {isBatchMode && selectedCardIds.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[var(--surface)] border-4 border-[var(--border)] p-4 rounded-2xl shadow-[8px_8px_0px_0px_var(--border)] z-50 flex items-center gap-4">
-          <p className="font-black text-[var(--text)]">Selected {selectedCardIds.length} cards</p>
+          <div className="flex flex-col">
+            <p className="font-black text-[var(--text)]">Selected {selectedCardIds.length} cards</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase">
+              {(() => {
+                const selectedList = selectedCardIds.map(id => cards.find(c => (c.user_card_id || c.id) === id)).filter(Boolean);
+                const foils = selectedList.filter(c => c.is_foil).length;
+                const normal = selectedList.length - foils;
+                return `${normal} Normal • ${foils} Foil`;
+              })()}
+            </p>
+          </div>
           <button 
             onClick={() => {
               setConfirmConfig({

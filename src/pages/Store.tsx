@@ -44,6 +44,7 @@ export function Store() {
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
   const [inventory, setInventory] = useState<any[]>([]);
   const [useGems, setUseGems] = useState(false);
+  const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -87,8 +88,18 @@ export function Store() {
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchPacks(), fetchShopItems(), fetchUserCosmetics(), fetchInventory()]);
+    await Promise.all([fetchPacks(), fetchShopItems(), fetchUserCosmetics(), fetchInventory(), fetchWishlistCardIds()]);
     setLoading(false);
+  };
+
+  const fetchWishlistCardIds = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_wishlist_card_ids');
+      if (error) throw error;
+      setWishlistCardIds(new Set(data || []));
+    } catch (err) {
+      console.error('Error fetching wishlist card ids:', err);
+    }
   };
 
   const fetchPacks = async () => {
@@ -334,6 +345,27 @@ export function Store() {
       toast.error(err.message || 'Failed to open all packs');
       setOpening(false);
       setPackOpeningStep('idle');
+    }
+  };
+
+  const handleToggleWishlist = async (cardId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('toggle_wishlist', { p_card_id: cardId });
+      if (error) throw error;
+      
+      const isAdded = data.added;
+      setWishlistCardIds(prev => {
+        const next = new Set(prev);
+        if (isAdded) next.add(cardId);
+        else next.delete(cardId);
+        return next;
+      });
+      
+      toast.success(isAdded ? 'Added to wishlist!' : 'Removed from wishlist', {
+        icon: isAdded ? '⭐' : '🗑️'
+      });
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to toggle wishlist');
     }
   };
 
@@ -792,8 +824,17 @@ export function Store() {
                 animate={{ 
                   rotate: [-3, 3, -3, 3, -3, 3, 0],
                   scale: [1, 1.05, 1, 1.05, 1, 1.05, 1.1],
+                  boxShadow: [
+                    '0 0 20px rgba(250,204,21,0.4)',
+                    '0 0 60px rgba(250,204,21,0.8)',
+                    '0 0 20px rgba(250,204,21,0.4)'
+                  ]
                 }}
-                transition={{ duration: 0.6, repeat: Infinity, repeatType: 'loop' }}
+                transition={{ 
+                  rotate: { duration: 0.2, repeat: Infinity },
+                  scale: { duration: 0.6, repeat: Infinity },
+                  boxShadow: { duration: 1, repeat: Infinity }
+                }}
                 className="w-40 h-56 rounded-xl border-4 border-yellow-400 overflow-hidden shadow-[0_0_40px_rgba(250,204,21,0.6)] relative"
               >
                 <img src={openingPackImageUrl} className="w-full h-full object-cover" />
@@ -876,6 +917,8 @@ export function Store() {
                       card={selectedCard}
                       cardBackUrl={profile?.card_back_url || null}
                       onClose={() => setSelectedCard(null)}
+                      isWishlisted={wishlistCardIds.has(selectedCard.id)}
+                      onToggleWishlist={() => handleToggleWishlist(selectedCard.id)}
                     />
                   )}
 

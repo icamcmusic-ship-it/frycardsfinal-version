@@ -249,9 +249,9 @@ export const FlipCard: React.FC<FlipCardProps> = ({
                 </div>
               )}
 
-              {card.flavor_text && (
+              {(card.flavor_text || card.description) && (
                 <p className="text-gray-300 text-[10px] italic leading-relaxed line-clamp-2">
-                  {card.flavor_text}
+                  {card.flavor_text || card.description}
                 </p>
               )}
             </motion.div>

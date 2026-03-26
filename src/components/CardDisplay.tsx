@@ -75,7 +75,7 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
 
   const isBattle = (card.hp !== undefined || card.attack !== undefined || card.defense !== undefined) && !['Location', 'Artifact', 'Event', 'Leader'].includes(card.card_type || '');
   const isSpell = (card.ability_text || (card.keywords && card.keywords.length > 0)) && !isBattle;
-  const isLore = card.flavor_text && !isBattle && !isSpell;
+  const isLore = (card.flavor_text || (card as any).description) && !isBattle && !isSpell;
 
   return (
     <div 
@@ -144,9 +144,9 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
             </div>
           )}
 
-          {card.flavor_text && (
+          {(card.flavor_text || (card as any).description) && (
             <p className="text-gray-300 text-[10px] italic leading-relaxed line-clamp-3">
-              {card.flavor_text}
+              {card.flavor_text || (card as any).description}
             </p>
           )}
 

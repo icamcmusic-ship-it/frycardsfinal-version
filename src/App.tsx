@@ -34,22 +34,6 @@ export default function App() {
   const { theme, gameStyle, setGameStyle } = useThemeStore();
 
   useEffect(() => {
-    supabase.rpc('get_user_settings').then(({ data }) => {
-      if (data) {
-        if (data.game_style) {
-          setGameStyle(data.game_style);
-        }
-        // Restore audio settings
-        const audioStore = useAudioStore.getState();
-        if (data.master_volume !== undefined) audioStore.setMasterVolume(data.master_volume);
-        if (data.music_volume !== undefined) audioStore.setMusicVolume(data.music_volume);
-        if (data.sfx_volume !== undefined) audioStore.setSfxVolume(data.sfx_volume);
-        if (data.audio_enabled !== undefined) audioStore.setAudioEnabled(data.audio_enabled);
-      }
-    });
-  }, [setGameStyle]);
-
-  useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-style', gameStyle);
   }, [theme, gameStyle]);
@@ -60,6 +44,19 @@ export default function App() {
       setSession(session);
       setUser(session?.user ?? null);
       setInitialized(true);
+
+      if (session) {
+        supabase.rpc('get_user_settings').then(({ data }) => {
+          if (data) {
+            if (data.game_style) setGameStyle(data.game_style);
+            const audioStore = useAudioStore.getState();
+            if (data.master_volume !== undefined) audioStore.setMasterVolume(data.master_volume);
+            if (data.music_volume !== undefined) audioStore.setMusicVolume(data.music_volume);
+            if (data.sfx_volume !== undefined) audioStore.setSfxVolume(data.sfx_volume);
+            if (data.audio_enabled !== undefined) audioStore.setAudioEnabled(data.audio_enabled);
+          }
+        });
+      }
     });
 
     const {
@@ -70,7 +67,7 @@ export default function App() {
     });
 
     return () => subscription.unsubscribe();
-  }, [setSession, setUser, setInitialized]);
+  }, [setSession, setUser, setInitialized, setGameStyle]);
 
   if (!initialized) {
     return (

@@ -410,12 +410,18 @@ export function Home() {
               {reward.reward_type === 'jackpot' ? '🎉 Jackpot!' :
                reward.reward_type === 'gem_cache' ? '💎 Gem Cache!' :
                reward.reward_type === 'gold_stash' ? '💰 Gold Stash!' :
+               reward.reward_type === 'rare_card' ? '✨ Rare Card!' :
+               reward.reward_type === 'pack_bundle' ? '📦 Pack Bundle!' :
+               reward.reward_type === 'milestone_7' ? '🌟 7-Day Milestone!' :
+               reward.reward_type === 'milestone_30' ? '🔥 30-Day Milestone!' :
                'Reward Claimed!'}
             </h2>
             <div className="text-xl font-bold text-slate-700 mb-6">
               {reward.gold_earned > 0 && <p className="text-yellow-600">+{reward.gold_earned} Gold</p>}
               {reward.gems_earned > 0 && <p className="text-emerald-600">+{reward.gems_earned} Gems</p>}
               {reward.xp_earned > 0 && <p className="text-blue-600">+{reward.xp_earned} XP</p>}
+              {reward.packs_earned > 0 && <p className="text-purple-600">+{reward.packs_earned} Packs</p>}
+              {reward.card_name && <p className="text-orange-500">New Card: {reward.card_name}</p>}
               <p className="mt-2 text-sm font-black text-blue-500 uppercase">Streak: {reward.current_streak} days</p>
             </div>
             <button 
