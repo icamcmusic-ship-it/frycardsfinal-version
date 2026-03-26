@@ -44,7 +44,7 @@ export function Collection() {
       }
       fetchStats();
     }
-  }, [profile, activeTab, sortBy, filter, elementType]);
+  }, [profile, activeTab, sortBy, filter, elementType, search]);
 
   const fetchStats = async () => {
     try {
@@ -74,8 +74,9 @@ export function Collection() {
         p_rarity: rarityForApi,
         p_sort_by: sortBy,
         p_element_type: elementType === 'all' ? null : elementType,
-        p_limit: 20,
-        p_offset: nextOffset
+        p_limit: search ? 1000 : 20,
+        p_offset: nextOffset,
+        p_search: search || null
       });
       
       if (error) throw error;
@@ -171,7 +172,7 @@ export function Collection() {
       if (error) throw error;
       
       setCards(cards.map(c => {
-        if (c.id === userCardId) {
+        if (c.user_card_id === userCardId) {
           const newLockedState = !c.is_locked;
           toast.success(newLockedState ? 'Card locked!' : 'Card unlocked!');
           return { ...c, is_locked: newLockedState };
@@ -262,7 +263,7 @@ export function Collection() {
     if (!confirm('Are you sure you want to mill ALL duplicate cards? This cannot be undone.')) return;
     
     try {
-      const { data, error } = await supabase.rpc('mill_bulk_duplicates');
+      const { data, error } = await supabase.rpc('mill_bulk_duplicates', { p_card_ids: null });
       if (error) throw error;
       
       fetchCollection(); // Refresh
@@ -282,7 +283,7 @@ export function Collection() {
       if (filter !== 'all' && c.rarity.toLowerCase() !== filter) return false;
       if (elementType !== 'all' && c.element?.toLowerCase() !== elementType) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (showFoilsOnly && !c.is_foil) return false;
+      if (showFoilsOnly && !(c.foil_quantity > 0)) return false;
       return true;
     });
 

@@ -153,16 +153,21 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                       )}
                     </div>
                     <div className={cn(
-                      "max-w-[85%] px-3 py-2 rounded-xl border-2 text-sm font-bold shadow-[2px_2px_0px_0px_var(--border)]",
-                      msg.user_id === profile?.id 
-                        ? "bg-blue-100 border-blue-400 text-blue-900" 
-                        : "bg-white border-[var(--border)] text-[var(--text)]"
+                      "flex items-end gap-2",
+                      msg.user_id === profile?.id ? "flex-row-reverse" : "flex-row"
                     )}>
-                      {msg.content}
+                      <div className={cn(
+                        "max-w-[85%] px-3 py-2 rounded-xl border-2 text-sm font-bold shadow-[2px_2px_0px_0px_var(--border)]",
+                        msg.user_id === profile?.id 
+                          ? "bg-blue-100 border-blue-400 text-blue-900" 
+                          : "bg-white border-[var(--border)] text-[var(--text)]"
+                      )}>
+                        {msg.content}
+                      </div>
+                      <span className="text-[8px] font-bold text-slate-400 whitespace-nowrap mb-1">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
-                    <span className="text-[8px] font-bold text-slate-400 mt-1">
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
                   </div>
                 ))
               )}

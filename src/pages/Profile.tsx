@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
 import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings as SettingsIcon, Plus } from 'lucide-react';
 import { cn, getAvatarUrl, getBannerUrl, getCardBackUrl } from '../lib/utils';
+import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
 
 export function Profile() {
@@ -14,6 +15,7 @@ export function Profile() {
   const [username, setUsername] = useState(profile?.username || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [bannerUrl, setBannerUrl] = useState(profile?.banner_url || '');
+  const [bio, setBio] = useState(profile?.bio || '');
   const [ownedBanners, setOwnedBanners] = useState<any[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
@@ -27,6 +29,7 @@ export function Profile() {
       setUsername(profile.username || '');
       setAvatarUrl(profile.avatar_url || '');
       setBannerUrl(profile.banner_url || '');
+      setBio(profile.bio || '');
     }
   }, [profile]);
 
@@ -84,13 +87,13 @@ export function Profile() {
         p_username: username,
         p_avatar_url: avatarUrl,
         p_banner_url: bannerUrl,
-        p_bio: profile.bio
+        p_bio: bio
       });
 
       if (error) throw error;
       
       // Update local state
-      setProfile({ ...profile, username, avatar_url: avatarUrl, banner_url: bannerUrl });
+      setProfile({ ...profile, username, avatar_url: avatarUrl, banner_url: bannerUrl, bio });
       setEditing(false);
       toast.success('Profile updated successfully!');
     } catch (err: any) {
@@ -161,9 +164,33 @@ export function Profile() {
                       placeholder="Enter username"
                     />
                   ) : (
-                    <h2 className="text-4xl font-black text-[var(--text)] uppercase">{profile.username || 'Duelist'}</h2>
+                    <div className="space-y-2">
+                      <h2 className="text-4xl font-black text-[var(--text)] uppercase">{profile.username || 'Duelist'}</h2>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 bg-blue-100 px-3 py-1 rounded-full border-2 border-blue-200">
+                          <Trophy className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-black text-blue-700 uppercase">Level {profile.level || 1}</span>
+                        </div>
+                        <div className="flex-1 max-w-xs">
+                          <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
+                            <span>XP Progress</span>
+                            <span>{profile.xp || 0} / {((profile.level || 1) * 1000)}</span>
+                          </div>
+                          <div className="h-3 bg-slate-200 rounded-full border-2 border-slate-300 overflow-hidden">
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.min(100, ((profile.xp || 0) / ((profile.level || 1) * 1000)) * 100)}%` }}
+                              className="h-full bg-blue-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
                   <p className="text-slate-500 font-bold mt-1">Joined {new Date(profile.created_at).toLocaleDateString()}</p>
+                  {!editing && profile.bio && (
+                    <p className="text-slate-600 font-medium mt-2 max-w-md">{profile.bio}</p>
+                  )}
                 </div>
 
                 <div className="flex gap-3">
@@ -208,6 +235,15 @@ export function Profile() {
 
               {editing && (
                 <div className="mb-6 space-y-6">
+                  <div>
+                    <p className="font-black mb-2 text-[var(--text)]">Bio:</p>
+                    <textarea
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      className="text-lg font-bold text-[var(--text)] bg-[var(--bg)] border-4 border-[var(--border)] rounded-xl px-4 py-2 w-full focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-[4px_4px_0px_0px_var(--border)] resize-none h-24"
+                      placeholder="Tell us about yourself..."
+                    />
+                  </div>
                   <div>
                     <p className="font-black mb-2 text-[var(--text)]">Select Avatar:</p>
                     <div className="flex gap-3 flex-wrap">

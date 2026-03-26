@@ -19,6 +19,8 @@ export function SeasonPass() {
   const [tiers, setTiers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [claiming, setClaiming] = useState<number | null>(null);
+
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
@@ -34,10 +36,32 @@ export function SeasonPass() {
   };
 
   const claimTier = async (tier: number) => {
-    // claim_season_pass_tier signature: (p_season, p_tier)
-    const { error } = await supabase.rpc('claim_season_pass_tier', { p_season: passData?.season || 1, p_tier: tier });
-    if (error) { toast.error(error.message); return; }
-    fetchData();
+    if (claiming) return;
+    setClaiming(tier);
+    try {
+      // claim_season_pass_tier signature: (p_season, p_tier)
+      const { error } = await supabase.rpc('claim_season_pass_tier', { p_season: passData?.season || 1, p_tier: tier });
+      if (error) throw error;
+      
+      toast.success(`Claimed Tier ${tier} reward!`);
+      
+      // Refresh profile to update gold/gems/packs
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', profile?.id)
+        .single();
+        
+      if (profileData) {
+        useProfileStore.getState().setProfile(profileData);
+      }
+      
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to claim reward');
+    } finally {
+      setClaiming(null);
+    }
   };
 
   if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-10 h-10 animate-spin" /></div>;
@@ -134,8 +158,9 @@ export function SeasonPass() {
                 <div className="p-3 bg-slate-200 rounded-xl border-2 border-[var(--border)]"><Lock className="w-5 h-5 text-slate-400" /></div>
               ) : (
                 <button onClick={() => claimTier(tier.tier)}
-                  className="px-5 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)]">
-                  Claim!
+                  disabled={claiming === tier.tier}
+                  className="px-5 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2">
+                  {claiming === tier.tier ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Claim!'}
                 </button>
               )}
             </div>

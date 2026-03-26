@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Loader2, Trophy, UserPlus, UserCheck } from 'lucide-react';
+import { Loader2, Trophy, UserPlus, UserCheck, UserMinus, Users } from 'lucide-react';
 import { CardDisplay } from '../components/CardDisplay';
-import { getAvatarUrl, getBannerUrl } from '../lib/utils';
+import { cn, getAvatarUrl, getBannerUrl } from '../lib/utils';
 import toast from 'react-hot-toast';
 
 function OtherUserCollection({ userId }: { userId: string }) {
@@ -43,18 +43,64 @@ export function PublicProfile() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showCollection, setShowCollection] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   useEffect(() => {
     if (!userId) return;
     supabase.rpc('get_public_profile', { p_user_id: userId }).then(({ data }) => {
       setProfile(data);
+      setFollowersCount(data?.followers_count || 0);
+      setFollowingCount(data?.following_count || 0);
       setLoading(false);
     });
+    
+    // Check if following
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('follows')
+          .select('id')
+          .eq('follower_id', user.id)
+          .eq('following_id', userId)
+          .then(({ data }) => {
+            setIsFollowing(data && data.length > 0);
+          });
+      }
+    });
   }, [userId]);
+
+  const toggleFollow = async () => {
+    if (isFollowing) {
+      const { error } = await supabase.rpc('unfollow_user', { p_target_user_id: userId });
+      if (!error) {
+        setIsFollowing(false);
+        setFollowersCount(prev => Math.max(0, prev - 1));
+        toast.success(`Unfollowed ${profile.username}`);
+      } else {
+        toast.error('Failed to unfollow');
+      }
+    } else {
+      const { error } = await supabase.rpc('follow_user', { p_target_user_id: userId });
+      if (!error) {
+        setIsFollowing(true);
+        setFollowersCount(prev => prev + 1);
+        toast.success(`Following ${profile.username}`);
+      } else {
+        toast.error('Failed to follow');
+      }
+    }
+  };
 
   const sendRequest = async () => {
     await supabase.rpc('send_friend_request', { p_addressee_id: userId });
     setProfile((p: any) => ({ ...p, friendship_status: 'pending' }));
+  };
+
+  const removeFriend = async () => {
+    if (!window.confirm(`Are you sure you want to remove ${profile.username} from your friends?`)) return;
+    await supabase.rpc('remove_friend', { p_friend_id: userId });
+    setProfile((p: any) => ({ ...p, friendship_status: 'none' }));
   };
 
   if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
@@ -83,9 +129,12 @@ export function PublicProfile() {
             {userId !== undefined && (
               <div className="flex items-center gap-3 mt-3">
                 {profile.friendship_status === 'accepted' ? (
-                  <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-green-500 rounded-xl font-bold text-green-700 uppercase text-sm">
-                    <UserCheck className="w-4 h-4" /> Friends
-                  </span>
+                  <button onClick={removeFriend} className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 hover:bg-red-100 border-2 border-green-500 hover:border-red-500 rounded-xl font-bold text-green-700 hover:text-red-700 uppercase text-sm group transition-colors">
+                    <UserCheck className="w-4 h-4 group-hover:hidden" />
+                    <UserMinus className="w-4 h-4 hidden group-hover:block" />
+                    <span className="group-hover:hidden">Friends</span>
+                    <span className="hidden group-hover:inline">Remove</span>
+                  </button>
                 ) : profile.friendship_status === 'pending' ? (
                   <span className="inline-flex px-4 py-2 bg-yellow-100 border-2 border-yellow-400 rounded-xl font-bold text-yellow-700 uppercase text-sm">
                     Request Pending
@@ -114,10 +163,35 @@ export function PublicProfile() {
                 >
                   Block
                 </button>
+                
+                <button
+                  onClick={toggleFollow}
+                  className={cn(
+                    "px-4 py-2 font-black text-sm uppercase rounded-xl border-2 transition-colors flex items-center gap-2",
+                    isFollowing 
+                      ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300" 
+                      : "bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-300"
+                  )}
+                >
+                  <Users className="w-4 h-4" />
+                  {isFollowing ? 'Following' : 'Follow'}
+                </button>
               </div>
             )}
           </div>
         </div>
+        
+        <div className="flex gap-6 mt-4 px-2">
+          <div className="flex items-center gap-2">
+            <span className="font-black text-lg text-[var(--text)]">{followersCount}</span>
+            <span className="text-xs font-bold text-slate-500 uppercase">Followers</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="font-black text-lg text-[var(--text)]">{followingCount}</span>
+            <span className="text-xs font-bold text-slate-500 uppercase">Following</span>
+          </div>
+        </div>
+
         <div className="grid grid-cols-3 gap-4 mt-6">
           {[
             { label: 'Unique Cards', value: profile.unique_cards },

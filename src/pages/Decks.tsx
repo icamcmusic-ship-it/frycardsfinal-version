@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader2, Plus, Trash2, Edit2, Save, X } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit2, Save, X, Shield, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { CardDisplay } from '../components/CardDisplay';
 import { CardSkeleton } from '../components/CardSkeleton';
@@ -36,8 +36,11 @@ export function Decks() {
 
   const fetchCollection = async () => {
     const { data, error } = await supabase.rpc('get_user_collection', {
+      p_user_id: null,
+      p_rarity: null,
       p_limit: 1000,
-      p_sort_by: 'name'
+      p_sort_by: 'name',
+      p_element_type: null
     });
     if (error) {
       console.error('Error fetching collection:', error);
@@ -219,7 +222,18 @@ export function Decks() {
           {decks.map(deck => (
             <div key={deck.id} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] flex flex-col">
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-2xl font-black uppercase truncate text-[var(--text)]">{deck.name}</h3>
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-2xl font-black uppercase truncate text-[var(--text)]">{deck.name}</h3>
+                  {deck.is_valid ? (
+                    <span className="text-[10px] font-black text-green-500 uppercase flex items-center gap-1">
+                      <Shield className="w-3 h-3" /> Valid Deck
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-black text-red-500 uppercase flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Need at least 5 cards
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => {

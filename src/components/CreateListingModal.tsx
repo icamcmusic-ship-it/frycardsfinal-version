@@ -17,8 +17,8 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
   const [loading, setLoading] = useState(true);
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [listingType, setListingType] = useState<'fixed_price' | 'auction'>('fixed_price');
-  const [priceGold, setPriceGold] = useState(0);
-  const [priceGems, setPriceGems] = useState(0);
+  const [currency, setCurrency] = useState<'gold' | 'gems'>('gold');
+  const [price, setPrice] = useState(0);
   const [duration, setDuration] = useState(24);
   const [isFoil, setIsFoil] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -95,8 +95,8 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
       const { error } = await supabase.rpc('create_market_listing_safe', {
         p_card_id: selectedCard.id,
         p_listing_type: listingType,
-        p_price_gold: priceGold,
-        p_price_gems: priceGems,
+        p_price_gold: currency === 'gold' ? price : 0,
+        p_price_gems: currency === 'gems' ? price : 0,
         p_expires_hours: duration,
         p_is_foil: isFoil
       });
@@ -159,14 +159,13 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">{listingType === 'auction' ? 'Starting Bid (Gold)' : 'Price (Gold)'}</label>
-                <input type="number" min="0" placeholder="0" value={priceGold || ''} onChange={e => setPriceGold(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-slate-500 uppercase">{listingType === 'auction' ? 'Starting Bid (Gems)' : 'Price (Gems)'}</label>
-                <input type="number" min="0" placeholder="0" value={priceGems || ''} onChange={e => setPriceGems(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500" />
-              </div>
+              <button onClick={() => setCurrency('gold')} className={cn("p-4 border-4 rounded-xl font-black transition-colors flex items-center justify-center gap-2", currency === 'gold' ? "border-[var(--border)] bg-yellow-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}><Coins className="w-5 h-5" /> Gold</button>
+              <button onClick={() => setCurrency('gems')} className={cn("p-4 border-4 rounded-xl font-black transition-colors flex items-center justify-center gap-2", currency === 'gems' ? "border-[var(--border)] bg-emerald-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}><Gem className="w-5 h-5" /> Gems</button>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-slate-500 uppercase">{listingType === 'auction' ? 'Starting Bid' : 'Price'} ({currency === 'gold' ? 'Gold' : 'Gems'})</label>
+              <input type="number" min="0" placeholder="0" value={price || ''} onChange={e => setPrice(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500" />
             </div>
 
             <div className="flex flex-col gap-1">

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { useAuthStore } from './stores/authStore';
 import { useThemeStore } from './stores/themeStore';
+import { useAudioStore } from './stores/audioStore';
 import { Toaster } from 'react-hot-toast';
 import { audioService } from './services/AudioService';
 import { Layout } from './components/Layout';
@@ -31,8 +32,16 @@ export default function App() {
 
   useEffect(() => {
     supabase.rpc('get_user_settings').then(({ data }) => {
-      if (data?.game_style) {
-        setGameStyle(data.game_style);
+      if (data) {
+        if (data.game_style) {
+          setGameStyle(data.game_style);
+        }
+        // Restore audio settings
+        const audioStore = useAudioStore.getState();
+        if (data.master_volume !== undefined) audioStore.setMasterVolume(data.master_volume);
+        if (data.music_volume !== undefined) audioStore.setMusicVolume(data.music_volume);
+        if (data.sfx_volume !== undefined) audioStore.setSfxVolume(data.sfx_volume);
+        if (data.audio_enabled !== undefined) audioStore.setAudioEnabled(data.audio_enabled);
       }
     });
   }, [setGameStyle]);

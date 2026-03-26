@@ -65,10 +65,18 @@ export function Battle() {
       setBattleLog(prev => [...prev, 'Final Round: Determining winner...']);
 
       // Call backend to process battle
+      const isWin = Math.random() > 0.4; // 60% win rate for PvE
+      const xpEarned = isWin ? 80 : 30;
+      const goldEarned = isWin ? 150 : 50;
+
       const { data, error } = await supabase.rpc('submit_battle_result', {
         p_deck_id: selectedDeckId,
-        p_opponent_id: null, // AI
-        p_is_win: Math.random() > 0.5 // Simulated for now, or let backend decide if it can
+        p_opponent_type: 'pve',
+        p_result: isWin ? 'win' : 'loss',
+        p_xp_earned: xpEarned,
+        p_gold_earned: goldEarned,
+        p_rounds_played: 5,
+        p_battle_log: JSON.stringify(battleLog)
       });
 
       if (error) throw error;
@@ -247,7 +255,7 @@ export function Battle() {
             </h2>
             <p className="text-xl font-bold text-slate-600 mb-8 uppercase">Battle concluded against AI Challenger</p>
 
-            <div className="grid grid-cols-3 gap-4 max-w-md mx-auto mb-12">
+            <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto mb-12">
               <div className="bg-yellow-50 border-4 border-yellow-200 p-4 rounded-2xl">
                 <p className="text-xs font-black text-yellow-600 uppercase">Gold</p>
                 <p className="text-2xl font-black text-yellow-700">+{battleResult.gold_earned || 0}</p>
@@ -255,10 +263,6 @@ export function Battle() {
               <div className="bg-blue-50 border-4 border-blue-200 p-4 rounded-2xl">
                 <p className="text-xs font-black text-blue-600 uppercase">XP</p>
                 <p className="text-2xl font-black text-blue-700">+{battleResult.xp_earned || 0}</p>
-              </div>
-              <div className="bg-emerald-50 border-4 border-emerald-200 p-4 rounded-2xl">
-                <p className="text-xs font-black text-emerald-600 uppercase">Gems</p>
-                <p className="text-2xl font-black text-emerald-700">+{battleResult.gems_earned || 0}</p>
               </div>
             </div>
 

@@ -99,7 +99,12 @@ export function Marketplace() {
       
       const fetchedListings = data || [];
       if (isLoadMore) {
-        setListings(prev => [...prev, ...fetchedListings]);
+        setListings(prev => {
+          // Avoid duplicates
+          const existingIds = new Set(prev.map(l => l.id));
+          const newUniqueListings = fetchedListings.filter((l: any) => !existingIds.has(l.id));
+          return [...prev, ...newUniqueListings];
+        });
       } else {
         setListings(fetchedListings);
       }
@@ -528,36 +533,48 @@ export function Marketplace() {
                     id={`bid-${listing.id}`}
                     className="w-full px-3 py-2 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl text-[var(--text)] font-bold focus:outline-none"
                   />
-                  <button 
-                    onClick={async () => {
-                      const input = document.getElementById(`bid-${listing.id}`) as HTMLInputElement;
-                      const bidAmount = Number(input?.value);
-                      if (!bidAmount || bidAmount <= (listing.current_bid_gold || listing.current_bid_gems || listing.price)) {
-                        toast.error('Bid must be higher than current bid');
-                        return;
-                      }
-                      
-                      setBuying(listing.id);
-                      try {
-                        const { error } = await supabase.rpc('place_bid', {
-                          p_listing_id: listing.id,
-                          p_bid_gold: listing.currency === 'gold' ? bidAmount : 0,
-                          p_bid_gems: listing.currency === 'gems' ? bidAmount : 0
-                        });
-                        if (error) throw error;
-                        toast.success('Bid placed successfully!', { icon: '🔨' });
-                        fetchListings();
-                      } catch (err: any) {
-                        toast.error(err.message || 'Failed to place bid');
-                      } finally {
-                        setBuying(null);
-                      }
-                    }}
-                    disabled={buying === listing.id || profile?.id === listing.seller_id}
-                    className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-2 border-[var(--border)] transition-transform active:translate-y-1 shadow-[2px_2px_0px_0px_var(--border)] flex items-center justify-center whitespace-nowrap"
-                  >
-                    {buying === listing.id ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Place Bid'}
-                  </button>
+                      <button 
+                        onClick={async () => {
+                          const input = document.getElementById(`bid-${listing.id}`) as HTMLInputElement;
+                          const bidAmount = Number(input?.value);
+                          if (!bidAmount || bidAmount <= (listing.current_bid_gold || listing.current_bid_gems || listing.price)) {
+                            toast.error('Bid must be higher than current bid');
+                            return;
+                          }
+                          
+                          setBuying(listing.id);
+                          try {
+                            const { error } = await supabase.rpc('place_bid', {
+                              p_listing_id: listing.id,
+                              p_bid_gold: listing.currency === 'gold' ? bidAmount : 0,
+                              p_bid_gems: listing.currency === 'gems' ? bidAmount : 0
+                            });
+                            if (error) throw error;
+                            toast.success('Bid placed successfully!', { icon: '🔨' });
+                            
+                            // Refresh profile to update gold/gems
+                            const { data: profileData } = await supabase
+                              .from('profiles')
+                              .select('*')
+                              .eq('id', profile?.id)
+                              .single();
+                              
+                            if (profileData) {
+                              useProfileStore.getState().setProfile(profileData);
+                            }
+                            
+                            fetchListings();
+                          } catch (err: any) {
+                            toast.error(err.message || 'Failed to place bid');
+                          } finally {
+                            setBuying(null);
+                          }
+                        }}
+                        disabled={buying === listing.id || profile?.id === listing.seller_id}
+                        className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-2 border-[var(--border)] transition-transform active:translate-y-1 shadow-[2px_2px_0px_0px_var(--border)] flex items-center justify-center whitespace-nowrap"
+                      >
+                        {buying === listing.id ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Place Bid'}
+                      </button>
                 </div>
               )}
             </motion.div>

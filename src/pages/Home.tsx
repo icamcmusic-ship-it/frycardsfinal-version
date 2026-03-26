@@ -16,6 +16,8 @@ export function Home() {
   const [nextRegen, setNextRegen] = useState<number | null>(null);
 
   const [stats, setStats] = useState<{ unique_cards: number; total_possible: number; total_cards: number } | null>(null);
+  const [claimingQuest, setClaimingQuest] = useState<string | null>(null);
+  const [claimingDaily, setClaimingDaily] = useState(false);
   const [reward, setReward] = useState<any>(null);
 
   useEffect(() => {
@@ -80,6 +82,8 @@ export function Home() {
   };
 
   const handleClaimQuest = async (questId: string) => {
+    if (claimingQuest) return;
+    setClaimingQuest(questId);
     try {
       const { data, error } = await supabase.rpc('claim_daily_mission', { p_mission_id: questId });
       if (error) throw error;
@@ -108,10 +112,14 @@ export function Home() {
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to claim quest');
+    } finally {
+      setClaimingQuest(null);
     }
   };
 
   const handleClaimDailyReward = async () => {
+    if (claimingDaily) return;
+    setClaimingDaily(true);
     try {
       const { data, error } = await supabase.rpc('claim_daily_reward');
       if (error) throw error;
@@ -143,13 +151,15 @@ export function Home() {
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to claim daily reward');
+    } finally {
+      setClaimingDaily(false);
     }
   };
 
   const isDailyClaimable = () => {
     if (!profile?.last_daily_claim) return true;
     const lastClaim = profile.last_daily_claim; // e.g. "2026-03-12"
-    const today = new Date().toISOString().split('T')[0]; // "2026-03-12"
+    const today = new Date().toLocaleDateString('en-CA'); // "YYYY-MM-DD" in local timezone
     return today > lastClaim;
   };
 
@@ -328,9 +338,10 @@ export function Home() {
                   {quest.is_completed && !quest.is_claimed ? (
                     <button 
                       onClick={() => { console.log('Claim clicked'); handleClaimQuest(quest.id); }}
-                      className="px-4 py-1 bg-green-400 hover:bg-green-500 text-black font-black text-sm rounded-lg border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] active:translate-y-1 active:shadow-none transition-all"
+                      disabled={claimingQuest === quest.id}
+                      className="px-4 py-1 bg-green-400 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-sm rounded-lg border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2"
                     >
-                      Claim Reward
+                      {claimingQuest === quest.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Claim Reward'}
                     </button>
                   ) : quest.is_claimed ? (
                     <span className="text-sm text-slate-500 font-bold uppercase">Claimed</span>

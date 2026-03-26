@@ -106,13 +106,15 @@ export function Store() {
 
   const fetchInventory = async () => {
     if (!profile) return;
-    const { data } = await supabase
-      .from('user_pack_inventory')
-      .select(`id, pack_type_id, quantity, pack_types (name, image_url)`)
-      .eq('user_id', profile.id)
-      .gt('quantity', 0);
+    const { data } = await supabase.rpc('get_user_pack_inventory');
     setInventory(data || []);
   };
+
+  useEffect(() => {
+    if (activeTab === 'inventory') {
+      fetchInventory();
+    }
+  }, [activeTab]);
 
   const handleBuyItem = async (itemId: string, priceGold: number, priceGems: number, itemName: string) => {
     audioService.play('click');
@@ -443,7 +445,7 @@ export function Store() {
                     <h3 className="text-2xl font-black text-[var(--text)] mb-2 uppercase">{pack.name}</h3>
                     {pack.next_pity_in !== undefined && (
                       <p className="text-[10px] font-black uppercase text-blue-500 mb-1">
-                        Pity in {pack.next_pity_in} packs
+                        Guaranteed Rare in {pack.next_pity_in} packs
                       </p>
                     )}
                     <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>

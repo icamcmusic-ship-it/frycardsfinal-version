@@ -67,7 +67,8 @@ export function Trades() {
       p_user_id: null, // Uses auth.uid() in the function
       p_rarity: null,
       p_sort_by: 'name',
-      p_limit: 500
+      p_limit: 500,
+      p_element_type: null
     });
     setMyCards(data || []);
   };
