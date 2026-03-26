@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
 import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star, Sparkles, Bookmark } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import { CreateListingModal } from '../components/CreateListingModal';
 import { CardSkeleton } from '../components/CardSkeleton';
@@ -35,6 +35,39 @@ export function Marketplace() {
   const [elementFilter, setElementFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'price' | 'newest'>('newest');
   const [hoveredListing, setHoveredListing] = useState<string | null>(null);
+  const [expandedBids, setExpandedBids] = useState<Set<string>>(new Set());
+  const [bidHistories, setBidHistories] = useState<Record<string, any[]>>({});
+  const [loadingBids, setLoadingBids] = useState<Set<string>>(new Set());
+
+  const toggleBidHistory = async (listingId: string) => {
+    if (expandedBids.has(listingId)) {
+      setExpandedBids(prev => {
+        const next = new Set(prev);
+        next.delete(listingId);
+        return next;
+      });
+      return;
+    }
+
+    setExpandedBids(prev => new Set(prev).add(listingId));
+    
+    if (!bidHistories[listingId]) {
+      setLoadingBids(prev => new Set(prev).add(listingId));
+      try {
+        const { data, error } = await supabase.rpc('get_bid_history', { p_listing_id: listingId });
+        if (error) throw error;
+        setBidHistories(prev => ({ ...prev, [listingId]: data || [] }));
+      } catch (err) {
+        console.error('Error fetching bid history:', err);
+      } finally {
+        setLoadingBids(prev => {
+          const next = new Set(prev);
+          next.delete(listingId);
+          return next;
+        });
+      }
+    }
+  };
 
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -84,27 +117,34 @@ export function Marketplace() {
         const updated = payload.new;
         const old = payload.old;
         
+        // Find the card name from the current state
+        const listing = [...listings, ...watchlist, ...myListings].find(l => l.id === updated.id);
+        const cardName = listing?.card_name || listing?.card?.name || 'card';
+        
         // Check if this listing is in our watchlist
         if (watchlistedIdsRef.current.has(updated.id)) {
+          const updatedBid = (updated.current_bid_gold ?? 0) + (updated.current_bid_gems ?? 0);
+          const oldBid = (old.current_bid_gold ?? 0) + (old.current_bid_gems ?? 0);
+          
           // If bid increased
-          if (updated.current_bid > old.current_bid) {
-            if (updated.last_bidder_id === profile?.id) {
-              toast.success(`You're the high bidder on ${updated.card_name}!`, { id: `bid-win-${updated.id}` });
+          if (updatedBid > oldBid) {
+            if (updated.highest_bidder_id === profile?.id) {
+              toast.success(`You're the high bidder on ${cardName}!`, { id: `bid-win-${updated.id}` });
             } else {
-              toast.error(`You've been outbid on ${updated.card_name}!`, { id: `outbid-${updated.id}` });
+              toast.error(`You've been outbid on ${cardName}!`, { id: `outbid-${updated.id}` });
             }
           }
           
           // If ended
           if (updated.status !== 'active' && old.status === 'active') {
             if (updated.status === 'sold') {
-              const won = updated.last_bidder_id === profile?.id;
-              toast(won ? `🎉 You won the auction for ${updated.card_name}!` : `Auction ended for ${updated.card_name}`, {
+              const won = updated.highest_bidder_id === profile?.id;
+              toast(won ? `🎉 You won the auction for ${cardName}!` : `Auction ended for ${cardName}`, {
                 icon: won ? '🏆' : '⏰',
                 id: `ended-${updated.id}`
               });
             } else {
-              toast(`Auction expired for ${updated.card_name}`, { icon: '⏰', id: `expired-${updated.id}` });
+              toast(`Auction expired for ${cardName}`, { icon: '⏰', id: `expired-${updated.id}` });
             }
           }
         }
@@ -162,7 +202,20 @@ export function Marketplace() {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_my_listings');
       if (error) throw error;
-      setMyListings(data || []);
+      
+      // Normalize flat data into nested card object
+      const normalized = (data || []).map((item: any) => ({
+        ...item,
+        card: item.card || {
+          name: item.card_name,
+          rarity: item.card_rarity,
+          element: item.card_element,
+          image_url: item.card_image_url,
+          type: item.card_type,
+          flavor_text: item.card_flavor_text
+        }
+      }));
+      setMyListings(normalized);
     } catch (err) {
       console.error('Error fetching my listings:', err);
     } finally {
@@ -192,7 +245,18 @@ export function Marketplace() {
       });
       if (error) throw error;
       
-      const fetchedListings = data || [];
+      // Normalize flat data into nested card object
+      const fetchedListings = (data || []).map((item: any) => ({
+        ...item,
+        card: item.card || {
+          name: item.card_name,
+          rarity: item.card_rarity,
+          element: item.card_element,
+          image_url: item.card_image_url,
+          type: item.card_type,
+          flavor_text: item.card_flavor_text
+        }
+      }));
       if (isLoadMore) {
         setListings(prev => {
           // Avoid duplicates
@@ -235,7 +299,20 @@ export function Marketplace() {
       setLoading(true);
       const { data, error } = await supabase.rpc('get_watchlist');
       if (error) throw error;
-      setWatchlist(data || []);
+      
+      // Normalize flat data into nested card object
+      const normalized = (data || []).map((item: any) => ({
+        ...item,
+        card: item.card || {
+          name: item.card_name,
+          rarity: item.card_rarity,
+          element: item.card_element,
+          image_url: item.card_image_url,
+          type: item.card_type,
+          flavor_text: item.card_flavor_text
+        }
+      }));
+      setWatchlist(normalized);
     } catch (err) {
       console.error('Error fetching watchlist:', err);
     } finally {
@@ -355,18 +432,32 @@ export function Marketplace() {
     });
   };
 
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   function timeLeft(expiresAt: string): string {
-    const diff = new Date(expiresAt).getTime() - Date.now();
+    const diff = new Date(expiresAt).getTime() - now;
     if (diff <= 0) return 'Expired';
+    
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    const s = Math.floor((diff % 60000) / 1000);
+
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
   }
 
   const filteredListings = (activeTab === 'all' ? listings : activeTab === 'watchlist' ? watchlist : myListings)
     .filter(listing => {
       if (filter !== 'all' && listing.type !== filter) return false;
-      // Client-side search for watchlist/my_listings since they don't use the search RPC param
+      // Client-side search for watchlist/my_listings since they don't use the search RPC param.
+      // This is intentional: "All" tab uses server-side search via p_search, 
+      // while other tabs use client-side filtering on the fetched results.
       if (activeTab !== 'all' && search && !listing.card_name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
@@ -630,9 +721,53 @@ export function Marketplace() {
                       <Clock className="w-4 h-4" />
                       <span>{listing.expires_at ? timeLeft(listing.expires_at) : '—'}</span>
                     </div>
+                    <button 
+                      onClick={() => toggleBidHistory(listing.id)}
+                      className="text-[10px] font-black text-blue-500 hover:text-blue-600 underline uppercase mt-1"
+                    >
+                      {expandedBids.has(listing.id) ? 'Hide Bids' : 'View Bids'}
+                    </button>
                   </div>
                 )}
               </div>
+
+              <AnimatePresence>
+                {expandedBids.has(listing.id) && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="bg-slate-50 border-2 border-slate-200 rounded-xl p-3 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                      <p className="text-[10px] font-black uppercase text-slate-400 border-b border-slate-200 pb-1">Bid History</p>
+                      {loadingBids.has(listing.id) ? (
+                        <div className="flex justify-center py-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                        </div>
+                      ) : bidHistories[listing.id]?.length > 0 ? (
+                        bidHistories[listing.id].map((bid, i) => (
+                          <div key={i} className={cn(
+                            "flex justify-between items-center text-[10px] font-bold",
+                            bid.is_winning ? "text-emerald-600" : "text-slate-500"
+                          )}>
+                            <div className="flex items-center gap-1">
+                              {bid.is_winning && <Star className="w-2.5 h-2.5 fill-current" />}
+                              <span>{bid.bidder_username}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span>{bid.bid_gold || bid.bid_gems}</span>
+                              <span className="text-[8px] opacity-60">{new Date(bid.bid_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-center text-slate-400 py-2">No bids yet</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {activeTab === 'my_listings' ? (
                 listing.status === 'active' ? (

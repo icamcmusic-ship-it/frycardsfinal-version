@@ -6,20 +6,26 @@ import { cn } from '../lib/utils';
 
 export function Achievements() {
   const [achievements, setAchievements] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAchievements();
+    fetchData();
   }, []);
 
-  const fetchAchievements = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_user_achievements');
-      if (error) throw error;
-      setAchievements(data || []);
+      const [achRes, statsRes] = await Promise.all([
+        supabase.rpc('get_user_achievements'),
+        supabase.rpc('get_my_collection_stats')
+      ]);
+      
+      if (achRes.error) throw achRes.error;
+      setAchievements(achRes.data || []);
+      if (statsRes.data) setStats(statsRes.data);
     } catch (err) {
-      console.error('Error fetching achievements:', err);
+      console.error('Error fetching achievements data:', err);
     } finally {
       setLoading(false);
     }
@@ -63,8 +69,38 @@ export function Achievements() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {achievements.map((achievement) => {
           const isUnlocked = !!achievement.unlocked_at;
-          const progress = achievement.progress || 0;
-          const target = achievement.target_value || 1;
+          
+          // Calculate progress based on requirement_type and stats
+          let progress = 0;
+          let target = achievement.requirement_data?.count || 1;
+
+          if (isUnlocked) {
+            progress = target;
+          } else if (stats) {
+            switch (achievement.requirement_type) {
+              case 'total_cards':
+                progress = stats.total_cards;
+                break;
+              case 'unique_cards':
+                progress = stats.unique_cards;
+                break;
+              case 'foil_cards':
+                progress = stats.foil_cards;
+                break;
+              case 'rarity_count':
+                const rarity = achievement.requirement_data?.rarity;
+                if (rarity === 'Common') progress = stats.common_count || 0;
+                else if (rarity === 'Uncommon') progress = stats.uncommon_count || 0;
+                else if (rarity === 'Rare') progress = stats.rare_count || 0;
+                else if (rarity === 'Super-Rare') progress = stats.super_rare_count || 0;
+                else if (rarity === 'Mythic') progress = stats.mythic_count || 0;
+                else if (rarity === 'Divine') progress = stats.divine_count || 0;
+                break;
+              default:
+                progress = 0;
+            }
+          }
+
           const currentPct = Math.min(100, (progress / target) * 100);
 
           return (

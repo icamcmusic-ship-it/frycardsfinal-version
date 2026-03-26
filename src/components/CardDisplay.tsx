@@ -21,6 +21,7 @@ interface CardDisplayProps {
     keywords?: string[];
     ability_text?: string;
     ability_type?: string;
+    author?: string;
   };
   showQuantity?: boolean;
   showNewBadge?: boolean;
@@ -153,6 +154,14 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
             <div className="mt-2 pt-2 border-t border-white/10">
               <p className="text-white/90 text-[10px] leading-tight font-medium line-clamp-3">
                 {card.ability_text}
+              </p>
+            </div>
+          )}
+
+          {card.author && (
+            <div className="mt-1 pt-1 border-t border-white/5">
+              <p className="text-white/40 text-[8px] font-bold uppercase tracking-widest">
+                Art by {card.author}
               </p>
             </div>
           )}

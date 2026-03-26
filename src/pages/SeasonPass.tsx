@@ -139,18 +139,33 @@ export function SeasonPass() {
         {tiers.map(tier => {
           const isLocked   = tier.tier > userLevel;
           const isClaimed  = claimedTiers.includes(tier.tier);
-          const canClaim   = !isLocked && !isClaimed;
+          const isPremiumTier = tier.is_premium;
+          const canClaim   = !isLocked && !isClaimed && (isPremium || !isPremiumTier);
 
           return (
             <div key={tier.id}
-              className={cn("flex justify-between items-center p-5 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[4px_4px_0px_0px_var(--border)]",
-                (isLocked || isClaimed) && "opacity-50")}>
+              className={cn("flex justify-between items-center p-5 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[4px_4px_0px_0px_var(--border)] relative overflow-hidden",
+                (isLocked || isClaimed) && "opacity-50",
+                isPremiumTier && !isPremium && "border-yellow-500/50 bg-yellow-50/10"
+              )}>
+              
+              {isPremiumTier && (
+                <div className="absolute top-0 right-0 bg-yellow-400 text-black px-2 py-0.5 font-black text-[8px] uppercase rounded-bl-lg border-l-2 border-b-2 border-black z-10 flex items-center gap-1">
+                  <Gem className="w-2 h-2" />
+                  Premium
+                </div>
+              )}
+
               <div className="flex items-center gap-4">
                 <div className="text-3xl font-black text-slate-300 w-10 text-center">#{tier.tier}</div>
                 <div className="flex items-center gap-2">
-                  {REWARD_ICONS[tier.reward_type] ?? <Gift className="w-5 h-5" />}
+                  <div className={cn(
+                    "p-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_black]",
+                    isPremiumTier ? "bg-yellow-100" : "bg-slate-100"
+                  )}>
+                    {REWARD_ICONS[tier.reward_type] ?? <Gift className="w-5 h-5" />}
+                  </div>
                   <div>
-                    {/* tier.reward_label is the correct column */}
                     <h3 className="font-black text-base uppercase text-[var(--text)]">{tier.reward_label}</h3>
                     <p className="text-xs font-bold text-slate-500">{tier.xp_required.toLocaleString()} XP required</p>
                   </div>
@@ -161,6 +176,11 @@ export function SeasonPass() {
                 <div className="p-3 bg-green-400 rounded-xl border-2 border-[var(--border)]"><Check className="w-5 h-5" /></div>
               ) : isLocked ? (
                 <div className="p-3 bg-slate-200 rounded-xl border-2 border-[var(--border)]"><Lock className="w-5 h-5 text-slate-400" /></div>
+              ) : isPremiumTier && !isPremium ? (
+                <div className="flex flex-col items-center gap-1">
+                  <div className="p-3 bg-yellow-200 rounded-xl border-2 border-yellow-400"><Lock className="w-5 h-5 text-yellow-600" /></div>
+                  <span className="text-[8px] font-black uppercase text-yellow-600">Premium Only</span>
+                </div>
               ) : (
                 <button onClick={() => claimTier(tier.tier)}
                   disabled={claiming === tier.tier}

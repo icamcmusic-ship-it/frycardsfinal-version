@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
 import { ClickableUsername } from '../components/ClickableUsername';
-import { Loader2, Search, UserPlus, UserMinus, Check, X, Users, UserCheck, Send, MessageSquare } from 'lucide-react';
+import { Loader2, Search, UserPlus, UserMinus, Check, X, Users, UserCheck, Send, MessageSquare, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
@@ -278,15 +278,38 @@ export function Social() {
         </div>
 
         <div className="space-y-8">
-          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
-            <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 text-[var(--text)]"><UserCheck /> Pending Requests</h2>
+          <div className="bg-blue-50 border-4 border-blue-200 rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(191,219,254,1)]">
+            <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 text-blue-900">
+              <UserPlus className="w-6 h-6" /> 
+              Pending Requests ({pendingRequests.length})
+            </h2>
             <div className="space-y-3">
               {pendingRequests.map(req => (
-                <div key={req.id} className="flex justify-between items-center p-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl">
-                  <ClickableUsername userId={req.from_id} username={req.from_username} className="text-[var(--text)] font-black" />
+                <div key={req.id} className="flex justify-between items-center p-4 bg-white border-2 border-blue-200 rounded-xl shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center border-2 border-blue-200">
+                      <User className="w-6 h-6 text-blue-500" />
+                    </div>
+                    <div>
+                      <ClickableUsername userId={req.from_id} username={req.from_username} className="text-blue-900 font-black" />
+                      <p className="text-[10px] font-bold text-blue-400 uppercase">Wants to be friends</p>
+                    </div>
+                  </div>
                   <div className="flex gap-2">
-                    <button onClick={() => respondRequest(req.id, true)} className="p-1.5 bg-green-400 rounded-lg border-2 border-[var(--border)] text-black"><Check className="w-4 h-4" /></button>
-                    <button onClick={() => respondRequest(req.id, false)} className="p-1.5 bg-red-400 rounded-lg border-2 border-[var(--border)] text-white"><X className="w-4 h-4" /></button>
+                    <button 
+                      onClick={() => respondRequest(req.id, true)} 
+                      className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_black] transition-transform active:translate-y-0.5"
+                      title="Accept"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => respondRequest(req.id, false)} 
+                      className="p-2 bg-red-400 hover:bg-red-500 text-white rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_black] transition-transform active:translate-y-0.5"
+                      title="Decline"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}

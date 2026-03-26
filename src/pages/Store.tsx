@@ -470,6 +470,7 @@ export function Store() {
                       </div>
                     )}
                     <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
+                    <p className="text-[10px] text-slate-400 italic mb-2">Pity system: Rare+ guaranteed after 10 pulls without one.</p>
                     
                     <button onClick={() => setShowOdds(prev => ({...prev, [pack.id]: !prev[pack.id]}))}
                       className="text-xs text-slate-500 font-bold underline mt-1 mb-2">
@@ -686,14 +687,14 @@ export function Store() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {inventory.map(inv => (
-                  <div key={inv.pack_type_id} className="border-4 border-[var(--border)] bg-[var(--bg)] rounded-xl p-3 text-center transition-all">
+                  <div key={inv.id || inv.pack_type_id} className="border-4 border-[var(--border)] bg-[var(--bg)] rounded-xl p-3 text-center transition-all">
                     <div className="aspect-[3/4] rounded overflow-hidden mb-2 border-2 border-[var(--border)] bg-gray-200">
-                      <img src={(inv.pack_types as any)?.image_url} alt={(inv.pack_types as any)?.name} className="w-full h-full object-cover" />
+                      <img src={inv.image_url} alt={inv.name} className="w-full h-full object-cover" />
                     </div>
-                    <p className="text-xs font-black uppercase text-[var(--text)]">{(inv.pack_types as any)?.name}</p>
+                    <p className="text-xs font-black uppercase text-[var(--text)]">{inv.name}</p>
                     <p className="text-xs font-bold text-slate-500 mb-2">Quantity: {inv.quantity}</p>
                     <button 
-                      onClick={() => handleOpenFromInventory(inv.pack_type_id, (inv.pack_types as any)?.image_url)}
+                      onClick={() => handleOpenFromInventory(inv.pack_type_id, inv.image_url)}
                       disabled={opening}
                       className="w-full py-2 bg-red-500 text-white text-xs font-black rounded border-2 border-black hover:bg-red-600 disabled:opacity-50"
                     >

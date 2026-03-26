@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem } from 'lucide-react';
+import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -109,6 +109,8 @@ export function Home() {
     }
   };
 
+  const [showDailyPreview, setShowDailyPreview] = useState(false);
+
   const handleClaimDailyReward = async () => {
     if (claimingDaily) return;
     setClaimingDaily(true);
@@ -117,19 +119,7 @@ export function Home() {
       if (error) throw error;
       
       setReward(data);
-      
-      // Rich toast
-      toast.success((t) => (
-        <div className="flex flex-col gap-1">
-          <p className="font-black uppercase">Daily Reward Claimed!</p>
-          <div className="text-sm font-bold">
-            {data.gold_earned > 0 && <p className="text-yellow-600">+{data.gold_earned} Gold</p>}
-            {data.gems_earned > 0 && <p className="text-emerald-600">+{data.gems_earned} Gems</p>}
-            {data.xp_earned > 0 && <p className="text-blue-600">+{data.xp_earned} XP</p>}
-            <p className="text-xs mt-1 text-slate-500">Streak: {data.current_streak} days</p>
-          </div>
-        </div>
-      ), { duration: 5000 });
+      setShowDailyPreview(false);
       
       // Refresh profile
       await useProfileStore.getState().refreshProfile();
@@ -207,7 +197,7 @@ export function Home() {
                 
                 <div className="flex items-center gap-4">
                   <button 
-                    onClick={handleClaimDailyReward}
+                    onClick={() => setShowDailyPreview(true)}
                     className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
                   >
                     <Trophy className="w-6 h-6" />
@@ -352,6 +342,57 @@ export function Home() {
           )}
         </div>
       </div>
+
+      {showDailyPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-3xl p-8 max-w-sm w-full shadow-[12px_12px_0px_0px_var(--border)] text-center relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500" />
+            
+            <motion.div
+              animate={{ 
+                rotate: [0, -5, 5, -5, 5, 0],
+                scale: [1, 1.05, 1, 1.05, 1]
+              }}
+              transition={{ 
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="w-32 h-32 bg-emerald-100 rounded-2xl border-4 border-emerald-200 flex items-center justify-center mx-auto mb-6 shadow-[4px_4px_0px_0px_emerald-200]"
+            >
+              <Gift className="w-16 h-16 text-emerald-600" />
+            </motion.div>
+
+            <h2 className="text-3xl font-black text-[var(--text)] uppercase mb-2">Ready to Claim?</h2>
+            <p className="text-slate-600 font-bold mb-8">Your daily reward is waiting! Tap below to reveal what's inside.</p>
+            
+            <div className="space-y-3">
+              <button 
+                onClick={handleClaimDailyReward}
+                disabled={claimingDaily}
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-y-1 active:shadow-none flex items-center justify-center gap-3"
+              >
+                {claimingDaily ? <Loader2 className="w-6 h-6 animate-spin" /> : (
+                  <>
+                    <Sparkles className="w-6 h-6" />
+                    Reveal Reward
+                  </>
+                )}
+              </button>
+              <button 
+                onClick={() => setShowDailyPreview(false)}
+                className="w-full py-2 text-slate-400 font-black uppercase text-xs hover:text-slate-600 transition-colors"
+              >
+                Maybe later
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {reward && (
         <div 

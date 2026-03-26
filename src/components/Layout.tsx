@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers, Target, MessageSquare, Sword, Award } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers, Target, MessageSquare, Sword, Award, ShieldAlert } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 
@@ -71,24 +71,38 @@ export function Layout() {
   };
 
   const navItems = [
-    { name: 'Home', path: '/', icon: Home },
-    { name: 'Battle', path: '/battle', icon: Sword },
-    { name: 'Collection', path: '/collection', icon: LayoutGrid },
-    { name: 'Market', path: '/marketplace', icon: ShoppingBag },
-    { name: 'Store', path: '/store', icon: Store },
-    { name: 'Social', path: '/social', icon: Users },
-    { name: 'Trades', path: '/trades', icon: ArrowRightLeft },
-    { name: 'Decks', path: '/decks', icon: Layers },
-    { name: 'Quests', path: '/quests', icon: Target },
-    { name: 'Achievements', path: '/achievements', icon: Award },
-    { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
-    { name: 'Season Pass', path: '/season-pass', icon: Gift },
-    { name: 'Settings', path: '/settings', icon: SettingsIcon },
-    { name: 'Profile', path: '/profile', icon: UserIcon },
+    { name: 'Home', path: '/', icon: Home, category: 'Main' },
+    { name: 'Collection', path: '/collection', icon: LayoutGrid, category: 'Main' },
+    { name: 'Store', path: '/store', icon: Store, category: 'Main' },
+    { name: 'Market', path: '/marketplace', icon: ShoppingBag, category: 'Main' },
+    { name: 'Profile', path: '/profile', icon: UserIcon, category: 'Main' },
+    
+    { name: 'Battle', path: '/battle', icon: Sword, category: 'Gameplay' },
+    { name: 'Decks', path: '/decks', icon: Layers, category: 'Gameplay' },
+    
+    { name: 'Social', path: '/social', icon: Users, category: 'Social' },
+    { name: 'Trades', path: '/trades', icon: ArrowRightLeft, category: 'Social' },
+    
+    { name: 'Quests', path: '/quests', icon: Target, category: 'Progression' },
+    { name: 'Achievements', path: '/achievements', icon: Award, category: 'Progression' },
+    { name: 'Leaderboard', path: '/leaderboard', icon: Trophy, category: 'Progression' },
+    { name: 'Season Pass', path: '/season-pass', icon: Gift, category: 'Progression' },
+    
+    { name: 'Settings', path: '/settings', icon: SettingsIcon, category: 'System' },
   ];
+
+  if (profile?.is_admin) {
+    navItems.push({ name: 'Admin', path: '/admin', icon: ShieldAlert, category: 'System' });
+  }
 
   const primaryNav = navItems.slice(0, 5);
   const secondaryNav = navItems.slice(5);
+
+  const groupedSecondaryNav = secondaryNav.reduce((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {} as Record<string, typeof navItems>);
 
   const [nextRegen, setNextRegen] = useState<number | null>(null);
 
@@ -198,26 +212,39 @@ export function Layout() {
       {/* Main Content & Sidebar */}
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row min-h-[calc(100vh-4rem)]">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex flex-col w-64 border-r-4 border-[var(--border)] p-4 gap-2 bg-[var(--surface)]">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2",
-                  isActive 
-                    ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold" 
-                    : "text-[var(--text)] hover:text-black hover:bg-blue-50 border-transparent hover:border-[var(--border)] hover:shadow-[4px_4px_0px_0px_var(--border)] font-medium opacity-80 hover:opacity-100"
-                )}
-              >
-                <Icon className={cn("w-5 h-5", isActive && "text-black")} />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
+        <aside className="hidden md:flex flex-col w-64 border-r-4 border-[var(--border)] p-4 gap-2 bg-[var(--surface)] overflow-y-auto">
+          {Object.entries(
+            navItems.reduce((acc, item) => {
+              if (!acc[item.category]) acc[item.category] = [];
+              acc[item.category].push(item);
+              return acc;
+            }, {} as Record<string, typeof navItems>)
+          ).map(([category, items]) => (
+            <div key={category} className="mb-4">
+              <h3 className="px-4 text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest">{category}</h3>
+              <div className="space-y-1">
+                {items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2",
+                        isActive 
+                          ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold" 
+                          : "text-[var(--text)] hover:text-black hover:bg-blue-50 border-transparent hover:border-[var(--border)] hover:shadow-[4px_4px_0px_0px_var(--border)] font-medium opacity-80 hover:opacity-100"
+                      )}
+                    >
+                      <Icon className={cn("w-5 h-5", isActive && "text-black")} />
+                      <span>{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </aside>
 
         {/* Main Content Area */}
@@ -263,29 +290,36 @@ export function Layout() {
         {isMobileMenuOpen && (
           <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsMobileMenuOpen(false)}>
             <div 
-              className="absolute bottom-16 left-0 right-0 bg-[var(--surface)] border-t-4 border-[var(--border)] rounded-t-2xl p-4 flex flex-col gap-2 max-h-[70vh] overflow-y-auto"
+              className="absolute bottom-16 left-0 right-0 bg-[var(--surface)] border-t-4 border-[var(--border)] rounded-t-2xl p-4 flex flex-col gap-4 max-h-[70vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
-              {secondaryNav.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2",
-                      isActive 
-                        ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold" 
-                        : "text-[var(--text)] hover:text-black hover:bg-blue-50 border-transparent hover:border-[var(--border)] font-medium"
-                    )}
-                  >
-                    <Icon className={cn("w-5 h-5", isActive && "text-black")} />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
+              {Object.entries(groupedSecondaryNav).map(([category, items]) => (
+                <div key={category}>
+                  <h3 className="px-4 text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest">{category}</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2",
+                            isActive 
+                              ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold" 
+                              : "text-[var(--text)] hover:text-black hover:bg-blue-50 border-transparent hover:border-[var(--border)] font-medium"
+                          )}
+                        >
+                          <Icon className={cn("w-5 h-5", isActive && "text-black")} />
+                          <span className="text-sm">{item.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

@@ -5,12 +5,15 @@ import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../stores/profileStore';
-import { MessageSquare, UserPlus, ShoppingCart, Trophy, Info } from 'lucide-react';
+import { MessageSquare, UserPlus, ShoppingCart, Trophy, Info, Coins } from 'lucide-react';
 
 const NOTIFICATION_TYPES: Record<string, { icon: any, color: string, bg: string }> = {
   trade_offer: { icon: MessageSquare, color: 'text-purple-500', bg: 'bg-purple-100' },
   friend_request: { icon: UserPlus, color: 'text-green-500', bg: 'bg-green-100' },
   marketplace_sale: { icon: ShoppingCart, color: 'text-yellow-500', bg: 'bg-yellow-100' },
+  marketplace_purchase: { icon: ShoppingCart, color: 'text-emerald-500', bg: 'bg-emerald-100' },
+  auction_won: { icon: Trophy, color: 'text-yellow-500', bg: 'bg-yellow-100' },
+  auction_sold: { icon: Coins, color: 'text-amber-500', bg: 'bg-amber-100' },
   achievement: { icon: Trophy, color: 'text-orange-500', bg: 'bg-orange-100' },
   default: { icon: Bell, color: 'text-blue-500', bg: 'bg-blue-100' },
 };

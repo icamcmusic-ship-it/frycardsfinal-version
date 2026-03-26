@@ -414,18 +414,26 @@ export function Collection() {
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
-        {['all', 'common', 'uncommon', 'rare', 'super-rare', 'mythic', 'divine'].map((r) => (
+        {['all', 'common', 'uncommon', 'rare', 'super-rare', 'mythic', 'divine', 'foil'].map((r) => (
           <button
             key={r}
-            onClick={() => setFilter(r)}
+            onClick={() => {
+              if (r === 'foil') {
+                setShowFoilsOnly(true);
+                setFilter('all');
+              } else {
+                setShowFoilsOnly(false);
+                setFilter(r);
+              }
+            }}
             className={cn(
               "px-4 py-1.5 rounded-full font-black text-xs uppercase border-2 transition-all",
-              filter === r 
+              (filter === r || (r === 'foil' && showFoilsOnly))
                 ? "bg-[var(--text)] text-[var(--surface)] border-[var(--text)]" 
                 : "bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400"
             )}
           >
-            {r}
+            {r === 'foil' ? '✨ Foil' : r}
           </button>
         ))}
       </div>
@@ -471,15 +479,7 @@ export function Collection() {
             <option value="light">Light</option>
             <option value="dark">Dark</option>
           </select>
-          <button
-            onClick={() => setShowFoilsOnly(!showFoilsOnly)}
-            className={cn(
-              "shrink-0 px-4 py-2 font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)]",
-              showFoilsOnly ? "bg-yellow-400 text-black" : "bg-[var(--surface)] text-[var(--text)]"
-            )}
-          >
-            {showFoilsOnly ? '✨ Foils Only' : 'Show All'}
-          </button>
+
           <button
             onClick={() => setViewSize(prev => prev === 'normal' ? 'large' : 'normal')}
             className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
@@ -558,6 +558,12 @@ export function Collection() {
           card={selectedCard}
           cardBackUrl={profile?.card_back_url || null}
           onClose={() => setSelectedCard(null)}
+          onSell={activeTab === 'collection' ? handleQuicksell : undefined}
+          onList={activeTab === 'collection' ? (card) => {
+            setSelectedCard(null);
+            setCardToList(card);
+            setIsListingModalOpen(true);
+          } : undefined}
         />
       )}
       {isBatchMode && selectedCardIds.length > 0 && (

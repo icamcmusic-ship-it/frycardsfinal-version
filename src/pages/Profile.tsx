@@ -21,8 +21,17 @@ export function Profile() {
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
   const [achievements, setAchievements] = useState<any[]>([]);
+  const [ownStats, setOwnStats] = useState<{ unique_cards: number; total_cards: number } | null>(null);
 
   const discordAvatar = user?.user_metadata?.avatar_url;
+
+  useEffect(() => {
+    if (profile) {
+      supabase.rpc('get_my_profile').then(({ data }) => {
+        if (data) setOwnStats(data);
+      });
+    }
+  }, [profile]);
 
   useEffect(() => {
     if (profile) {
@@ -111,8 +120,28 @@ export function Profile() {
 
   if (!profile) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+      <div className="max-w-4xl mx-auto space-y-8 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="h-10 bg-slate-200 rounded-xl w-32 border-4 border-[var(--border)]"></div>
+          <div className="h-10 bg-slate-200 rounded-xl w-32 border-4 border-[var(--border)]"></div>
+        </div>
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_var(--border)]">
+          <div className="h-48 bg-slate-200 border-b-4 border-[var(--border)]"></div>
+          <div className="px-8 pb-8 relative">
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              <div className="-mt-16 w-32 h-32 bg-slate-200 rounded-2xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]"></div>
+              <div className="flex-1 pt-4 w-full space-y-4">
+                <div className="h-10 bg-slate-200 rounded-xl w-1/2"></div>
+                <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map(i => (
+                    <div key={i} className="h-16 bg-slate-200 rounded-xl border-2 border-[var(--border)]"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -287,7 +316,7 @@ export function Profile() {
               )}
 
               {/* Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
                 <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)]">
                   <p className="text-xs text-slate-500 font-bold uppercase mb-1">Level</p>
                   <p className="text-2xl font-black text-[var(--text)]">{profile.level}</p>
@@ -303,6 +332,14 @@ export function Profile() {
                 <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)]">
                   <p className="text-xs text-slate-500 font-bold uppercase mb-1">Gems</p>
                   <p className="text-2xl font-black text-emerald-600">{profile.gem_balance}</p>
+                </div>
+                <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Unique</p>
+                  <p className="text-2xl font-black text-blue-600">{ownStats?.unique_cards || 0}</p>
+                </div>
+                <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Total</p>
+                  <p className="text-2xl font-black text-purple-600">{ownStats?.total_cards || 0}</p>
                 </div>
               </div>
 

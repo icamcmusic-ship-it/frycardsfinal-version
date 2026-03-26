@@ -65,7 +65,7 @@ export function Battle() {
       setBattleLog(prev => [...prev, 'Final Round: Determining winner...']);
 
       // Call backend to process battle
-      const { data, error } = await supabase.rpc('submit_battle_result', {
+      const { data, error } = await supabase.rpc('complete_battle', {
         p_deck_id: selectedDeckId,
         p_opponent_type: 'pve',
         p_rounds_played: 5,

@@ -70,9 +70,30 @@ export function Trades() {
       p_rarity: null,
       p_sort_by: 'name',
       p_limit: 500,
-      p_element_type: null
+      p_element_type: null,
+      p_search: null,
+      p_offset: 0
     });
     setMyCards(data || []);
+  };
+
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTradeExpiry = (createdAt: string) => {
+    const expiryTime = new Date(createdAt).getTime() + 48 * 60 * 60 * 1000; // 48 hours expiry
+    const diff = expiryTime - now;
+    if (diff <= 0) return 'Expired';
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    return `${hours}h ${mins}m ${secs}s`;
   };
 
   const respondTrade = async (offerId: string, accept: boolean) => {
@@ -262,7 +283,17 @@ export function Trades() {
           <div key={trade.id} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
             <div className="flex justify-between items-start flex-wrap gap-4">
               <div>
-                <p className="font-black text-lg uppercase text-[var(--text)]">{trade.sender_username} ↔ {trade.receiver_username}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="font-black text-lg uppercase text-[var(--text)]">{trade.sender_username} ↔ {trade.receiver_username}</p>
+                  {trade.status === 'pending' && (
+                    <span className={cn(
+                      "text-[10px] font-black px-2 py-0.5 rounded border-2 uppercase",
+                      formatTradeExpiry(trade.created_at) === 'Expired' ? "bg-red-100 text-red-600 border-red-200" : "bg-blue-100 text-blue-600 border-blue-200"
+                    )}>
+                      Expires in {formatTradeExpiry(trade.created_at)}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm font-bold text-slate-500 capitalize">Status: {trade.status}</p>
                 {trade.sender_gold > 0 && <p className="text-sm font-bold text-yellow-600">+{trade.sender_gold} gold offered</p>}
                 {trade.sender_gems > 0 && <p className="text-sm font-bold text-emerald-600">+{trade.sender_gems} gems offered</p>}

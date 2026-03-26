@@ -1,15 +1,18 @@
 import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X } from 'lucide-react';
+import { X, LayoutGrid, ShoppingBag, Plus, Coins, Trophy } from 'lucide-react';
 import { cn, getCardBackUrl } from '../lib/utils';
 
 interface Card3DModalProps {
   card: any;
   cardBackUrl: string | null;
   onClose: () => void;
+  onSell?: (card: any) => void;
+  onList?: (card: any) => void;
+  onAddToDeck?: (card: any) => void;
 }
 
-export function Card3DModal({ card, cardBackUrl, onClose }: Card3DModalProps) {
+export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddToDeck }: Card3DModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
@@ -173,6 +176,39 @@ export function Card3DModal({ card, cardBackUrl, onClose }: Card3DModalProps) {
               <span>Copies owned: {card.quantity}</span>
               {card.author && <span className="ml-4">Art by {card.author}</span>}
             </div>
+
+            {/* Actions */}
+            {(onSell || onList || onAddToDeck) && (
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+                {onAddToDeck && (
+                  <button 
+                    onClick={() => onAddToDeck(card)}
+                    className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+                  >
+                    <LayoutGrid className="w-5 h-5" />
+                    Add to Deck
+                  </button>
+                )}
+                {onList && (
+                  <button 
+                    onClick={() => onList(card)}
+                    className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+                  >
+                    <Trophy className="w-5 h-5" />
+                    List on Market
+                  </button>
+                )}
+                {onSell && (
+                  <button 
+                    onClick={() => onSell(card)}
+                    className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+                  >
+                    <Coins className="w-5 h-5" />
+                    Quick Sell
+                  </button>
+                )}
+              </div>
+            )}
           </motion.div>
         </div>
       </motion.div>

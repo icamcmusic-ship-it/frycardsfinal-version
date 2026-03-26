@@ -12,6 +12,10 @@ interface Message {
   username: string;
   avatar_url: string;
   created_at: string;
+  profiles?: {
+    username: string;
+    avatar_url: string;
+  };
 }
 
 export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -53,7 +57,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     try {
       const { data, error } = await supabase
         .from('messages_history')
-        .select('*')
+        .select('*, profiles(username, avatar_url)')
         .eq('room_id', 'global')
         .order('created_at', { ascending: true })
         .limit(50);
@@ -139,37 +143,53 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                   No messages yet. Be the first to say hi!
                 </div>
               ) : (
-                messages.map((msg) => (
-                  <div 
-                    key={msg.id} 
-                    className={cn(
-                      "flex flex-col gap-1",
-                      msg.user_id === profile?.id ? "items-end" : "items-start"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      {msg.user_id !== profile?.id && (
-                        <span className="text-[10px] font-black text-slate-500 uppercase">{msg.username}</span>
+                messages.map((msg) => {
+                  const displayName = msg.profiles?.username || msg.username;
+                  const displayAvatar = msg.profiles?.avatar_url || msg.avatar_url;
+                  
+                  return (
+                    <div 
+                      key={msg.id} 
+                      className={cn(
+                        "flex flex-col gap-1",
+                        msg.user_id === profile?.id ? "items-end" : "items-start"
                       )}
-                    </div>
-                    <div className={cn(
-                      "flex items-end gap-2",
-                      msg.user_id === profile?.id ? "flex-row-reverse" : "flex-row"
-                    )}>
-                      <div className={cn(
-                        "max-w-[85%] px-3 py-2 rounded-xl border-2 text-sm font-bold shadow-[2px_2px_0px_0px_var(--border)]",
-                        msg.user_id === profile?.id 
-                          ? "bg-blue-100 border-blue-400 text-blue-900" 
-                          : "bg-white border-[var(--border)] text-[var(--text)]"
-                      )}>
-                        {msg.content}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        {msg.user_id !== profile?.id && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 rounded-full overflow-hidden border border-slate-200">
+                              {displayAvatar ? (
+                                <img src={displayAvatar} className="w-full h-full object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-slate-100">
+                                  <UserIcon className="w-2 h-2 text-slate-400" />
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase">{displayName}</span>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-[8px] font-bold text-slate-400 whitespace-nowrap mb-1">
-                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <div className={cn(
+                        "flex items-end gap-2",
+                        msg.user_id === profile?.id ? "flex-row-reverse" : "flex-row"
+                      )}>
+                        <div className={cn(
+                          "max-w-[85%] px-3 py-2 rounded-xl border-2 text-sm font-bold shadow-[2px_2px_0px_0px_var(--border)]",
+                          msg.user_id === profile?.id 
+                            ? "bg-blue-100 border-blue-400 text-blue-900" 
+                            : "bg-white border-[var(--border)] text-[var(--text)]"
+                        )}>
+                          {msg.content}
+                        </div>
+                        <span className="text-[8px] font-bold text-slate-400 whitespace-nowrap mb-1">
+                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
 
