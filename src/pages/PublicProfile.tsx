@@ -82,6 +82,8 @@ export function PublicProfile() {
       const { error } = await supabase.rpc('toggle_follow', { p_target_user_id: userId });
       if (error) throw error;
       
+      toast.success(isFollowing ? 'Unfollowed user' : 'Following user', { id: `follow-${userId}` });
+      
       // Refresh counts and state
       const { data } = await supabase.rpc('get_public_profile', { p_user_id: userId });
       if (data) {
@@ -96,6 +98,7 @@ export function PublicProfile() {
 
   const sendRequest = async () => {
     await supabase.rpc('send_friend_request', { p_addressee_id: userId });
+    toast.success('Friend request sent!', { id: `friend-request-${userId}` });
     setProfile((p: any) => ({ ...p, friendship_status: 'pending' }));
   };
 
@@ -107,6 +110,7 @@ export function PublicProfile() {
       variant: 'danger',
       onConfirm: async () => {
         await supabase.rpc('remove_friend', { p_friend_id: userId });
+        toast.success('Friend removed', { id: `friend-remove-${userId}` });
         setProfile((p: any) => ({ ...p, friendship_status: 'none' }));
       }
     });

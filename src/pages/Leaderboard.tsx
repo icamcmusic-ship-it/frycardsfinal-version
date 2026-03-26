@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { ClickableUsername } from '../components/ClickableUsername';
-import { Loader2, Trophy, Package, LayoutGrid } from 'lucide-react';
+import { Loader2, Trophy, Package, LayoutGrid, Repeat, Library } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const LEADERBOARD_TYPES = [
-  { id: 'xp',          label: 'Top Level',     icon: Trophy,      scoreLabel: 'XP' },
-  { id: 'collection',  label: 'Most Cards',    icon: LayoutGrid,  scoreLabel: 'Cards' },
-  { id: 'packs_opened',label: 'Packs Opened',  icon: Package,     scoreLabel: 'Packs' },
+  { id: 'xp',           label: 'Top Level',     icon: Trophy,      scoreLabel: 'XP' },
+  { id: 'collection',   label: 'Most Cards',    icon: LayoutGrid,  scoreLabel: 'Cards' },
+  { id: 'unique_cards', label: 'Unique Cards',  icon: Library,     scoreLabel: 'Unique' },
+  { id: 'packs_opened', label: 'Packs Opened',  icon: Package,     scoreLabel: 'Packs' },
+  { id: 'total_trades', label: 'Top Traders',   icon: Repeat,      scoreLabel: 'Trades' },
 ];
 
 export function Leaderboard() {

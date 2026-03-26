@@ -120,9 +120,17 @@ export function Notifications() {
               key={notification.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
+              onClick={async () => {
+                if (!notification.is_read) {
+                  await markAsRead(notification.id);
+                }
+                if (notification.action_url) {
+                  navigate(notification.action_url);
+                }
+              }}
               className={cn(
-                "p-4 rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] flex items-start gap-4 transition-colors",
-                notification.is_read ? "bg-[var(--bg)] opacity-75" : "bg-[var(--surface)]"
+                "p-4 rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] flex items-start gap-4 transition-colors cursor-pointer group",
+                notification.is_read ? "bg-[var(--bg)] opacity-75" : "bg-[var(--surface)] hover:bg-blue-50"
               )}
             >
               {(() => {
@@ -141,24 +149,24 @@ export function Notifications() {
               })()}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-black text-black text-lg uppercase truncate">{notification.title}</h3>
+                  <h3 className="font-black text-black text-lg uppercase truncate group-hover:text-blue-600 transition-colors">{notification.title}</h3>
                   <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
                     {new Date(notification.created_at).toLocaleDateString()}
                   </span>
                 </div>
                 <p className="text-slate-600 font-bold mt-1">{notification.body}</p>
                 {notification.action_url && (
-                  <button 
-                    onClick={() => navigate(notification.action_url)}
-                    className="inline-flex items-center gap-1 mt-3 text-sm font-black text-blue-600 hover:text-blue-800 uppercase"
-                  >
+                  <div className="inline-flex items-center gap-1 mt-3 text-sm font-black text-blue-600 uppercase">
                     View Details <ExternalLink className="w-4 h-4" />
-                  </button>
+                  </div>
                 )}
               </div>
               {!notification.is_read && (
                 <button 
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markAsRead(notification.id);
+                  }}
                   className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                   title="Mark as read"
                 >

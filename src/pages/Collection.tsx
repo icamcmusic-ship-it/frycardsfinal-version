@@ -97,6 +97,7 @@ export function Collection() {
         p_rarity: rarityForApi,
         p_sort_by: sortBy,
         p_element_type: elementType === 'all' ? null : elementType,
+        p_is_foil: showFoilsOnly || null,
         p_limit: PAGE_SIZE,
         p_offset: targetOffset,
         p_search: debouncedSearch || null
@@ -458,19 +459,6 @@ export function Collection() {
             className="shrink-0 w-48 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold placeholder-slate-400 focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
           />
           <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_var(--border)]"
-          >
-            <option value="all">All Rarities</option>
-            <option value="common">Common</option>
-            <option value="uncommon">Uncommon</option>
-            <option value="rare">Rare</option>
-            <option value="super-rare">Super-Rare</option>
-            <option value="mythic">Mythic</option>
-            <option value="divine">Divine</option>
-          </select>
-          <select
             value={elementType}
             onChange={(e) => setElementType(e.target.value)}
             className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_var(--border)]"
@@ -502,7 +490,7 @@ export function Collection() {
         </div>
       </div>
 
-      <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
+      <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
         {filteredCards.map((card) => {
           const selectionId = card.user_card_id || card.id;
           return (
@@ -519,14 +507,13 @@ export function Collection() {
                 setSelectedCard(card);
               }
             }}
-            onToggleLock={(e: any) => { e.stopPropagation(); handleToggleLock(card.id); }}
-            onQuicksell={(e: any) => { e.stopPropagation(); handleQuicksell(card); }}
-            onList={(e: any) => { 
-              e.stopPropagation(); 
+            onToggleLock={() => handleToggleLock(card.user_card_id || card.id)}
+            onQuicksell={() => handleQuicksell(card)}
+            onList={() => { 
               setCardToList(card);
               setIsListingModalOpen(true);
             }}
-            onToggleWishlist={(e: any) => { e.stopPropagation(); handleToggleWishlist(card.id); }}
+            onToggleWishlist={() => handleToggleWishlist(card.id)}
           />
         )})}
       </div>
@@ -534,6 +521,25 @@ export function Collection() {
       {loadingMore && (
         <div className="flex justify-center py-8">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      )}
+
+      {hasMore && filteredCards.length > 0 && activeTab === 'collection' && (
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={() => fetchCollection(true)}
+            disabled={loadingMore}
+            className="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] disabled:opacity-50 transition-all active:translate-y-1"
+          >
+            {loadingMore ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Loading...
+              </div>
+            ) : (
+              'Load More Cards'
+            )}
+          </button>
         </div>
       )}
 
@@ -566,16 +572,39 @@ export function Collection() {
                 variant: 'danger',
                 onConfirm: async () => {
                   try {
-                    const { data, error } = await supabase.rpc('mill_bulk_duplicates', {
-                      p_card_ids: selectedCardIds
-                    });
-                    if (error) throw error;
-                    toast.success(`Sold ${data.count} cards for ${data.gold_earned} gold!`, { icon: '🪙' });
-                    setSelectedCardIds([]);
-                    setIsBatchMode(false);
-                    fetchCollection();
+                    let totalGold = 0;
+                    let successCount = 0;
+
+                    for (const id of selectedCardIds) {
+                      const card = cards.find(c => (c.user_card_id || c.id) === id);
+                      if (!card) continue;
+                      
+                      const { data, error } = await supabase.rpc('quicksell_card', {
+                        p_card_id: card.id,
+                        p_is_foil: card.is_foil || false
+                      });
+                      
+                      if (!error && data) {
+                        totalGold += (data as any).gold_earned || 0;
+                        successCount++;
+                      }
+                    }
+
+                    if (successCount > 0) {
+                      toast.success(`Sold ${successCount} cards for ${totalGold} gold!`, { 
+                        id: 'batch-sell-success',
+                        icon: '🪙' 
+                      });
+                      setSelectedCardIds([]);
+                      setIsBatchMode(false);
+                      fetchCollection();
+                      fetchStats();
+                      useProfileStore.getState().refreshProfile();
+                    } else {
+                      throw new Error('Failed to sell any cards');
+                    }
                   } catch (err: any) {
-                    toast.error('Failed to sell cards');
+                    toast.error(err.message || 'Failed to sell cards', { id: 'batch-sell-error' });
                   }
                 }
               });

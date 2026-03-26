@@ -210,8 +210,12 @@ export function Store() {
           setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
           setCurrentCardIndex(0);
           setRevealedCards([]);
-          setPackOpeningStep('revealing');
-          audioService.play('pack_open');
+          
+          // Auto-transition after 1.5s if user hasn't clicked
+          setTimeout(() => {
+            setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
+            audioService.play('pack_open');
+          }, 1500);
 
           fetchPacks(); // Refresh pity counter
 
@@ -272,7 +276,12 @@ export function Store() {
       setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
       setCurrentCardIndex(0);
       setRevealedCards([]);
-      setPackOpeningStep('revealing');
+      
+      // Auto-transition after 1.5s if user hasn't clicked
+      setTimeout(() => {
+        setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
+        audioService.play('pack_open');
+      }, 1500);
 
       fetchPacks(); // Refresh pity counter
 
@@ -313,7 +322,13 @@ export function Store() {
       setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
       setCurrentCardIndex(0);
       setRevealedCards([]);
-      setPackOpeningStep('revealing');
+      
+      // Auto-transition after 1.5s if user hasn't clicked
+      setTimeout(() => {
+        setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
+        audioService.play('pack_open');
+      }, 1500);
+
       fetchPacks();
     } catch (err: any) {
       toast.error(err.message || 'Failed to open all packs');
@@ -442,9 +457,17 @@ export function Store() {
                   <div className="p-6 flex flex-col flex-1">
                     <h3 className="text-2xl font-black text-[var(--text)] mb-2 uppercase">{pack.name}</h3>
                     {pack.next_pity_in !== undefined && (
-                      <p className="text-[10px] font-black uppercase text-blue-500 mb-1">
-                        Guaranteed Rare in {pack.next_pity_in} packs
-                      </p>
+                      <div className={cn(
+                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border-2 font-black text-[10px] uppercase tracking-wider mb-3",
+                        pack.next_pity_in === 1 
+                          ? "bg-blue-500 text-white border-blue-600 animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
+                          : "bg-blue-50 text-blue-600 border-blue-200"
+                      )}>
+                        <Sparkles className={cn("w-3 h-3", pack.next_pity_in === 1 ? "text-white" : "text-blue-500")} />
+                        {pack.next_pity_in === 1 
+                          ? "Guaranteed Rare Next Pack!" 
+                          : `Guaranteed Rare in ${pack.next_pity_in} packs`}
+                      </div>
                     )}
                     <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
                     
@@ -454,12 +477,39 @@ export function Store() {
                     </button>
                     {showOdds[pack.id] && (
                       <div className="mb-4 space-y-1 text-xs font-bold border-t border-[var(--border)] pt-2">
-                        {PACK_ODDS.map(o => (
-                          <div key={o.rarity} className="flex justify-between">
-                            <span className={o.color}>{o.rarity}</span>
-                            <span className="text-[var(--text)]">{o.pct}</span>
-                          </div>
-                        ))}
+                        {PACK_ODDS.map(o => {
+                          let displayPct = o.pct;
+                          let isPityBoosted = false;
+                          
+                          if (pack.next_pity_in === 1) {
+                            if (o.rarity === 'Common' || o.rarity === 'Uncommon') {
+                              displayPct = '0%';
+                            } else if (o.rarity === 'Rare') {
+                              // In pity, Rare becomes the baseline (80%+)
+                              displayPct = '80%*';
+                              isPityBoosted = true;
+                            } else {
+                              // Higher rarities also get a slight boost or stay same
+                              // This is just for display to show pity is active
+                              isPityBoosted = true;
+                            }
+                          }
+
+                          return (
+                            <div key={o.rarity} className="flex justify-between items-center">
+                              <span className={cn(o.color, isPityBoosted && "font-black underline decoration-2 underline-offset-2")}>
+                                {o.rarity}
+                                {isPityBoosted && o.rarity === 'Rare' && <span className="ml-1 text-[8px] opacity-70">(Pity)</span>}
+                              </span>
+                              <span className={cn("text-[var(--text)]", isPityBoosted && "text-blue-600 font-black")}>
+                                {displayPct}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {pack.next_pity_in === 1 && (
+                          <p className="text-[9px] text-blue-500 italic mt-1">* Pity active: Guaranteed Rare or better.</p>
+                        )}
                         {pack.foil_chance && (
                           <div className="flex justify-between text-yellow-600">
                             <span>Foil Chance</span>

@@ -42,6 +42,8 @@ export function Settings() {
     friend_notifications: true,
     show_online_status: true,
   });
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [loadingBlocked, setLoadingBlocked] = useState(false);
 
   const GAME_STYLES = [
     { id: 'retro',   label: 'Retro',   emoji: '🎮', desc: 'Bold borders, chunky pop art feel' },
@@ -53,7 +55,32 @@ export function Settings() {
 
   useEffect(() => {
     fetchSettings();
+    fetchBlockedUsers();
   }, []);
+
+  const fetchBlockedUsers = async () => {
+    setLoadingBlocked(true);
+    try {
+      const { data, error } = await supabase.rpc('get_blocked_users');
+      if (error) throw error;
+      setBlockedUsers(data || []);
+    } catch (err) {
+      console.error('Error fetching blocked users:', err);
+    } finally {
+      setLoadingBlocked(false);
+    }
+  };
+
+  const unblockUser = async (userId: string) => {
+    try {
+      const { error } = await supabase.rpc('unblock_user', { p_blocked_user_id: userId });
+      if (error) throw error;
+      toast.success('User unblocked');
+      fetchBlockedUsers();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to unblock user');
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -280,6 +307,32 @@ export function Settings() {
           <div className="pt-4 border-t-2 border-[var(--border)]">
             {/* Removed duplicate Game Style section */}
           </div>
+        </div>
+      </div>
+
+      {/* Blocked Users */}
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] space-y-6">
+        <h2 className="text-2xl font-black uppercase flex items-center gap-2 text-[var(--text)]">
+          <AlertTriangle className="w-6 h-6" /> Blocked Users
+        </h2>
+        <div className="space-y-3">
+          {loadingBlocked ? (
+            <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin" /></div>
+          ) : blockedUsers.length === 0 ? (
+            <p className="text-sm font-bold text-slate-500 italic">No blocked users.</p>
+          ) : (
+            blockedUsers.map(user => (
+              <div key={user.id} className="flex items-center justify-between p-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl">
+                <span className="font-black text-[var(--text)]">{user.username}</span>
+                <button 
+                  onClick={() => unblockUser(user.id)}
+                  className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-600 font-black text-xs uppercase rounded-lg border-2 border-red-200 transition-colors"
+                >
+                  Unblock
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

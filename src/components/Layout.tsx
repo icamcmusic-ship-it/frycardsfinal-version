@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers, Target, MessageSquare, Sword } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers, Target, MessageSquare, Sword, Award } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 
@@ -80,6 +80,7 @@ export function Layout() {
     { name: 'Trades', path: '/trades', icon: ArrowRightLeft },
     { name: 'Decks', path: '/decks', icon: Layers },
     { name: 'Quests', path: '/quests', icon: Target },
+    { name: 'Achievements', path: '/achievements', icon: Award },
     { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
     { name: 'Season Pass', path: '/season-pass', icon: Gift },
     { name: 'Settings', path: '/settings', icon: SettingsIcon },
@@ -98,6 +99,9 @@ export function Layout() {
       
       const timer = setInterval(() => {
         if (Date.now() >= regenTime) {
+          if (profile) {
+            setProfile({ ...profile, energy: Math.min(profile.energy + 1, profile.max_energy) });
+          }
           fetchProfile(profile.id);
         } else {
           setNextRegen(regenTime); // Force re-render for countdown

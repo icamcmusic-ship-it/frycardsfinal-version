@@ -144,7 +144,7 @@ export function SeasonPass() {
           return (
             <div key={tier.id}
               className={cn("flex justify-between items-center p-5 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[4px_4px_0px_0px_var(--border)]",
-                isLocked && "opacity-50")}>
+                (isLocked || isClaimed) && "opacity-50")}>
               <div className="flex items-center gap-4">
                 <div className="text-3xl font-black text-slate-300 w-10 text-center">#{tier.tier}</div>
                 <div className="flex items-center gap-2">

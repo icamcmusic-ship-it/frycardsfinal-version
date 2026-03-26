@@ -130,7 +130,9 @@ export function Card3DModal({ card, cardBackUrl, onClose }: Card3DModalProps) {
                 />
               </div>
             </motion.div>
-            <p className="text-center text-white/50 text-xs mt-3 font-bold">Click to flip • Hover to tilt</p>
+            <p className="text-center text-white/50 text-xs mt-3 font-bold">
+              {isFlipped ? 'Click to flip back' : 'Click to flip • Hover to tilt'}
+            </p>
           </div>
 
           {/* Card Info Panel */}

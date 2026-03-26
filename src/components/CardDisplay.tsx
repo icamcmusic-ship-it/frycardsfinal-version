@@ -87,43 +87,76 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
         transition: tilt.x === 0 ? 'transform 0.5s ease' : 'none'
       }}
       className={cn(
-        'relative w-full aspect-[3/4] rounded-xl border-4 group cursor-pointer transition-all duration-300',
+        'relative w-full aspect-[3/4] rounded-xl border-4 group cursor-pointer transition-all duration-300 overflow-hidden',
         border,
         className
       )}
     >
-      {/* Hover Stats Overlay */}
-      <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity z-30 flex flex-col items-center justify-center p-4 text-center rounded-lg pointer-events-none">
-        <h4 className="text-white font-black text-lg uppercase mb-2 leading-tight">{card.name}</h4>
-        
-        {isBattle && (
-          <div className="grid grid-cols-3 gap-2 w-full mb-3">
-            <div className="flex flex-col items-center">
-              <Heart className="w-4 h-4 text-red-400 mb-1" />
-              <span className="text-white font-black text-xs">{card.hp}</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <Sword className="w-4 h-4 text-orange-400 mb-1" />
-              <span className="text-white font-black text-xs">{card.attack}</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <Shield className="w-4 h-4 text-blue-400 mb-1" />
-              <span className="text-white font-black text-xs">{card.defense}</span>
-            </div>
-          </div>
+      {/* Artwork Container - Always Full Height */}
+      <div className="absolute inset-0 bg-slate-900">
+        {card.is_video ? (
+          <video src={card.image_url} autoPlay muted loop playsInline
+            className="w-full h-full object-cover" />
+        ) : (
+          <img src={card.image_url} alt={card.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={(e) => { e.currentTarget.src = '/fallback-card.png'; }} />
         )}
 
-        {card.element && (
-          <div className="bg-white/10 px-2 py-1 rounded border border-white/20 mb-2">
-            <span className="text-[10px] text-white font-black uppercase">{card.element}</span>
-          </div>
+        {/* Divine Frame Break (Top half) */}
+        {card.rarity === 'Divine' && (
+          <img 
+            src={card.image_url} 
+            alt="Pop out"
+            className="absolute inset-0 w-full h-full object-cover scale-105 opacity-0 group-hover:opacity-100 group-hover:scale-115 transition-all duration-500 z-50 pointer-events-none [clip-path:inset(0_0_30%_0)]" 
+            referrerPolicy="no-referrer"
+          />
         )}
+      </div>
 
-        {card.ability_text && (
-          <p className="text-[10px] text-gray-300 font-bold leading-tight line-clamp-4 italic">
-            {card.ability_text}
+      {/* Hover Info Panel - Slides up from bottom */}
+      <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-[0.23,1,0.32,1] z-30">
+        <div className={cn(
+          "pt-12 pb-4 px-4 bg-gradient-to-t from-black/95 via-black/80 to-transparent",
+        )}>
+          <h4 className="text-white font-black text-lg uppercase leading-tight mb-1">{card.name}</h4>
+          <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-2">
+            {card.card_type} {card.element ? `· ${card.element}` : ''}
           </p>
-        )}
+          
+          {isBattle && (
+            <div className="flex gap-3 mb-3">
+              <div className="flex items-center gap-1">
+                <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                <span className="text-white font-black text-xs">{card.hp}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Sword className="w-3 h-3 text-orange-500" />
+                <span className="text-white font-black text-xs">{card.attack}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Shield className="w-3 h-3 text-blue-500" />
+                <span className="text-white font-black text-xs">{card.defense}</span>
+              </div>
+            </div>
+          )}
+
+          {card.flavor_text && (
+            <p className="text-gray-300 text-[10px] italic leading-relaxed line-clamp-3">
+              {card.flavor_text}
+            </p>
+          )}
+
+          {card.ability_text && (
+            <div className="mt-2 pt-2 border-t border-white/10">
+              <p className="text-white/90 text-[10px] leading-tight font-medium line-clamp-3">
+                {card.ability_text}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Mythic Particle Effect */}
@@ -147,150 +180,54 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
         <div className="absolute -inset-12 -z-10 rounded-full animate-[spin_15s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(239,68,68,0.3)_30deg,transparent_60deg,rgba(239,68,68,0.3)_90deg,transparent_120deg,rgba(239,68,68,0.3)_150deg,transparent_180deg,rgba(239,68,68,0.3)_210deg,transparent_240deg,rgba(239,68,68,0.3)_270deg,transparent_300deg,rgba(239,68,68,0.3)_330deg,transparent_360deg)] opacity-60 blur-xl" />
       )}
 
-      <div className="absolute inset-0 rounded-lg overflow-hidden bg-slate-900">
-        {/* Artwork Container */}
-        <div className={cn(
-          "relative w-full transition-all duration-500",
-          isBattle ? "h-[60%]" : "h-full"
-        )}>
-          {card.is_video ? (
-            <video src={card.image_url} autoPlay muted loop playsInline
-              className="w-full h-full object-cover" />
-          ) : (
-            <img src={card.image_url} alt={card.name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={(e) => { e.currentTarget.src = '/fallback-card.png'; }} />
-          )}
+      {/* Foil / Holographic Effects */}
+      {(card.is_foil || (card.foil_quantity ?? 0) > 0) && (
+        <div 
+          className="absolute inset-0 pointer-events-none z-30 mix-blend-color-dodge opacity-40"
+          style={{
+            background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,0.8) 0%, transparent 50%), 
+                         repeating-linear-gradient(${mousePos.x + mousePos.y}deg, 
+                           rgba(255,0,0,0.1) 0%, 
+                           rgba(255,255,0,0.1) 10%, 
+                           rgba(0,255,0,0.1) 20%, 
+                           rgba(0,255,255,0.1) 30%, 
+                           rgba(0,0,255,0.1) 40%, 
+                           rgba(255,0,255,0.1) 50%, 
+                           rgba(255,0,0,0.1) 60%)`,
+            backgroundSize: '200% 200%',
+            backgroundPosition: `${mousePos.x}% ${mousePos.y}%`
+          }}
+        />
+      )}
 
-          {/* Divine Frame Break (Top half) */}
-          {card.rarity === 'Divine' && (
-            <img 
-              src={card.image_url} 
-              alt="Pop out"
-              className="absolute inset-0 w-full h-full object-cover scale-105 opacity-0 group-hover:opacity-100 group-hover:scale-115 transition-all duration-500 z-50 pointer-events-none [clip-path:inset(0_0_30%_0)]" 
-            />
-          )}
-
-          {/* Spell Overlay */}
-          {isSpell && (
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-black/40 backdrop-blur-md border-t border-white/20 p-3 flex flex-col gap-2 z-20">
-              {card.keywords && card.keywords.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {card.keywords.map(kw => (
-                    <span key={kw} className="px-2 py-0.5 bg-white/20 rounded-full text-[8px] font-black uppercase text-white border border-white/30">
-                      {kw}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <p className="text-white text-[10px] leading-tight font-medium line-clamp-4">
-                {card.ability_text}
-              </p>
-            </div>
-          )}
+      {/* Super-Rare Prismatic Sweep */}
+      {card.rarity === 'Super-Rare' && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-30 mix-blend-overlay">
+          <div className="w-[200%] h-[200%] absolute top-0 left-0 bg-gradient-to-r from-transparent via-purple-300/40 to-transparent animate-[sweep_4s_ease-in-out_infinite]" />
         </div>
+      )}
 
-        {/* Battle Stat Block */}
-        {isBattle && (
-          <div className="h-[40%] bg-slate-950 border-t-4 border-[var(--border)] p-3 flex flex-col justify-between z-20 relative">
-            <div className="flex flex-col gap-1">
-              <h4 className="text-white font-black text-xs uppercase truncate">{card.name}</h4>
-              <p className="text-white/40 text-[8px] font-bold uppercase tracking-wider">{card.card_type} · {card.element}</p>
-            </div>
-            
-            <div className="flex justify-between items-center gap-2">
-              <div className="flex items-center gap-1 bg-red-500/20 border border-red-500/40 px-1.5 py-0.5 rounded">
-                <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                <span className="text-white font-black text-xs">{card.hp}</span>
-              </div>
-              <div className="flex items-center gap-1 bg-orange-500/20 border border-orange-500/40 px-1.5 py-0.5 rounded">
-                <Sword className="w-3 h-3 text-orange-500" />
-                <span className="text-white font-black text-xs">{card.attack}</span>
-              </div>
-              <div className="flex items-center gap-1 bg-blue-500/20 border border-blue-500/40 px-1.5 py-0.5 rounded">
-                <Shield className="w-3 h-3 text-blue-500" />
-                <span className="text-white font-black text-xs">{card.defense}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Default / Lore Layout Info */}
-        {!isBattle && !isSpell && (
-          <div className={cn(
-            "absolute bottom-0 inset-x-0 bg-gradient-to-t pt-12 pb-3 px-3 z-20 transition-all duration-300",
-            elementGradient
-          )}>
-            <div>
-              <p className="text-white font-black text-sm uppercase tracking-wide truncate leading-tight mb-0.5">{card.name}</p>
-              {!['Location', 'Artifact', 'Event', 'Leader'].includes(card.card_type || '') && (
-                <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider">{card.element || card.card_type}</p>
-              )}
-              {['Location', 'Artifact', 'Event', 'Leader'].includes(card.card_type || '') && (
-                <p className="text-white/60 text-[10px] font-bold uppercase tracking-wider">{card.card_type}</p>
-              )}
-              
-              {isLore && (
-                <div className="overflow-hidden mt-2">
-                  <p className="text-gray-300 text-[10px] italic leading-relaxed line-clamp-2">
-                    {card.flavor_text}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Foil / Holographic Effects */}
-        {(card.is_foil || (card.foil_quantity ?? 0) > 0) && (
-          <div 
-            className="absolute inset-0 pointer-events-none z-30 mix-blend-color-dodge opacity-40"
-            style={{
-              background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,0.8) 0%, transparent 50%), 
-                           repeating-linear-gradient(${mousePos.x + mousePos.y}deg, 
-                             rgba(255,0,0,0.1) 0%, 
-                             rgba(255,255,0,0.1) 10%, 
-                             rgba(0,255,0,0.1) 20%, 
-                             rgba(0,255,255,0.1) 30%, 
-                             rgba(0,0,255,0.1) 40%, 
-                             rgba(255,0,255,0.1) 50%, 
-                             rgba(255,0,0,0.1) 60%)`,
-              backgroundSize: '200% 200%',
-              backgroundPosition: `${mousePos.x}% ${mousePos.y}%`
-            }}
-          />
-        )}
-
-        {/* Super-Rare Prismatic Sweep */}
-        {card.rarity === 'Super-Rare' && (
-          <div className="absolute inset-0 overflow-hidden pointer-events-none z-30 mix-blend-overlay">
-            <div className="w-[200%] h-[200%] absolute top-0 left-0 bg-gradient-to-r from-transparent via-purple-300/40 to-transparent animate-[sweep_4s_ease-in-out_infinite]" />
-          </div>
-        )}
-
-        {/* Rarity Badges */}
-        <div className={cn(
-          "absolute top-2 left-2 z-40 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]",
-          getRarityStyles(card.rarity, card.is_foil ?? false)
-        )}>
-          {card.is_foil ? <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" /> Foil</span> : card.rarity}
-        </div>
-
-        {/* Quantity badge */}
-        {showQuantity && card.quantity != null && card.quantity > 1 && (
-          <div className="absolute top-2 right-2 z-40 bg-black/80 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md border border-white/30">
-            ×{card.quantity}
-          </div>
-        )}
-
-        {/* NEW badge */}
-        {showNewBadge && card.is_new && (
-          <div className="absolute top-8 left-2 z-40 bg-green-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-black animate-bounce uppercase">
-            New!
-          </div>
-        )}
+      {/* Rarity Badges */}
+      <div className={cn(
+        "absolute top-2 left-2 z-40 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]",
+        getRarityStyles(card.rarity, card.is_foil ?? false)
+      )}>
+        {card.is_foil ? <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" /> Foil</span> : card.rarity}
       </div>
+
+      {/* Quantity badge */}
+      {showQuantity && card.quantity != null && card.quantity > 1 && (
+        <div className="absolute top-2 right-2 z-40 bg-black/80 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md border border-white/30">
+          ×{card.quantity}
+        </div>
+      )}
+
+      {/* NEW badge */}
+      {showNewBadge && card.is_new && (
+        <div className="absolute top-8 left-2 z-40 bg-green-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-black animate-bounce uppercase">
+          New!
+        </div>
+      )}
     </div>
   );
 }

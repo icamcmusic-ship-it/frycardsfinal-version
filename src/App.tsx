@@ -24,6 +24,7 @@ import { Notifications } from './pages/Notifications';
 import { Decks } from './pages/Decks';
 import { Quests } from './pages/Quests';
 import { Battle } from './pages/Battle';
+import { Achievements } from './pages/Achievements';
 import { Admin } from './pages/Admin';
 import { Loader2 } from 'lucide-react';
 
@@ -99,6 +100,7 @@ export default function App() {
             <Route path="/trades" element={<Trades />} />
             <Route path="/decks" element={<Decks />} />
             <Route path="/quests" element={<Quests />} />
+            <Route path="/achievements" element={<Achievements />} />
             <Route path="/battle" element={<Battle />} />
             <Route 
               path="/admin" 

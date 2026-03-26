@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Loader2, Plus, Trash2, Edit2, Save, X, Shield, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { CardDisplay } from '../components/CardDisplay';
+import { CollectionCard } from '../components/CollectionCard';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { cn } from '../lib/utils';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -60,6 +61,27 @@ export function Decks() {
       return;
     }
     setCollection(data || []);
+  };
+
+  const handleToggleLock = async (userCardId: string) => {
+    try {
+      const { error } = await supabase.rpc('toggle_card_lock', {
+        p_user_card_id: userCardId
+      });
+      if (error) throw error;
+      
+      setCollection(prev => prev.map(c => {
+        if ((c.user_card_id || c.id) === userCardId) {
+          const newLockedState = !c.is_locked;
+          toast.success(newLockedState ? 'Card locked!' : 'Card unlocked!', { id: `lock-${userCardId}` });
+          return { ...c, is_locked: newLockedState };
+        }
+        return c;
+      }));
+    } catch (err) {
+      console.error('Error toggling lock:', err);
+      toast.error('Failed to toggle lock', { id: `lock-error-${userCardId}` });
+    }
   };
 
   const handleCreateDeck = async () => {
@@ -197,16 +219,18 @@ export function Decks() {
             {collection.map(card => {
               const isSelected = selectedCards.includes(card.id);
               return (
-                <div 
+                <CollectionCard 
                   key={card.id} 
-                  onClick={() => toggleCardSelection(card.id)}
+                  card={card}
+                  isSelected={isSelected}
+                  activeTab="collection"
+                  onSelect={() => toggleCardSelection(card.id)}
+                  onToggleLock={() => handleToggleLock(card.user_card_id || card.id)}
                   className={cn(
                     "cursor-pointer transition-transform active:scale-95 rounded-xl border-4",
                     isSelected ? "border-blue-500 scale-105 shadow-[0_0_15px_rgba(59,130,246,0.5)]" : "border-transparent"
                   )}
-                >
-                  <CardDisplay card={card} showQuantity={true} />
-                </div>
+                />
               );
             })}
           </div>

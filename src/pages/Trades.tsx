@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useProfileStore } from '../stores/profileStore';
 import { ClickableUsername } from '../components/ClickableUsername';
 import { Loader2, ArrowRightLeft, Check, X, Trash2, Plus, Handshake } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -9,6 +10,7 @@ import { CardDisplay } from '../components/CardDisplay';
 import { CardSkeleton } from '../components/CardSkeleton';
 
 export function Trades() {
+  const { profile } = useProfileStore();
   const [trades, setTrades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -176,7 +178,10 @@ export function Trades() {
           <select value={receiverId} onChange={e => setReceiverId(e.target.value)}
             className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)]">
             <option value="">— Select a friend —</option>
-            {friends.map(f => <option key={f.id} value={f.id}>{f.username}</option>)}
+            {friends
+              .filter(f => f.id !== profile?.id)
+              .map(f => <option key={f.id} value={f.id}>{f.username}</option>)
+            }
           </select>
           <div>
             <p className="font-black mb-2 text-[var(--text)]">Cards you're offering (click to select):</p>

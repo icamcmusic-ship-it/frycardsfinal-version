@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star, Sparkles } from 'lucide-react';
+import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star, Sparkles, Bookmark } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
@@ -21,7 +21,12 @@ export function Marketplace() {
   const [activeTab, setActiveTab] = useState<'all' | 'watchlist' | 'my_listings'>('all');
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [watchlistedIds, setWatchlistedIds] = useState<Set<string>>(new Set());
+  const watchlistedIdsRef = React.useRef<Set<string>>(new Set());
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    watchlistedIdsRef.current = watchlistedIds;
+  }, [watchlistedIds]);
   const [myListings, setMyListings] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -71,12 +76,45 @@ export function Marketplace() {
           setHasNewListings(true);
         }
       })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'market_listings'
+      }, (payload) => {
+        const updated = payload.new;
+        const old = payload.old;
+        
+        // Check if this listing is in our watchlist
+        if (watchlistedIdsRef.current.has(updated.id)) {
+          // If bid increased
+          if (updated.current_bid > old.current_bid) {
+            if (updated.last_bidder_id === profile?.id) {
+              toast.success(`You're the high bidder on ${updated.card_name}!`, { id: `bid-win-${updated.id}` });
+            } else {
+              toast.error(`You've been outbid on ${updated.card_name}!`, { id: `outbid-${updated.id}` });
+            }
+          }
+          
+          // If ended
+          if (updated.status !== 'active' && old.status === 'active') {
+            if (updated.status === 'sold') {
+              const won = updated.last_bidder_id === profile?.id;
+              toast(won ? `🎉 You won the auction for ${updated.card_name}!` : `Auction ended for ${updated.card_name}`, {
+                icon: won ? '🏆' : '⏰',
+                id: `ended-${updated.id}`
+              });
+            } else {
+              toast(`Auction expired for ${updated.card_name}`, { icon: '⏰', id: `expired-${updated.id}` });
+            }
+          }
+        }
+      })
       .subscribe();
 
     return () => {
       channel.unsubscribe();
     };
-  }, [activeTab]);
+  }, [activeTab, profile?.id]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -99,7 +137,9 @@ export function Marketplace() {
 
   const fetchWishlistCardIds = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_wishlist');
+      const { data, error } = await supabase.rpc('get_wishlist', {
+        p_rarity: null
+      });
       if (error) throw error;
       setWishlistCardIds(new Set((data || []).map((item: any) => item.card_id)));
     } catch (err) {
@@ -217,10 +257,10 @@ export function Marketplace() {
           const newSet = new Set(prev);
           if (newSet.has(listingId)) {
             newSet.delete(listingId);
-            toast.success('Removed from watchlist');
+            toast.success('Removed from watchlist', { id: `watchlist-${listingId}` });
           } else {
             newSet.add(listingId);
-            toast.success('Added to watchlist', { icon: '✨' });
+            toast.success('Added to watchlist', { id: `watchlist-${listingId}`, icon: '✨' });
           }
           return newSet;
         });
@@ -244,7 +284,7 @@ export function Marketplace() {
           });
           if (error) throw error;
           
-          toast.success(`Blocked ${username}`, { icon: '🚫' });
+          toast.success(`Blocked ${username}`, { id: `block-${userId}`, icon: '🚫' });
           fetchListings(); // Refresh to hide their listings
         } catch (err) {
           console.error('Error blocking user:', err);
@@ -266,7 +306,7 @@ export function Marketplace() {
             p_listing_id: listingId
           });
           if (error) throw error;
-          toast.success('Listing cancelled!', { icon: '🗑️' });
+          toast.success('Listing cancelled!', { id: `cancel-${listingId}`, icon: '🗑️' });
           fetchMyListings();
         } catch (err: any) {
           toast.error(err.message || 'Failed to cancel listing');
@@ -301,7 +341,7 @@ export function Marketplace() {
 
           if (error) throw error;
           
-          toast.success(`Successfully bought ${listing.card_name}!`, { icon: '✨' });
+          toast.success(`Successfully bought ${listing.card_name}!`, { id: `buy-${listing.id}`, icon: '✨' });
           fetchListings();
           
           // Refresh profile to update gold balance
@@ -529,7 +569,7 @@ export function Marketplace() {
                     <h3 className="font-black text-[var(--text)] text-base leading-tight uppercase flex items-center gap-1.5">
                       {listing.card_name}
                       {wishlistCardIds.has(listing.card_id) && (
-                        <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-600" title="On your wishlist!" />
+                        <Bookmark className="w-3.5 h-3.5 fill-blue-400 text-blue-600" title="On your wishlist!" />
                       )}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">

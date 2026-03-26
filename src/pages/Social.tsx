@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
 import { ClickableUsername } from '../components/ClickableUsername';
-import { Loader2, Search, UserPlus, UserMinus, Check, X, Users, UserCheck } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Loader2, Search, UserPlus, UserMinus, Check, X, Users, UserCheck, Send, MessageSquare } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -17,6 +17,9 @@ export function Social() {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [socialCounts, setSocialCounts] = useState({ followers: 0, following: 0 });
+  const [messages, setMessages] = useState<any[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -32,7 +35,58 @@ export function Social() {
 
   useEffect(() => {
     fetchSocialData();
+    fetchMessages();
+
+    const channel = supabase
+      .channel('global')
+      .on('broadcast', { event: 'new_message' }, (payload) => {
+        setMessages(prev => [payload.payload, ...prev].slice(0, 50));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const fetchMessages = async () => {
+    const { data } = await supabase
+      .from('messages_history')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    setMessages(data || []);
+  };
+
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || sendingMessage) return;
+
+    setSendingMessage(true);
+    try {
+      const messageData = {
+        user_id: profile?.id,
+        username: profile?.username,
+        body: newMessage.trim(),
+        created_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase.from('messages_history').insert(messageData);
+      if (error) throw error;
+
+      await supabase.channel('global').send({
+        type: 'broadcast',
+        event: 'new_message',
+        payload: messageData
+      });
+
+      setNewMessage('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send message');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
 
   const fetchSocialData = async () => {
     setLoading(true);
@@ -152,34 +206,95 @@ export function Social() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
-          <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 text-[var(--text)]"><Users /> Friends</h2>
-          {friends.map(friend => (
-            <div key={friend.id} className="flex justify-between items-center p-2 border-b-2 border-slate-100">
-              <ClickableUsername userId={friend.friend_id} username={friend.username} className="text-blue-600" />
-              <button 
-                onClick={() => removeFriend(friend.friend_id)}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                title="Remove Friend"
-              >
-                <UserMinus className="w-5 h-5" />
-              </button>
+      <div className="grid md:grid-cols-3 gap-8">
+        <div className="md:col-span-2 space-y-8">
+          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] flex flex-col h-[600px]">
+            <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 text-[var(--text)]">
+              <MessageSquare /> Global Chat
+            </h2>
+            
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar flex flex-col-reverse">
+              <AnimatePresence initial={false}>
+                {messages.map((msg, i) => (
+                  <motion.div 
+                    key={msg.id || i}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={cn(
+                      "p-3 rounded-xl border-2 border-[var(--border)] max-w-[80%]",
+                      msg.user_id === profile?.id ? "bg-blue-50 self-end ml-auto" : "bg-[var(--bg)]"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-4 mb-1">
+                      <ClickableUsername userId={msg.user_id} username={msg.username} className="text-xs font-black text-blue-600" />
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-[var(--text)] break-words">{msg.body}</p>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
-          ))}
+
+            <form onSubmit={sendMessage} className="flex gap-2">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1 px-4 py-2 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl font-bold text-[var(--text)] focus:outline-none focus:border-blue-500"
+              />
+              <button 
+                type="submit" 
+                disabled={!newMessage.trim() || sendingMessage}
+                className="p-2 bg-blue-500 text-white rounded-xl border-2 border-[var(--border)] disabled:opacity-50 shadow-[2px_2px_0px_0px_var(--border)] active:translate-y-0.5 transition-all"
+              >
+                {sendingMessage ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </button>
+            </form>
+          </div>
+
+          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
+            <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 text-[var(--text)]"><Users /> Friends</h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {friends.map(friend => (
+                <div key={friend.id} className="flex justify-between items-center p-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl">
+                  <ClickableUsername userId={friend.friend_id} username={friend.username} className="text-blue-600 font-black" />
+                  <button 
+                    onClick={() => removeFriend(friend.friend_id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Remove Friend"
+                  >
+                    <UserMinus className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+              {friends.length === 0 && (
+                <p className="col-span-full text-center py-8 text-slate-500 font-bold">No friends yet. Search for players to add them!</p>
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
-          <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 text-[var(--text)]"><UserCheck /> Pending Requests</h2>
-          {pendingRequests.map(req => (
-            <div key={req.id} className="flex justify-between items-center p-2 border-b-2 border-slate-100">
-              <ClickableUsername userId={req.from_id} username={req.from_username} className="text-[var(--text)]" />
-              <div className="flex gap-2">
-                <button onClick={() => respondRequest(req.id, true)} className="p-2 bg-green-400 rounded-lg border-2 border-[var(--border)] text-black"><Check className="w-5 h-5" /></button>
-                <button onClick={() => respondRequest(req.id, false)} className="p-2 bg-red-400 rounded-lg border-2 border-[var(--border)] text-white"><X className="w-5 h-5" /></button>
-              </div>
+        <div className="space-y-8">
+          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
+            <h2 className="text-xl font-black uppercase mb-4 flex items-center gap-2 text-[var(--text)]"><UserCheck /> Pending Requests</h2>
+            <div className="space-y-3">
+              {pendingRequests.map(req => (
+                <div key={req.id} className="flex justify-between items-center p-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl">
+                  <ClickableUsername userId={req.from_id} username={req.from_username} className="text-[var(--text)] font-black" />
+                  <div className="flex gap-2">
+                    <button onClick={() => respondRequest(req.id, true)} className="p-1.5 bg-green-400 rounded-lg border-2 border-[var(--border)] text-black"><Check className="w-4 h-4" /></button>
+                    <button onClick={() => respondRequest(req.id, false)} className="p-1.5 bg-red-400 rounded-lg border-2 border-[var(--border)] text-white"><X className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              ))}
+              {pendingRequests.length === 0 && (
+                <p className="text-center py-4 text-slate-500 font-bold">No pending requests.</p>
+              )}
             </div>
-          ))}
+          </div>
         </div>
       </div>
       <ConfirmModal

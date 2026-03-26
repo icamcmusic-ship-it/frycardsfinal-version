@@ -73,16 +73,6 @@ export function Admin() {
           <Shield className="w-10 h-10 text-red-500" />
           Admin Control
         </h1>
-        
-        <div className="flex gap-2">
-          <button 
-            onClick={() => toast.error('Creation not implemented in this view')}
-            className="px-4 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Add New
-          </button>
-        </div>
       </div>
 
       {/* Tabs */}
