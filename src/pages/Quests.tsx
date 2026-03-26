@@ -55,7 +55,7 @@ export function Quests() {
       
       toast.success('Quest reward claimed!', { icon: '🎁' });
       fetchQuests();
-      refreshProfile();
+      await useProfileStore.getState().refreshProfile();
     } catch (err: any) {
       toast.error(err.message || 'Failed to claim reward');
     } finally {
@@ -74,23 +74,11 @@ export function Quests() {
         toast.success('Daily mission reward claimed!', { icon: '⚡' });
       }
       fetchDailyMissions();
-      refreshProfile();
+      await useProfileStore.getState().refreshProfile();
     } catch (err: any) {
       toast.error(err.message || 'Failed to claim reward');
     } finally {
       setClaiming(null);
-    }
-  };
-
-  const refreshProfile = async () => {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', profile?.id)
-      .single();
-      
-    if (profileData) {
-      useProfileStore.getState().setProfile(profileData);
     }
   };
 
@@ -138,6 +126,9 @@ export function Quests() {
   const activeQuests = quests.filter(q => !q.claimed);
   const completedQuests = quests.filter(q => q.claimed);
 
+  const activeDaily = dailyMissions.filter(m => !m.is_claimed);
+  const completedDaily = dailyMissions.filter(m => m.is_claimed);
+
   return (
     <div className="space-y-12 max-w-4xl mx-auto">
       <div>
@@ -164,14 +155,32 @@ export function Quests() {
               No daily missions available.
             </div>
           ) : (
-            dailyMissions.map(mission => (
-              <DailyMissionCard 
-                key={mission.id} 
-                mission={mission} 
-                onClaim={() => handleClaimDaily(mission.id)}
-                claiming={claiming === mission.id}
-              />
-            ))
+            <>
+              {activeDaily.map(mission => (
+                <DailyMissionCard 
+                  key={mission.id} 
+                  mission={mission} 
+                  onClaim={() => handleClaimDaily(mission.id)}
+                  claiming={claiming === mission.id}
+                />
+              ))}
+              
+              {completedDaily.length > 0 && (
+                <div className="space-y-4 pt-4">
+                  <h3 className="text-sm font-black uppercase text-slate-400">Completed Today</h3>
+                  <div className="grid gap-4 opacity-60 grayscale-[0.5]">
+                    {completedDaily.map(mission => (
+                      <DailyMissionCard 
+                        key={mission.id} 
+                        mission={mission} 
+                        onClaim={() => {}}
+                        claiming={false}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -86,8 +86,36 @@ export function Layout() {
     { name: 'Profile', path: '/profile', icon: UserIcon },
   ];
 
-  const primaryNav = navItems.slice(0, 4);
-  const secondaryNav = navItems.slice(4);
+  const primaryNav = navItems.slice(0, 5);
+  const secondaryNav = navItems.slice(5);
+
+  const [nextRegen, setNextRegen] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (profile && profile.energy < profile.max_energy && profile.energy_last_regen) {
+      const regenTime = new Date(profile.energy_last_regen).getTime() + 15 * 60 * 1000;
+      setNextRegen(regenTime);
+      
+      const timer = setInterval(() => {
+        if (Date.now() >= regenTime) {
+          fetchProfile(profile.id);
+        } else {
+          setNextRegen(regenTime); // Force re-render for countdown
+        }
+      }, 1000);
+      return () => clearInterval(timer);
+    } else {
+      setNextRegen(null);
+    }
+  }, [profile?.energy, profile?.energy_last_regen, profile?.max_energy, fetchProfile, profile?.id]);
+
+  const formatRegenTime = () => {
+    if (!nextRegen) return null;
+    const diff = Math.max(0, nextRegen - Date.now());
+    const mins = Math.floor(diff / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-red-400/30">
@@ -103,11 +131,21 @@ export function Layout() {
 
           {profile && (
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 bg-blue-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]">
+              <div 
+                className="group relative flex items-center gap-1.5 bg-blue-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] cursor-help"
+                title={nextRegen ? `Next energy in ${formatRegenTime()}` : "Energy full"}
+              >
                 <Zap className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-bold font-mono text-black">
-                  {profile.energy}/{profile.max_energy}
-                </span>
+                <div className="flex flex-col leading-none">
+                  <span className="text-sm font-bold font-mono text-black">
+                    {profile.energy}/{profile.max_energy}
+                  </span>
+                  {nextRegen && (
+                    <span className="text-[8px] font-black text-blue-600 uppercase tracking-tighter">
+                      {formatRegenTime()}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-1.5 bg-yellow-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]">
                 <Coins className="w-4 h-4 text-yellow-600" />

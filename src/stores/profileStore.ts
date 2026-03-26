@@ -30,6 +30,7 @@ interface ProfileState {
   profile: Profile | null;
   setProfile: (profile: Profile | null) => void;
   fetchProfile: (userId: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 export const useProfileStore = create<ProfileState>((set) => ({
@@ -44,6 +45,20 @@ export const useProfileStore = create<ProfileState>((set) => ({
     
     if (data && !error) {
       set({ profile: data as Profile });
+    }
+  },
+  refreshProfile: async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (data && !error) {
+        set({ profile: data as Profile });
+      }
     }
   },
 }));

@@ -101,15 +101,7 @@ export function Home() {
       fetchQuests();
       
       // Refresh profile to update gold/gems
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile?.id)
-        .single();
-        
-      if (profileData) {
-        useProfileStore.getState().setProfile(profileData);
-      }
+      await useProfileStore.getState().refreshProfile();
     } catch (err: any) {
       toast.error(err.message || 'Failed to claim quest');
     } finally {
@@ -140,15 +132,7 @@ export function Home() {
       ), { duration: 5000 });
       
       // Refresh profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile?.id)
-        .single();
-        
-      if (profileData) {
-        useProfileStore.getState().setProfile(profileData);
-      }
+      await useProfileStore.getState().refreshProfile();
     } catch (err: any) {
       toast.error(err.message || 'Failed to claim daily reward');
     } finally {
@@ -159,7 +143,7 @@ export function Home() {
   const isDailyClaimable = () => {
     if (!profile?.last_daily_claim) return true;
     const lastClaim = profile.last_daily_claim; // e.g. "2026-03-12"
-    const today = new Date().toLocaleDateString('en-CA'); // "YYYY-MM-DD" in local timezone
+    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD" in UTC
     return today > lastClaim;
   };
 
@@ -213,8 +197,10 @@ export function Home() {
                     </div>
                   )}
                   <p className="text-xs font-black text-black/60 uppercase tracking-wider">
-                    {profile.daily_streak >= 7 ? '💎 Tier 3 Rewards Available' : 
-                     profile.daily_streak >= 3 ? '✨ Tier 2 Rewards Available' : 
+                    {profile.daily_streak >= 30 ? '🔥 Tier 5 Rewards Available' :
+                     profile.daily_streak >= 14 ? '💎 Tier 4 Rewards Available' :
+                     profile.daily_streak >= 7 ? '✨ Tier 3 Rewards Available' : 
+                     profile.daily_streak >= 3 ? '🌟 Tier 2 Rewards Available' : 
                      '🎁 Tier 1 Rewards Available'}
                   </p>
                 </div>
@@ -244,6 +230,16 @@ export function Home() {
                       {profile.daily_streak >= 7 && (
                         <div className="w-6 h-6 rounded bg-purple-400 border border-black flex items-center justify-center" title="Packs/Rare Cards">
                           <PackageOpen className="w-3 h-3 text-black" />
+                        </div>
+                      )}
+                      {profile.daily_streak >= 14 && (
+                        <div className="w-6 h-6 rounded bg-red-400 border border-black flex items-center justify-center" title="Epic Rewards">
+                          <Sparkles className="w-3 h-3 text-black" />
+                        </div>
+                      )}
+                      {profile.daily_streak >= 30 && (
+                        <div className="w-6 h-6 rounded bg-black border border-black flex items-center justify-center" title="Legendary Rewards">
+                          <Trophy className="w-3 h-3 text-yellow-400" />
                         </div>
                       )}
                     </div>

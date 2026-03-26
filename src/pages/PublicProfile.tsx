@@ -5,6 +5,7 @@ import { Loader2, Trophy, UserPlus, UserCheck, UserMinus, Users } from 'lucide-r
 import { CardDisplay } from '../components/CardDisplay';
 import { cn, getAvatarUrl, getBannerUrl } from '../lib/utils';
 import toast from 'react-hot-toast';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 function OtherUserCollection({ userId }: { userId: string }) {
   const [cards, setCards] = useState<any[]>([]);
@@ -46,49 +47,50 @@ export function PublicProfile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     if (!userId) return;
-    supabase.rpc('get_public_profile', { p_user_id: userId }).then(({ data }) => {
-      setProfile(data);
-      setFollowersCount(data?.followers_count || 0);
-      setFollowingCount(data?.following_count || 0);
-      setLoading(false);
-    });
-    
-    // Check if following
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        supabase.from('follows')
-          .select('id')
-          .eq('follower_id', user.id)
-          .eq('following_id', userId)
-          .then(({ data }) => {
-            setIsFollowing(data && data.length > 0);
-          });
+    const fetchProfile = async () => {
+      const { data } = await supabase.rpc('get_public_profile', { p_user_id: userId });
+      if (data) {
+        setProfile(data);
+        setFollowersCount(data.followers_count || 0);
+        setFollowingCount(data.following_count || 0);
+        setIsFollowing(data.is_following || false);
       }
-    });
+      setLoading(false);
+    };
+    
+    fetchProfile();
   }, [userId]);
 
   const toggleFollow = async () => {
-    if (isFollowing) {
-      const { error } = await supabase.rpc('unfollow_user', { p_target_user_id: userId });
-      if (!error) {
-        setIsFollowing(false);
-        setFollowersCount(prev => Math.max(0, prev - 1));
-        toast.success(`Unfollowed ${profile.username}`);
-      } else {
-        toast.error('Failed to unfollow');
+    if (!profile) return;
+    try {
+      const { error } = await supabase.rpc('toggle_follow', { p_target_user_id: userId });
+      if (error) throw error;
+      
+      // Refresh counts and state
+      const { data } = await supabase.rpc('get_public_profile', { p_user_id: userId });
+      if (data) {
+        setFollowersCount(data.followers_count || 0);
+        setFollowingCount(data.following_count || 0);
+        setIsFollowing(data.is_following || false);
       }
-    } else {
-      const { error } = await supabase.rpc('follow_user', { p_target_user_id: userId });
-      if (!error) {
-        setIsFollowing(true);
-        setFollowersCount(prev => prev + 1);
-        toast.success(`Following ${profile.username}`);
-      } else {
-        toast.error('Failed to follow');
-      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to follow user');
     }
   };
 
@@ -98,9 +100,16 @@ export function PublicProfile() {
   };
 
   const removeFriend = async () => {
-    if (!window.confirm(`Are you sure you want to remove ${profile.username} from your friends?`)) return;
-    await supabase.rpc('remove_friend', { p_friend_id: userId });
-    setProfile((p: any) => ({ ...p, friendship_status: 'none' }));
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Remove Friend',
+      message: `Are you sure you want to remove ${profile.username} from your friends?`,
+      variant: 'danger',
+      onConfirm: async () => {
+        await supabase.rpc('remove_friend', { p_friend_id: userId });
+        setProfile((p: any) => ({ ...p, friendship_status: 'none' }));
+      }
+    });
   };
 
   if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
@@ -147,17 +156,23 @@ export function PublicProfile() {
                 )}
                 
                 <button 
-                  onClick={async () => {
-                    if (window.confirm(`Are you sure you want to block ${profile.username}?`)) {
-                      try {
-                        const { error } = await supabase.rpc('block_user', { p_blocked_user_id: userId });
-                        if (error) throw error;
-                        toast.success(`${profile.username} has been blocked.`);
-                        navigate('/social');
-                      } catch (err: any) {
-                        toast.error(err.message || 'Failed to block user');
+                  onClick={() => {
+                    setConfirmConfig({
+                      isOpen: true,
+                      title: 'Block User',
+                      message: `Are you sure you want to block ${profile.username}?`,
+                      variant: 'danger',
+                      onConfirm: async () => {
+                        try {
+                          const { error } = await supabase.rpc('block_user', { p_blocked_user_id: userId });
+                          if (error) throw error;
+                          toast.success(`${profile.username} has been blocked.`);
+                          navigate('/social');
+                        } catch (err: any) {
+                          toast.error(err.message || 'Failed to block user');
+                        }
                       }
-                    }
+                    });
                   }}
                   className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 font-black text-sm uppercase rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
                 >
@@ -214,6 +229,14 @@ export function PublicProfile() {
 
         {showCollection && userId && <OtherUserCollection userId={userId} />}
       </div>
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        variant={confirmConfig.variant}
+      />
     </div>
   );
 }

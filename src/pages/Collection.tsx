@@ -11,15 +11,16 @@ import { CardSkeleton } from '../components/CardSkeleton';
 import { CreateListingModal } from '../components/CreateListingModal';
 import { Card3DModal } from '../components/Card3DModal';
 import { CollectionCard } from '../components/CollectionCard';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export function Collection() {
   const { profile } = useProfileStore();
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(20);
 
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'collection' | 'wishlist'>('collection');
   const [wishlist, setWishlist] = useState<any[]>([]);
   const [selectedCard, setSelectedCard] = useState<any>(null);
@@ -27,6 +28,18 @@ export function Collection() {
   const [cardToList, setCardToList] = useState<any>(null);
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
   const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>('rarity');
   const [elementType, setElementType] = useState<string>('all');
   const [showFoilsOnly, setShowFoilsOnly] = useState(false);
@@ -34,17 +47,27 @@ export function Collection() {
   const [viewSize, setViewSize] = useState<'normal' | 'large'>('large');
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     if (profile) {
+      setOffset(0);
       if (activeTab === 'collection') {
-        fetchCollection();
+        fetchCollection(false, 0);
       } else {
         fetchWishlist();
       }
       fetchStats();
     }
-  }, [profile, activeTab, sortBy, filter, elementType, search]);
+  }, [profile, activeTab, sortBy, filter, elementType, debouncedSearch, showFoilsOnly]);
 
   const fetchStats = async () => {
     try {
@@ -55,13 +78,13 @@ export function Collection() {
     }
   };
 
-  const fetchCollection = async (isLoadMore = false) => {
+  const fetchCollection = async (isLoadMore = false, currentOffset?: number) => {
     try {
-      const nextOffset = isLoadMore ? cards.length : 0;
+      const targetOffset = currentOffset !== undefined ? currentOffset : offset;
+      
       if (!isLoadMore) {
-        setCards([]);
-        setHasMore(true);
         setLoading(true);
+        setHasMore(true);
       } else {
         setLoadingMore(true);
       }
@@ -74,9 +97,9 @@ export function Collection() {
         p_rarity: rarityForApi,
         p_sort_by: sortBy,
         p_element_type: elementType === 'all' ? null : elementType,
-        p_limit: search ? 1000 : 20,
-        p_offset: nextOffset,
-        p_search: search || null
+        p_limit: PAGE_SIZE,
+        p_offset: targetOffset,
+        p_search: debouncedSearch || null
       });
       
       if (error) throw error;
@@ -88,11 +111,8 @@ export function Collection() {
         setCards(fetchedCards);
       }
 
-      if (fetchedCards.length < 20) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
-      }
+      setHasMore(fetchedCards.length === PAGE_SIZE);
+      setOffset(targetOffset + fetchedCards.length);
 
       // Mark unseen cards as seen
       const unseenCardIds = fetchedCards.filter((c: any) => c.is_new === true).map((c: any) => c.id);
@@ -113,14 +133,12 @@ export function Collection() {
       if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
         if (hasMore && !loadingMore && activeTab === 'collection') {
           fetchCollection(true);
-        } else if (activeTab === 'wishlist') {
-          setVisibleCount(prev => prev + 20);
         }
       }
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, cards.length, activeTab]);
+  }, [hasMore, loadingMore, activeTab, offset]);
 
   const fetchWishlist = async () => {
     try {
@@ -206,86 +224,93 @@ export function Collection() {
     if (duplicates <= 0) return;
     
     const totalGold = calculateMillValue(card) * duplicates;
-    if (!confirm(`Are you sure you want to mill ${duplicates} duplicate(s) of ${card.name}? You will receive ${totalGold} Gold.`)) return;
-    
-    try {
-      const { data, error } = await supabase.rpc('mill_duplicates', {
-        p_card_id: card.id,
-        p_quantity: duplicates
-      });
-      if (error) throw error;
-      
-      fetchCollection(); // Refresh
-      toast.success(`Successfully milled ${data.quantity_milled} cards for ${data.gold_earned} Gold!`);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to mill');
-    }
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Mill Duplicates',
+      message: `Are you sure you want to mill ${duplicates} duplicate(s) of ${card.name}? You will receive ${totalGold} Gold.`,
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          const { data, error } = await supabase.rpc('mill_duplicates', {
+            p_card_id: card.id,
+            p_quantity: duplicates
+          });
+          if (error) throw error;
+          
+          fetchCollection(); // Refresh
+          toast.success(`Successfully milled ${data.quantity_milled} cards for ${data.gold_earned} Gold!`);
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to mill');
+        }
+      }
+    });
   };
 
   const handleQuicksell = async (card: any) => {
     const baseValue = { Common: 10, Uncommon: 25, Rare: 100, 'Super-Rare': 250, Mythic: 500, Divine: 1000 }[card.rarity] ?? 10;
     const value = card.is_foil ? baseValue * 3 : baseValue;
     
-    if (!confirm(`Quicksell ${card.name} for ${value} Gold?`)) return;
-    
-    // Optimistic update
-    const previousCards = [...cards];
-    setCards(cards.filter(c => c.id !== card.id));
-    
-    if (profile) {
-      useProfileStore.getState().setProfile({
-        ...profile,
-        gold_balance: profile.gold_balance + value
-      });
-    }
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Quicksell Card',
+      message: `Quicksell ${card.name} for ${value} Gold?`,
+      variant: 'danger',
+      onConfirm: async () => {
+        // Optimistic update
+        const previousCards = [...cards];
+        setCards(cards.filter(c => c.id !== card.id));
+        
+        if (profile) {
+          useProfileStore.getState().setProfile({
+            ...profile,
+            gold_balance: profile.gold_balance + value
+          });
+        }
 
-    const { data, error } = await supabase.rpc('quicksell_card', {
-      p_card_id: card.id,
-      p_is_foil: card.is_foil || false,
-      p_quantity: 1,
-    });
-    
-    if (error) { 
-      toast.error(error.message); 
-      // Revert optimistic update
-      setCards(previousCards);
-      if (profile) {
-        useProfileStore.getState().setProfile(profile);
+        const { data, error } = await supabase.rpc('quicksell_card', {
+          p_card_id: card.id,
+          p_is_foil: card.is_foil || false,
+          p_quantity: 1,
+        });
+        
+        if (error) { 
+          toast.error(error.message); 
+          // Revert optimistic update
+          setCards(previousCards);
+          if (profile) {
+            useProfileStore.getState().setProfile(profile);
+          }
+          return; 
+        }
+        
+        toast.success(`Sold for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
+        fetchStats(); // Update stats in background
       }
-      return; 
-    }
-    
-    toast.success(`Sold for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
-    fetchStats(); // Update stats in background
+    });
   };
 
   const handleBulkMill = async () => {
-    if (!confirm('Are you sure you want to mill ALL duplicate cards? This cannot be undone.')) return;
-    
-    try {
-      const { data, error } = await supabase.rpc('mill_bulk_duplicates', { p_card_ids: null });
-      if (error) throw error;
-      
-      fetchCollection(); // Refresh
-      
-      toast.success(`Successfully milled ${data.cards_milled} cards for ${data.gold_earned} Gold!`, { icon: '🪙' });
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to bulk mill');
-    }
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Bulk Mill Duplicates',
+      message: 'Are you sure you want to mill ALL duplicate cards? This cannot be undone.',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const { data, error } = await supabase.rpc('mill_bulk_duplicates', { p_card_ids: null });
+          if (error) throw error;
+          
+          fetchCollection(); // Refresh
+          
+          toast.success(`Successfully milled ${data.cards_milled} cards for ${data.gold_earned} Gold!`, { icon: '🪙' });
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to bulk mill');
+        }
+      }
+    });
   };
 
-  useEffect(() => {
-    setVisibleCount(20);
-  }, [filter, search, sortBy, activeTab, elementType, showFoilsOnly]);
-
-  const filteredCards = (activeTab === 'collection' ? cards : wishlist)
-    .filter(c => {
-      if (filter !== 'all' && c.rarity.toLowerCase() !== filter) return false;
-      if (elementType !== 'all' && c.element?.toLowerCase() !== elementType) return false;
-      if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-      if (showFoilsOnly && !(c.foil_quantity > 0)) return false;
-      return true;
-    });
+  const filteredCards = activeTab === 'collection' ? cards : wishlist;
 
   if (loading) {
     return (
@@ -478,7 +503,7 @@ export function Collection() {
       </div>
 
       <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
-        {filteredCards.slice(0, visibleCount).map((card) => {
+        {filteredCards.map((card) => {
           const selectionId = card.user_card_id || card.id;
           return (
           <CollectionCard 
@@ -533,20 +558,27 @@ export function Collection() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[var(--surface)] border-4 border-[var(--border)] p-4 rounded-2xl shadow-[8px_8px_0px_0px_var(--border)] z-50 flex items-center gap-4">
           <p className="font-black text-[var(--text)]">Selected {selectedCardIds.length} cards</p>
           <button 
-            onClick={async () => {
-              if (!confirm(`Are you sure you want to quicksell ${selectedCardIds.length} cards?`)) return;
-              try {
-                const { data, error } = await supabase.rpc('mill_bulk_duplicates', {
-                  p_card_ids: selectedCardIds
-                });
-                if (error) throw error;
-                toast.success(`Sold ${data.count} cards for ${data.gold_earned} gold!`, { icon: '🪙' });
-                setSelectedCardIds([]);
-                setIsBatchMode(false);
-                fetchCollection();
-              } catch (err: any) {
-                toast.error('Failed to sell cards');
-              }
+            onClick={() => {
+              setConfirmConfig({
+                isOpen: true,
+                title: 'Quicksell Selected',
+                message: `Are you sure you want to quicksell ${selectedCardIds.length} cards?`,
+                variant: 'danger',
+                onConfirm: async () => {
+                  try {
+                    const { data, error } = await supabase.rpc('mill_bulk_duplicates', {
+                      p_card_ids: selectedCardIds
+                    });
+                    if (error) throw error;
+                    toast.success(`Sold ${data.count} cards for ${data.gold_earned} gold!`, { icon: '🪙' });
+                    setSelectedCardIds([]);
+                    setIsBatchMode(false);
+                    fetchCollection();
+                  } catch (err: any) {
+                    toast.error('Failed to sell cards');
+                  }
+                }
+              });
             }}
             className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]"
           >
@@ -554,6 +586,14 @@ export function Collection() {
           </button>
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        variant={confirmConfig.variant}
+      />
       <CreateListingModal 
         isOpen={isListingModalOpen} 
         onClose={() => {

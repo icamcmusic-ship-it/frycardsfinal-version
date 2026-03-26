@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
-import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings as SettingsIcon, Plus } from 'lucide-react';
+import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings as SettingsIcon, Plus, ExternalLink } from 'lucide-react';
 import { cn, getAvatarUrl, getBannerUrl, getCardBackUrl } from '../lib/utils';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -194,6 +194,13 @@ export function Profile() {
                 </div>
 
                 <div className="flex gap-3">
+                  <button 
+                    onClick={() => window.open(`/profile/${profile?.id}`, '_blank')}
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+                  >
+                    <ExternalLink className="w-5 h-5" />
+                    View Public Profile
+                  </button>
                   <button 
                     onClick={handleCopyLink}
                     className="px-4 py-2 bg-[var(--bg)] hover:bg-slate-50 text-[var(--text)] font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"

@@ -65,16 +65,9 @@ export function Battle() {
       setBattleLog(prev => [...prev, 'Final Round: Determining winner...']);
 
       // Call backend to process battle
-      const isWin = Math.random() > 0.4; // 60% win rate for PvE
-      const xpEarned = isWin ? 80 : 30;
-      const goldEarned = isWin ? 150 : 50;
-
       const { data, error } = await supabase.rpc('submit_battle_result', {
         p_deck_id: selectedDeckId,
         p_opponent_type: 'pve',
-        p_result: isWin ? 'win' : 'loss',
-        p_xp_earned: xpEarned,
-        p_gold_earned: goldEarned,
         p_rounds_played: 5,
         p_battle_log: JSON.stringify(battleLog)
       });
@@ -82,6 +75,9 @@ export function Battle() {
       if (error) throw error;
 
       setBattleResult(data);
+      // Refresh profile to update energy/gold/xp
+      await useProfileStore.getState().refreshProfile();
+
       if (data.is_win) {
         toast.success('Victory!', { icon: '🏆' });
       } else {
@@ -146,7 +142,21 @@ export function Battle() {
                       </div>
                       <div className="text-left">
                         <p className="font-black text-[var(--text)] uppercase">{deck.name}</p>
-                        <p className="text-xs font-bold text-slate-500">{deck.card_count} Cards</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold text-slate-500">{deck.card_count} Cards</p>
+                          <div className="flex -space-x-2">
+                            {(deck as any).cards?.slice(0, 3).map((card: any, i: number) => (
+                              <div key={i} className="w-6 h-8 rounded border border-black bg-gray-200 overflow-hidden shrink-0">
+                                <img src={card.image_url} alt={card.name} className="w-full h-full object-cover" />
+                              </div>
+                            ))}
+                            {(deck as any).cards?.length > 3 && (
+                              <div className="w-6 h-8 rounded border border-black bg-gray-100 flex items-center justify-center font-black text-[8px] shrink-0 z-10">
+                                +{(deck as any).cards.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                     {!deck.is_valid && (

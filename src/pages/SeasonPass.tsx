@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { useProfileStore } from '../stores/profileStore';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 const REWARD_ICONS: Record<string, React.ReactNode> = {
   gold:  <Coins className="w-5 h-5 text-yellow-500" />,
@@ -20,6 +21,18 @@ export function SeasonPass() {
   const [loading, setLoading] = useState(true);
 
   const [claiming, setClaiming] = useState<number | null>(null);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => { fetchData(); }, []);
 
@@ -46,15 +59,7 @@ export function SeasonPass() {
       toast.success(`Claimed Tier ${tier} reward!`);
       
       // Refresh profile to update gold/gems/packs
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile?.id)
-        .single();
-        
-      if (profileData) {
-        useProfileStore.getState().setProfile(profileData);
-      }
+      await useProfileStore.getState().refreshProfile();
       
       fetchData();
     } catch (err: any) {
@@ -72,36 +77,36 @@ export function SeasonPass() {
   const isPremium = passData?.is_premium ?? false;
 
   const nextTier = tiers.find(t => t.tier > userLevel);
+  const currentTier = tiers.find(t => t.tier === userLevel);
+  const prevXP = currentTier ? currentTier.xp_required : 0;
   const xpToNext = nextTier ? nextTier.xp_required : null;
-  const progressPct = xpToNext ? Math.min(100, (userXP / xpToNext) * 100) : 100;
+  const progressPct = xpToNext ? Math.min(100, ((userXP - prevXP) / (xpToNext - prevXP)) * 100) : 100;
 
   const upgradeToPremium = async () => {
-    if (!confirm('Upgrade to Premium Season Pass for 500 Gems?')) return;
-    
-    try {
-      const { data, error } = await supabase.rpc('upgrade_season_pass_premium', { p_cost: 500 });
-      if (error) throw error;
-      
-      if (data && data.success === false) {
-        throw new Error(data.error || 'Failed to upgrade');
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Upgrade Season Pass',
+      message: 'Upgrade to Premium Season Pass for 500 Gems?',
+      variant: 'info',
+      onConfirm: async () => {
+        try {
+          const { data, error } = await supabase.rpc('upgrade_season_pass_premium', { p_cost: 500 });
+          if (error) throw error;
+          
+          if (data && data.success === false) {
+            throw new Error(data.error || 'Failed to upgrade');
+          }
+          
+          toast.success('Upgraded to Premium!', { icon: '✨' });
+          fetchData();
+          
+          // Refresh profile to update gems
+          await useProfileStore.getState().refreshProfile();
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to upgrade');
+        }
       }
-      
-      toast.success('Upgraded to Premium!', { icon: '✨' });
-      fetchData();
-      
-      // Refresh profile to update gems
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile?.id)
-        .single();
-        
-      if (profileData) {
-        useProfileStore.getState().setProfile(profileData);
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to upgrade');
-    }
+    });
   };
 
   return (
@@ -173,6 +178,14 @@ export function SeasonPass() {
           </div>
         )}
       </div>
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        variant={confirmConfig.variant}
+      />
     </div>
   );
 }

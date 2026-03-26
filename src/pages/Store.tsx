@@ -59,6 +59,14 @@ export function Store() {
   };
 
   useEffect(() => {
+    if (location.pathname === '/inventory') {
+      setActiveTab('inventory');
+    } else if (location.pathname === '/store') {
+      setActiveTab('packs');
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && packOpeningStep !== 'idle') {
         setPackOpeningStep('idle');
@@ -132,9 +140,7 @@ export function Store() {
           }
           toast.success(`${data?.item_name || 'Item'} purchased!`, { icon: '✨' });
           fetchUserCosmetics();
-          
-          const { data: profileData } = await supabase.from('profiles').select('*').eq('id', profile!.id).single();
-          if (profileData) useProfileStore.getState().setProfile(profileData);
+          useProfileStore.getState().refreshProfile();
         } catch (err: any) {
           toast.error(err.message || 'Failed to buy item');
         }
@@ -151,9 +157,7 @@ export function Store() {
       }
       toast.success('Equipped!', { icon: '✨' });
       fetchUserCosmetics();
-      
-      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', profile!.id).single();
-      if (profileData) useProfileStore.getState().setProfile(profileData);
+      useProfileStore.getState().refreshProfile();
     } catch (err: any) {
       toast.error(err.message || 'Failed to equip item');
     }
@@ -164,9 +168,7 @@ export function Store() {
       const { error } = await supabase.rpc('unequip_cosmetic_type', { p_item_type: itemType });
       if (error) throw error;
       fetchUserCosmetics();
-      
-      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', profile!.id).single();
-      if (profileData) useProfileStore.getState().setProfile(profileData);
+      useProfileStore.getState().refreshProfile();
     } catch (err: any) {
       toast.error(err.message || 'Failed to unequip item');
     }
@@ -202,15 +204,7 @@ export function Store() {
             totalNew += data.new_card_count;
           }
           
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', profile.id)
-            .single();
-            
-          if (profileData) {
-            useProfileStore.getState().setProfile(profileData);
-          }
+          useProfileStore.getState().refreshProfile();
           
           setOpenedCards(allCards);
           setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
@@ -249,6 +243,8 @@ export function Store() {
           if (error) throw error;
           
           toast.success('Pack added to inventory!', { icon: '📦' });
+          fetchInventory();
+          useProfileStore.getState().refreshProfile();
         } catch (err: any) {
           toast.error(err.message || 'Failed to buy pack');
         }
@@ -270,6 +266,7 @@ export function Store() {
       if (error) throw error;
       
       fetchInventory();
+      useProfileStore.getState().refreshProfile();
       
       setOpenedCards(data.cards);
       setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
@@ -311,6 +308,7 @@ export function Store() {
       }
       
       fetchInventory();
+      useProfileStore.getState().refreshProfile();
       setOpenedCards(allCards);
       setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
       setCurrentCardIndex(0);

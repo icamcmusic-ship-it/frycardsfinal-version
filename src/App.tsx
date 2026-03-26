@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { useAuthStore } from './stores/authStore';
+import { useProfileStore } from './stores/profileStore';
 import { useThemeStore } from './stores/themeStore';
 import { useAudioStore } from './stores/audioStore';
 import { Toaster } from 'react-hot-toast';
@@ -28,6 +29,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function App() {
   const { user, initialized, setUser, setSession, setInitialized } = useAuthStore();
+  const { profile } = useProfileStore();
   const { theme, gameStyle, setGameStyle } = useThemeStore();
 
   useEffect(() => {
@@ -98,7 +100,16 @@ export default function App() {
             <Route path="/decks" element={<Decks />} />
             <Route path="/quests" element={<Quests />} />
             <Route path="/battle" element={<Battle />} />
-            <Route path="/admin" element={<Admin />} />
+            <Route 
+              path="/admin" 
+              element={
+                profile?.is_admin ? (
+                  <Admin />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              } 
+            />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/season-pass" element={<SeasonPass />} />
             <Route path="/settings" element={<Settings />} />

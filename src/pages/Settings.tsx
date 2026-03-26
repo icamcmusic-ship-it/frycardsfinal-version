@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import { useProfileStore } from '../stores/profileStore';
 import { useAudioStore } from '../stores/audioStore';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export function Settings() {
   const { profile } = useProfileStore();
@@ -21,6 +22,18 @@ export function Settings() {
   } = useAudioStore();
 
   const [resetting, setResetting] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
   const [settings, setSettings] = useState({
     low_perf_mode: false,
     notifications_enabled: true,
@@ -100,19 +113,25 @@ export function Settings() {
   };
 
   const handleReset = async () => {
-    if (!confirm('Are you sure you want to reset your account? This action is permanent.')) return;
-    
-    setResetting(true);
-    try {
-      const { error } = await supabase.rpc('reset_account');
-      if (error) throw error;
-      toast.success('Account reset successfully!');
-      window.location.reload();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to reset account');
-    } finally {
-      setResetting(false);
-    }
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Reset Account',
+      message: 'Are you sure you want to reset your account? This action is permanent.',
+      variant: 'danger',
+      onConfirm: async () => {
+        setResetting(true);
+        try {
+          const { error } = await supabase.rpc('reset_account');
+          if (error) throw error;
+          toast.success('Account reset successfully!');
+          window.location.reload();
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to reset account');
+        } finally {
+          setResetting(false);
+        }
+      }
+    });
   };
 
   const themes = [
@@ -277,6 +296,14 @@ export function Settings() {
           Reset Account
         </button>
       </div>
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        variant={confirmConfig.variant}
+      />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { CardDisplay } from '../components/CardDisplay';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { cn } from '../lib/utils';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export function Decks() {
   const [decks, setDecks] = useState<any[]>([]);
@@ -14,6 +15,18 @@ export function Decks() {
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [leaderId, setLeaderId] = useState<string | null>(null);
   const [collection, setCollection] = useState<any[]>([]);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     fetchData();
@@ -91,17 +104,24 @@ export function Decks() {
   };
 
   const handleDeleteDeck = async (deckId: string) => {
-    if (!confirm('Are you sure you want to delete this deck?')) return;
-    try {
-      const { error } = await supabase.rpc('delete_deck', {
-        p_deck_id: deckId
-      });
-      if (error) throw error;
-      toast.success('Deck deleted!');
-      fetchDecks();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to delete deck');
-    }
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Delete Deck',
+      message: 'Are you sure you want to delete this deck?',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.rpc('delete_deck', {
+            p_deck_id: deckId
+          });
+          if (error) throw error;
+          toast.success('Deck deleted!');
+          fetchDecks();
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to delete deck');
+        }
+      }
+    });
   };
 
   const toggleCardSelection = (cardId: string) => {
@@ -272,6 +292,14 @@ export function Decks() {
           ))}
         </div>
       )}
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        variant={confirmConfig.variant}
+      />
     </div>
   );
 }

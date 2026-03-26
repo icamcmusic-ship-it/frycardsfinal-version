@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star } from 'lucide-react';
+import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import { CreateListingModal } from '../components/CreateListingModal';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { CardDisplay } from '../components/CardDisplay';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export function Marketplace() {
   const { profile } = useProfileStore();
@@ -15,12 +16,15 @@ export function Marketplace() {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hasNewListings, setHasNewListings] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'all' | 'watchlist' | 'my_listings'>('all');
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [watchlistedIds, setWatchlistedIds] = useState<Set<string>>(new Set());
+  const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
   const [myListings, setMyListings] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [rarityFilter, setRarityFilter] = useState('all');
   const [elementFilter, setElementFilter] = useState('all');
@@ -29,6 +33,20 @@ export function Marketplace() {
 
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'danger'
+  });
 
   useEffect(() => {
     const expireAuctions = async () => {
@@ -39,18 +57,55 @@ export function Marketplace() {
       }
     };
     expireAuctions();
-  }, []);
+
+    // Real-time subscription for new listings
+    const channel = supabase
+      .channel('marketplace-updates')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'market_listings',
+        filter: 'status=eq.active'
+      }, () => {
+        if (activeTab === 'all') {
+          setHasNewListings(true);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
     if (activeTab === 'all') {
       fetchListings();
       fetchWatchlistedIds();
+      fetchWishlistCardIds();
     } else if (activeTab === 'watchlist') {
       fetchWatchlist();
     } else if (activeTab === 'my_listings') {
       fetchMyListings();
     }
-  }, [activeTab, rarityFilter, elementFilter, filter, sortBy, search]);
+  }, [activeTab, rarityFilter, elementFilter, filter, sortBy, debouncedSearch]);
+
+  const fetchWishlistCardIds = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_wishlist');
+      if (error) throw error;
+      setWishlistCardIds(new Set((data || []).map((item: any) => item.card_id)));
+    } catch (err) {
+      console.error('Error fetching wishlist card ids:', err);
+    }
+  };
 
   const fetchWatchlistedIds = async () => {
     try {
@@ -92,7 +147,7 @@ export function Marketplace() {
         p_rarity: rarityFilter === 'all' ? null : rarityFilter,
         p_element: elementFilter === 'all' ? null : elementFilter,
         p_listing_type: filter === 'all' ? null : filter,
-        p_search: search || null,
+        p_search: debouncedSearch || null,
         p_sort_by: sortBy
       });
       if (error) throw error;
@@ -177,34 +232,47 @@ export function Marketplace() {
   };
 
   const handleBlockUser = async (userId: string, username: string) => {
-    if (!confirm(`Are you sure you want to block ${username}? You won't see their listings anymore.`)) return;
-    
-    try {
-      const { error } = await supabase.rpc('block_user', {
-        p_blocked_user_id: userId
-      });
-      if (error) throw error;
-      
-      toast.success(`Blocked ${username}`, { icon: '🚫' });
-      fetchListings(); // Refresh to hide their listings
-    } catch (err) {
-      console.error('Error blocking user:', err);
-      toast.error('Failed to block user');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Block User?',
+      message: `Are you sure you want to block ${username}? You won't see their listings anymore.`,
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.rpc('block_user', {
+            p_blocked_user_id: userId
+          });
+          if (error) throw error;
+          
+          toast.success(`Blocked ${username}`, { icon: '🚫' });
+          fetchListings(); // Refresh to hide their listings
+        } catch (err) {
+          console.error('Error blocking user:', err);
+          toast.error('Failed to block user');
+        }
+      }
+    });
   };
 
   const handleCancelListing = async (listingId: string) => {
-    if (!confirm('Are you sure you want to cancel this listing?')) return;
-    try {
-      const { error } = await supabase.rpc('cancel_listing', {
-        p_listing_id: listingId
-      });
-      if (error) throw error;
-      toast.success('Listing cancelled!', { icon: '🗑️' });
-      fetchMyListings();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to cancel listing');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'Cancel Listing?',
+      message: 'Are you sure you want to cancel this listing?',
+      variant: 'warning',
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.rpc('cancel_listing', {
+            p_listing_id: listingId
+          });
+          if (error) throw error;
+          toast.success('Listing cancelled!', { icon: '🗑️' });
+          fetchMyListings();
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to cancel listing');
+        }
+      }
+    });
   };
 
   const handleBuy = async (listing: any) => {
@@ -219,34 +287,32 @@ export function Marketplace() {
       return;
     }
 
-    if (!confirm(`Buy ${listing.card_name} for ${listing.price} ${listing.currency}?`)) return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Confirm Purchase',
+      message: `Buy ${listing.card_name} for ${listing.price} ${listing.currency}?`,
+      variant: 'info',
+      onConfirm: async () => {
+        setBuying(listing.id);
+        try {
+          const { error } = await supabase.rpc('buy_market_listing', {
+            p_listing_id: listing.id
+          });
 
-    setBuying(listing.id);
-    try {
-      const { error } = await supabase.rpc('buy_market_listing', {
-        p_listing_id: listing.id
-      });
-
-      if (error) throw error;
-      
-      toast.success(`Successfully bought ${listing.card_name}!`, { icon: '✨' });
-      fetchListings();
-      
-      // Refresh profile to update gold balance
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', profile.id)
-        .single();
-        
-      if (profileData) {
-        useProfileStore.getState().setProfile(profileData);
+          if (error) throw error;
+          
+          toast.success(`Successfully bought ${listing.card_name}!`, { icon: '✨' });
+          fetchListings();
+          
+          // Refresh profile to update gold balance
+          await useProfileStore.getState().refreshProfile();
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to buy card');
+        } finally {
+          setBuying(null);
+        }
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to buy card');
-    } finally {
-      setBuying(null);
-    }
+    });
   };
 
   function timeLeft(expiresAt: string): string {
@@ -325,6 +391,37 @@ export function Marketplace() {
       </div>
       
       <CreateListingModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={fetchListings} />
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
+      />
+
+      {hasNewListings && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-blue-500 text-white px-6 py-3 rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-between gap-4 sticky top-[120px] z-40"
+        >
+          <div className="flex items-center gap-2 font-black uppercase italic">
+            <Sparkles className="w-5 h-5 animate-pulse" />
+            New listings are available!
+          </div>
+          <button 
+            onClick={() => {
+              setHasNewListings(false);
+              fetchListings();
+            }}
+            className="px-4 py-1 bg-white text-black font-black rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-0.5 active:translate-y-1 active:shadow-none transition-all text-sm uppercase"
+          >
+            Refresh
+          </button>
+        </motion.div>
+      )}
 
       <div className="sticky top-16 z-30 bg-[var(--bg)]/90 backdrop-blur-sm py-4 border-b-2 border-[var(--border)] -mx-4 px-4 md:-mx-8 md:px-8">
         <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-nowrap items-center">
@@ -429,7 +526,12 @@ export function Marketplace() {
                         YOUR LISTING
                       </div>
                     )}
-                    <h3 className="font-black text-[var(--text)] text-base leading-tight uppercase">{listing.card_name}</h3>
+                    <h3 className="font-black text-[var(--text)] text-base leading-tight uppercase flex items-center gap-1.5">
+                      {listing.card_name}
+                      {wishlistCardIds.has(listing.card_id) && (
+                        <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-600" title="On your wishlist!" />
+                      )}
+                    </h3>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-[10px] text-slate-500 font-bold">Seller: {listing.seller_name}</p>
                       {profile?.id !== listing.seller_id && (
@@ -553,15 +655,7 @@ export function Marketplace() {
                             toast.success('Bid placed successfully!', { icon: '🔨' });
                             
                             // Refresh profile to update gold/gems
-                            const { data: profileData } = await supabase
-                              .from('profiles')
-                              .select('*')
-                              .eq('id', profile?.id)
-                              .single();
-                              
-                            if (profileData) {
-                              useProfileStore.getState().setProfile(profileData);
-                            }
+                            await useProfileStore.getState().refreshProfile();
                             
                             fetchListings();
                           } catch (err: any) {

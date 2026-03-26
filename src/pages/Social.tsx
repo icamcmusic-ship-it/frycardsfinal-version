@@ -7,6 +7,7 @@ import { Loader2, Search, UserPlus, UserMinus, Check, X, Users, UserCheck } from
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export function Social() {
   const { profile } = useProfileStore();
@@ -16,6 +17,18 @@ export function Social() {
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [socialCounts, setSocialCounts] = useState({ followers: 0, following: 0 });
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     fetchSocialData();
@@ -49,15 +62,22 @@ export function Social() {
   };
 
   const removeFriend = async (friendId: string) => {
-    if (!window.confirm('Are you sure you want to remove this friend?')) return;
-    try {
-      const { error } = await supabase.rpc('remove_friend', { p_friend_id: friendId });
-      if (error) throw error;
-      toast.success('Friend removed');
-      fetchFriends();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to remove friend');
-    }
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Remove Friend',
+      message: 'Are you sure you want to remove this friend?',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.rpc('remove_friend', { p_friend_id: friendId });
+          if (error) throw error;
+          toast.success('Friend removed');
+          fetchFriends();
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to remove friend');
+        }
+      }
+    });
   };
 
   const fetchPendingRequests = async () => {
@@ -162,6 +182,14 @@ export function Social() {
           ))}
         </div>
       </div>
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        variant={confirmConfig.variant}
+      />
     </div>
   );
 }
