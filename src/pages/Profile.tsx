@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
-import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings as SettingsIcon, Plus, ExternalLink } from 'lucide-react';
+import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings as SettingsIcon, Plus, ExternalLink, ShoppingBag, Shirt } from 'lucide-react';
 import { cn, getAvatarUrl, getBannerUrl, getCardBackUrl } from '../lib/utils';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -79,6 +79,56 @@ export function Profile() {
       console.error('Error unblocking user:', err);
     }
   };
+
+  const [userCosmetics, setUserCosmetics] = useState<any[]>([]);
+  const [loadingCosmetics, setLoadingCosmetics] = useState(true);
+
+  const fetchUserCosmetics = async () => {
+    if (!user) return;
+    try {
+      setLoadingCosmetics(true);
+      const { data, error } = await supabase.rpc('get_user_cosmetics');
+      if (!error) {
+        setUserCosmetics(data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching cosmetics:', err);
+    } finally {
+      setLoadingCosmetics(false);
+    }
+  };
+
+  const handleEquip = async (userItemId: string) => {
+    try {
+      const { data, error } = await supabase.rpc('equip_item', { p_user_item_id: userItemId });
+      if (error || data?.success === false) {
+        toast.error(error?.message || data?.error || 'Failed to equip');
+        return;
+      }
+      toast.success('Equipped!', { icon: '✨' });
+      fetchUserCosmetics();
+      useProfileStore.getState().refreshProfile();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to equip item');
+    }
+  };
+
+  const handleUnequip = async (itemType: string) => {
+    try {
+      const { error } = await supabase.rpc('unequip_cosmetic_type', { p_item_type: itemType });
+      if (error) throw error;
+      fetchUserCosmetics();
+      useProfileStore.getState().refreshProfile();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to unequip item');
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchUserCosmetics();
+    }
+  }, [user]);
 
   const toggleBlockedSection = () => {
     if (!showBlocked) {
@@ -208,7 +258,7 @@ export function Profile() {
                           <div className="h-3 bg-slate-200 rounded-full border-2 border-slate-300 overflow-hidden">
                             <motion.div 
                               initial={{ width: 0 }}
-                              animate={{ width: `${Math.min(100, ((profile.xp || 0) / ((profile.level || 1) * 1000)) * 100)}%` }}
+                              animate={{ width: `${Math.min(100, (((profile.xp || 0) % ((profile.level || 1) * 1000)) / ((profile.level || 1) * 1000)) * 100)}%` }}
                               className="h-full bg-blue-500"
                             />
                           </div>
@@ -284,7 +334,7 @@ export function Profile() {
                     <p className="font-black mb-2 text-[var(--text)]">Select Avatar:</p>
                     <div className="flex gap-3 flex-wrap">
                       {ownedBanners.filter(b => b.item_type === 'profile_avatar').length === 0
-                        ? <p className="text-sm text-slate-500 font-bold">No avatars owned. Visit the Shop!</p>
+                        ? <p className="text-sm text-slate-500 font-bold">No avatars owned. Earn them via Season Pass!</p>
                         : ownedBanners.filter(b => b.item_type === 'profile_avatar').map(b => (
                             <button key={b.item_id}
                               onClick={() => setAvatarUrl(b.image_url)}
@@ -300,7 +350,7 @@ export function Profile() {
                     <p className="font-black mb-2 text-[var(--text)]">Select Banner:</p>
                     <div className="flex gap-3 flex-wrap">
                       {ownedBanners.filter(b => b.item_type === 'profile_banner').length === 0
-                        ? <p className="text-sm text-slate-500 font-bold">No banners owned. Visit the Shop!</p>
+                        ? <p className="text-sm text-slate-500 font-bold">No banners owned. Earn them via Season Pass!</p>
                         : ownedBanners.filter(b => b.item_type === 'profile_banner').map(b => (
                             <button key={b.item_id}
                               onClick={() => setBannerUrl(b.image_url)}
@@ -357,6 +407,155 @@ export function Profile() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Wardrobe Section */}
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] mb-8">
+        <h2 className="text-2xl font-black text-[var(--text)] mb-6 flex items-center gap-2 uppercase">
+          <ShoppingBag className="w-6 h-6 text-blue-500" />
+          Wardrobe
+        </h2>
+        
+        {loadingCosmetics ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : userCosmetics.length === 0 ? (
+          <div className="text-center py-12 bg-[var(--bg)] rounded-xl border-2 border-dashed border-[var(--border)]">
+            <p className="text-slate-500 font-bold">No cosmetics owned yet.</p>
+            <p className="text-xs text-slate-400 mt-1">Earn them from the Season Pass!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {['profile_avatar', 'banner', 'card_back'].map(type => {
+              const items = userCosmetics.filter(c => c.item_type === type);
+              const activeItem = items.find(c => c.is_equipped);
+              
+              return (
+                <div key={type} className="space-y-4">
+                  <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                    {type === 'profile_avatar' && <UserIcon className="w-4 h-4" />}
+                    {type === 'banner' && <ImageIcon className="w-4 h-4" />}
+                    {type === 'card_back' && <Shirt className="w-4 h-4" />}
+                    {type.replace('_', ' ')}s
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    {items.map(item => (
+                      <div 
+                        key={item.user_item_id}
+                        className={cn(
+                          "group relative p-3 rounded-xl border-2 transition-all flex items-center gap-3",
+                          item.is_equipped 
+                            ? "bg-blue-50 border-blue-400 shadow-[2px_2px_0px_0px_rgba(59,130,246,0.5)]" 
+                            : "bg-[var(--bg)] border-[var(--border)] hover:border-slate-400"
+                        )}
+                      >
+                        <div className="w-12 h-12 rounded-lg border-2 border-[var(--border)] overflow-hidden bg-white shrink-0">
+                          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-black text-[var(--text)] truncate uppercase">{item.name}</p>
+                          <p className="text-[10px] font-bold text-slate-500 truncate">{item.description}</p>
+                        </div>
+                        <button
+                          onClick={() => item.is_equipped ? handleUnequip(type) : handleEquip(item.user_item_id)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg font-black text-[10px] uppercase border-2 transition-all",
+                            item.is_equipped
+                              ? "bg-white text-blue-600 border-blue-400"
+                              : "bg-blue-500 text-white border-blue-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-[-2px] active:translate-y-[0px]"
+                          )}
+                        >
+                          {item.is_equipped ? 'Unequip' : 'Equip'}
+                        </button>
+                      </div>
+                    ))}
+                    {items.length === 0 && (
+                      <div className="p-4 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">No {type.replace('_', ' ')}s owned</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Wardrobe Section */}
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] mb-8">
+        <h2 className="text-2xl font-black text-[var(--text)] mb-6 flex items-center gap-2 uppercase">
+          <ShoppingBag className="w-6 h-6 text-blue-500" />
+          Wardrobe
+        </h2>
+        
+        {loadingCosmetics ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          </div>
+        ) : userCosmetics.length === 0 ? (
+          <div className="text-center py-12 bg-[var(--bg)] rounded-xl border-2 border-dashed border-[var(--border)]">
+            <p className="text-slate-500 font-bold">No cosmetics owned yet.</p>
+            <p className="text-xs text-slate-400 mt-1">Earn them from the Season Pass!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {['profile_avatar', 'profile_banner', 'card_back'].map(type => {
+              const items = userCosmetics.filter(c => c.item_type === type);
+              
+              return (
+                <div key={type} className="space-y-4">
+                  <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                    {type === 'profile_avatar' && <UserIcon className="w-4 h-4" />}
+                    {type === 'profile_banner' && <ImageIcon className="w-4 h-4" />}
+                    {type === 'card_back' && <Shirt className="w-4 h-4" />}
+                    {type.replace('profile_', '').replace('_', ' ')}s
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    {items.map(item => (
+                      <div 
+                        key={item.user_item_id}
+                        className={cn(
+                          "group relative p-3 rounded-xl border-2 transition-all flex items-center gap-3",
+                          item.is_equipped 
+                            ? "bg-blue-50 border-blue-400 shadow-[2px_2px_0px_0px_rgba(59,130,246,0.5)]" 
+                            : "bg-[var(--bg)] border-[var(--border)] hover:border-slate-400"
+                        )}
+                      >
+                        <div className="w-12 h-12 rounded-lg border-2 border-[var(--border)] overflow-hidden bg-white shrink-0">
+                          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-black text-[var(--text)] truncate uppercase">{item.name}</p>
+                          <p className="text-[10px] font-bold text-slate-500 truncate">{item.description}</p>
+                        </div>
+                        <button
+                          onClick={() => item.is_equipped ? handleUnequip(type) : handleEquip(item.user_item_id)}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg font-black text-[10px] uppercase border-2 transition-all",
+                            item.is_equipped
+                              ? "bg-white text-blue-600 border-blue-400"
+                              : "bg-blue-500 text-white border-blue-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:translate-y-[-2px] active:translate-y-[0px]"
+                          )}
+                        >
+                          {item.is_equipped ? 'Unequip' : 'Equip'}
+                        </button>
+                      </div>
+                    ))}
+                    {items.length === 0 && (
+                      <div className="p-4 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">No {type.replace('profile_', '').replace('_', ' ')}s owned</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Achievements / Showcase */}

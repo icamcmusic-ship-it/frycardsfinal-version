@@ -138,34 +138,41 @@ export function Layout() {
   }, {} as Record<string, typeof navItems>);
 
   const [nextRegen, setNextRegen] = useState<number | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const requestRef = React.useRef<number>(null);
+
+  const animate = () => {
+    if (nextRegen) {
+      const diff = Math.max(0, nextRegen - Date.now());
+      setTimeRemaining(diff);
+      
+      if (diff <= 0) {
+        fetchProfile();
+      }
+    }
+    requestRef.current = requestAnimationFrame(animate);
+  };
 
   useEffect(() => {
     if (profile && profile.energy < profile.max_energy && profile.energy_last_regen) {
       const regenTime = new Date(profile.energy_last_regen).getTime() + 15 * 60 * 1000;
       setNextRegen(regenTime);
-      
-      const timer = setInterval(() => {
-        if (Date.now() >= regenTime) {
-          if (profile) {
-            setProfile({ ...profile, energy: Math.min(profile.energy + 1, profile.max_energy) });
-          }
-          fetchProfile();
-        } else {
-          setNextRegen(regenTime); // Force re-render for countdown
-        }
-      }, 1000);
-      return () => clearInterval(timer);
+      requestRef.current = requestAnimationFrame(animate);
     } else {
       setNextRegen(null);
+      setTimeRemaining(0);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
     }
-  }, [profile?.energy, profile?.energy_last_regen, profile?.max_energy, fetchProfile, profile?.id]);
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+    };
+  }, [profile?.energy, profile?.energy_last_regen, profile?.max_energy, fetchProfile]);
 
   const formatRegenTime = () => {
-    if (!nextRegen) return null;
-    const diff = Math.max(0, nextRegen - Date.now());
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
+    if (!nextRegen || timeRemaining <= 0) return null;
+    const h = Math.floor(timeRemaining / 3600000);
+    const m = Math.floor((timeRemaining % 3600000) / 60000);
+    const s = Math.floor((timeRemaining % 60000) / 1000);
     
     if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     return `${m}:${s.toString().padStart(2, '0')}`;

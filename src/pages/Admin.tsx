@@ -33,7 +33,7 @@ export function Admin() {
           query = supabase.from('cards').select('*').order('rarity', { ascending: true });
           break;
         case 'packs':
-          query = supabase.from('pack_types').select('*').order('price_gold', { ascending: true });
+          query = supabase.from('pack_types').select('*').order('cost_gold', { ascending: true });
           break;
         case 'quests':
           query = supabase.from('quest_templates').select('*');

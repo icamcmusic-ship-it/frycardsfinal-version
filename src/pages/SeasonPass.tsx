@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader2, Gift, Lock, Check, Gem, Coins, Zap } from 'lucide-react';
+import { Loader2, Gift, Lock, Check, Gem, Coins, Zap, Shirt, Image, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
@@ -12,6 +12,9 @@ const REWARD_ICONS: Record<string, React.ReactNode> = {
   gems:  <Gem className="w-5 h-5 text-emerald-500" />,
   xp:    <Zap className="w-5 h-5 text-blue-500" />,
   pack:  <Gift className="w-5 h-5 text-purple-500" />,
+  card_back: <Shirt className="w-5 h-5 text-indigo-500" />,
+  banner: <Image className="w-5 h-5 text-pink-500" />,
+  profile_avatar: <User className="w-5 h-5 text-orange-500" />,
 };
 
 export function SeasonPass() {

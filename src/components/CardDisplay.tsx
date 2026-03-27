@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { cn, getRarityStyles } from '../lib/utils';
-import { Sword, Shield, Heart, Sparkles } from 'lucide-react';
+import { Sword, Shield, Heart, Sparkles, Lock, Unlock, Star } from 'lucide-react';
 
 interface CardDisplayProps {
   card: {
@@ -22,13 +22,28 @@ interface CardDisplayProps {
     ability_text?: string;
     ability_type?: string;
     author?: string;
+    user_card_id?: string;
+    is_locked?: boolean;
   };
   showQuantity?: boolean;
   showNewBadge?: boolean;
   className?: string;
+  onToggleLock?: () => void;
+  onToggleWishlist?: () => void;
+  isWishlisted?: boolean;
+  activeTab?: 'collection' | 'wishlist' | 'sets';
 }
 
-export function CardDisplay({ card, showQuantity = true, showNewBadge = true, className }: CardDisplayProps) {
+export function CardDisplay({ 
+  card, 
+  showQuantity = true, 
+  showNewBadge = true, 
+  className,
+  onToggleLock,
+  onToggleWishlist,
+  isWishlisted,
+  activeTab
+}: CardDisplayProps) {
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
@@ -61,21 +76,7 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
     'Common':     'border-slate-400',
   };
 
-  const elementGradients: Record<string, string> = {
-    'Fire': 'from-red-900/90 via-orange-600/50 to-transparent',
-    'Water': 'from-blue-900/90 via-cyan-600/50 to-transparent',
-    'Earth': 'from-stone-900/90 via-emerald-900/50 to-transparent',
-    'Air': 'from-slate-800/90 via-indigo-400/30 to-transparent',
-    'Light': 'from-yellow-600/90 via-amber-200/40 to-transparent',
-    'Dark': 'from-purple-950/90 via-slate-900/70 to-transparent',
-  };
-
   const border = rarityBorder[card.rarity] ?? rarityBorder['Common'];
-  const elementGradient = elementGradients[card.element || ''] ?? 'from-black/90 via-black/50 to-transparent';
-
-  const isBattle = (card.hp !== undefined || card.attack !== undefined || card.defense !== undefined) && !['Location', 'Artifact', 'Event', 'Leader'].includes(card.card_type || '');
-  const isSpell = (card.ability_text || (card.keywords && card.keywords.length > 0)) && !isBattle;
-  const isLore = (card.flavor_text || (card as any).description) && !isBattle && !isSpell;
 
   return (
     <div 
@@ -105,16 +106,6 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
             referrerPolicy="no-referrer"
             onError={(e) => { e.currentTarget.src = '/fallback-card.png'; }} />
         )}
-
-        {/* Divine Frame Break (Top half) */}
-        {card.rarity === 'Divine' && (
-          <img 
-            src={card.image_url} 
-            alt="Pop out"
-            className="absolute inset-0 w-full h-full object-cover scale-105 opacity-0 group-hover:opacity-100 group-hover:scale-115 transition-all duration-500 z-50 pointer-events-none [clip-path:inset(0_0_30%_0)]" 
-            referrerPolicy="no-referrer"
-          />
-        )}
       </div>
 
       {/* Hover Info Panel - Slides up from bottom */}
@@ -122,48 +113,38 @@ export function CardDisplay({ card, showQuantity = true, showNewBadge = true, cl
         <div className={cn(
           "pt-12 pb-4 px-4 bg-gradient-to-t from-black/95 via-black/80 to-transparent",
         )}>
-          <h4 className="text-white font-black text-lg uppercase leading-tight mb-1">{card.name}</h4>
-          <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-2">
-            {card.card_type} {card.element ? `· ${card.element}` : ''}
-          </p>
-          
-          {isBattle && (
-            <div className="flex gap-3 mb-3">
-              <div className="flex items-center gap-1">
-                <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                <span className="text-white font-black text-xs">{card.hp}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Sword className="w-3 h-3 text-orange-500" />
-                <span className="text-white font-black text-xs">{card.attack}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Shield className="w-3 h-3 text-blue-500" />
-                <span className="text-white font-black text-xs">{card.defense}</span>
-              </div>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-white font-black text-lg uppercase leading-tight">{card.name}</h4>
+            <div className="flex gap-2">
+              {onToggleLock && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleLock(); }}
+                  className={cn(
+                    "p-1.5 rounded-lg border border-white/20 transition-transform active:scale-95",
+                    card.is_locked ? "bg-red-500/80 text-white" : "bg-white/10 text-white hover:bg-white/20"
+                  )}
+                >
+                  {card.is_locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                </button>
+              )}
+              {onToggleWishlist && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleWishlist(); }}
+                  className={cn(
+                    "p-1.5 rounded-lg border border-white/20 transition-transform active:scale-95",
+                    isWishlisted ? "bg-yellow-500/80 text-white" : "bg-white/10 text-white hover:bg-white/20"
+                  )}
+                >
+                  <Star className={cn("w-3 h-3", isWishlisted && "fill-current")} />
+                </button>
+              )}
             </div>
-          )}
+          </div>
 
           {(card.flavor_text || (card as any).description) && (
             <p className="text-gray-300 text-[10px] italic leading-relaxed line-clamp-3">
               {card.flavor_text || (card as any).description}
             </p>
-          )}
-
-          {card.ability_text && (
-            <div className="mt-2 pt-2 border-t border-white/10">
-              <p className="text-white/90 text-[10px] leading-tight font-medium line-clamp-3">
-                {card.ability_text}
-              </p>
-            </div>
-          )}
-
-          {card.author && (
-            <div className="mt-1 pt-1 border-t border-white/5">
-              <p className="text-white/40 text-[8px] font-bold uppercase tracking-widest">
-                Art by {card.author}
-              </p>
-            </div>
           )}
         </div>
       </div>
