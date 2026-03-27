@@ -75,6 +75,7 @@ export function Layout() {
     { name: 'Collection', path: '/collection', icon: LayoutGrid, category: 'Main' },
     { name: 'Store', path: '/store', icon: Store, category: 'Main' },
     { name: 'Market', path: '/marketplace', icon: ShoppingBag, category: 'Main' },
+    { name: 'Notifications', path: '/notifications', icon: Bell, category: 'Main' },
     { name: 'Profile', path: '/profile', icon: UserIcon, category: 'Main' },
     
     { name: 'Battle', path: '/battle', icon: Sword, category: 'Gameplay' },
@@ -279,12 +280,17 @@ export function Layout() {
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={cn(
-                "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors",
+                "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative",
                 isMobileMenuOpen ? "text-blue-600 font-bold" : "text-[var(--text)] opacity-70 hover:opacity-100"
               )}
             >
               {isMobileMenuOpen ? <X className="w-5 h-5 text-blue-600" /> : <Menu className="w-5 h-5" />}
               <span className="text-[10px]">More</span>
+              {!isMobileMenuOpen && unreadCount > 0 && (
+                <span className="absolute top-2 right-4 bg-red-500 text-white text-[8px] font-black w-3 h-3 rounded-full flex items-center justify-center border border-[var(--border)]">
+                  {unreadCount > 9 ? '!' : unreadCount}
+                </span>
+              )}
             </button>
           </div>
         </nav>

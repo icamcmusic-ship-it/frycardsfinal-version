@@ -54,7 +54,9 @@ export function Decks() {
       p_rarity: null,
       p_limit: 1000,
       p_sort_by: 'name',
-      p_element_type: null
+      p_element_type: null,
+      p_is_foil: null,
+      p_search: null
     });
     if (error) {
       console.error('Error fetching collection:', error);

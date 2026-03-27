@@ -45,6 +45,7 @@ export function Store() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [useGems, setUseGems] = useState(false);
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
+  const [lastPackResults, setLastPackResults] = useState<{ cards: any[], summary: any } | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -229,6 +230,7 @@ export function Store() {
           }, 1500);
 
           fetchPacks(); // Refresh pity counter
+          setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
 
         } catch (err: any) {
           toast.error(err.message || 'Failed to open pack');
@@ -295,6 +297,7 @@ export function Store() {
       }, 1500);
 
       fetchPacks(); // Refresh pity counter
+      setLastPackResults({ cards: data.cards, summary: { xp_gained: data.xp_gained, new_card_count: data.new_card_count } });
 
     } catch (err: any) {
       toast.error(err.message || 'Failed to open pack');
@@ -341,6 +344,7 @@ export function Store() {
       }, 1500);
 
       fetchPacks();
+      setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
     } catch (err: any) {
       toast.error(err.message || 'Failed to open all packs');
       setOpening(false);
@@ -442,7 +446,40 @@ export function Store() {
       )}
 
       {activeTab === 'packs' && (
-        packs.length === 0 ? (
+        <div className="space-y-8">
+          {lastPackResults && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-black uppercase text-[var(--text)] flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-yellow-500" />
+                  Last Pack Results
+                </h2>
+                <button 
+                  onClick={() => setLastPackResults(null)}
+                  className="text-xs font-bold text-slate-400 hover:text-red-500 uppercase"
+                >
+                  Dismiss
+                </button>
+              </div>
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 mb-4">
+                {lastPackResults.cards.map((card, i) => (
+                  <div key={i} className="aspect-[5/7] relative group cursor-pointer" onClick={() => setSelectedCard(card)}>
+                    <CardDisplay card={card} showQuantity={false} showNewBadge={false} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-4 text-xs font-black uppercase">
+                <span className="text-blue-500">+{lastPackResults.summary.xp_gained} XP</span>
+                <span className="text-yellow-500">{lastPackResults.summary.new_card_count} New Cards</span>
+              </div>
+            </motion.div>
+          )}
+
+          {packs.length === 0 ? (
           <EmptyState 
             icon={PackageOpen}
             title="No packs available"
@@ -618,9 +655,11 @@ export function Store() {
             })}
           </div>
         )
-      )}
+      }
+    </div>
+  )}
 
-      {activeTab === 'banners' && (
+    {activeTab === 'banners' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {shopItems.filter(i => i.item_type === 'profile_banner').map((item) => (
             <div key={item.id} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] flex flex-col">

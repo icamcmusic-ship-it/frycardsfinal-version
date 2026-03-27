@@ -84,7 +84,16 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
   const fetchCollection = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.rpc('get_user_collection');
+      const { data, error } = await supabase.rpc('get_user_collection', {
+        p_user_id: null,
+        p_rarity: null,
+        p_sort_by: 'name',
+        p_element_type: null,
+        p_is_foil: null,
+        p_search: null,
+        p_limit: 1000,
+        p_offset: 0
+      });
       if (error) throw error;
       setCollection(data || []);
     } catch (err) {

@@ -859,25 +859,33 @@ export function Marketplace() {
                             return;
                           }
                           
-                          setBuying(listing.id);
-                          try {
-                            const { error } = await supabase.rpc('place_bid', {
-                              p_listing_id: listing.id,
-                              p_bid_gold: listing.currency === 'gold' ? bidAmount : 0,
-                              p_bid_gems: listing.currency === 'gems' ? bidAmount : 0
-                            });
-                            if (error) throw error;
-                            toast.success('Bid placed successfully!', { icon: '🔨' });
-                            
-                            // Refresh profile to update gold/gems
-                            await useProfileStore.getState().refreshProfile();
-                            
-                            fetchListings();
-                          } catch (err: any) {
-                            toast.error(err.message || 'Failed to place bid');
-                          } finally {
-                            setBuying(null);
-                          }
+                          setConfirmModal({
+                            isOpen: true,
+                            title: 'Confirm Bid',
+                            message: `Place a bid of ${bidAmount} ${listing.currency} on ${listing.card_name}?`,
+                            variant: 'info',
+                            onConfirm: async () => {
+                              setBuying(listing.id);
+                              try {
+                                const { error } = await supabase.rpc('place_bid', {
+                                  p_listing_id: listing.id,
+                                  p_bid_gold: listing.currency === 'gold' ? bidAmount : 0,
+                                  p_bid_gems: listing.currency === 'gems' ? bidAmount : 0
+                                });
+                                if (error) throw error;
+                                toast.success('Bid placed successfully!', { icon: '🔨' });
+                                
+                                // Refresh profile to update gold/gems
+                                await useProfileStore.getState().refreshProfile();
+                                
+                                fetchListings();
+                              } catch (err: any) {
+                                toast.error(err.message || 'Failed to place bid');
+                              } finally {
+                                setBuying(null);
+                              }
+                            }
+                          });
                         }}
                         disabled={buying === listing.id || profile?.id === listing.seller_id}
                         className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-2 border-[var(--border)] transition-transform active:translate-y-1 shadow-[2px_2px_0px_0px_var(--border)] flex items-center justify-center whitespace-nowrap"

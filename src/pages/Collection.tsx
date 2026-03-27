@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
 import { Loader2, Search, Filter, Lock, Unlock, Zap, LayoutGrid, Coins, Star, PackageOpen, Check } from 'lucide-react';
@@ -15,6 +16,7 @@ import { ConfirmModal } from '../components/ConfirmModal';
 
 export function Collection() {
   const { profile } = useProfileStore();
+  const navigate = useNavigate();
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -128,6 +130,8 @@ export function Collection() {
       setOffset(targetOffset + fetchedCards.length);
 
       // Mark unseen cards as seen after 5 seconds
+      // NOTE: We use c.id (card definition ID) here because the mark_cards_seen RPC 
+      // filters by card_id. This marks all instances of this card type as seen.
       const unseenCardIds = fetchedCards.filter((c: any) => c.is_new === true).map((c: any) => c.id);
       if (unseenCardIds.length > 0) {
         setTimeout(async () => {
@@ -562,13 +566,36 @@ export function Collection() {
       )}
 
       {filteredCards.length === 0 && (
-        <EmptyState 
-          icon={PackageOpen}
-          title={activeTab === 'collection' ? 'Collection is empty' : 'Wishlist is empty'}
-          description={activeTab === 'collection' ? 'Your collection is looking a little empty! Head to the Store to open some packs.' : 'Add items to your wishlist to track them'}
-          ctaText={activeTab === 'collection' ? 'Go to Store' : 'Go to Marketplace'}
-          ctaPath={activeTab === 'collection' ? '/store' : '/marketplace'}
-        />
+        <div className="flex flex-col items-center justify-center py-12 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[8px_8px_0px_0px_var(--border)]">
+          <PackageOpen className="w-16 h-16 text-slate-300 mb-4" />
+          <h3 className="text-2xl font-black text-[var(--text)] uppercase mb-2">
+            {activeTab === 'collection' ? (filter !== 'all' || showFoilsOnly ? `No ${showFoilsOnly ? 'Foil' : filter} cards found` : 'Collection is empty') : 'Wishlist is empty'}
+          </h3>
+          <p className="text-slate-500 font-bold mb-6 max-w-md text-center">
+            {activeTab === 'collection' ? (filter !== 'all' || showFoilsOnly ? 'Try adjusting your filters to find more cards.' : 'Your collection is looking a little empty! Head to the Store to open some packs.') : 'Add items to your wishlist to track them'}
+          </p>
+          <div className="flex gap-4">
+            {(filter !== 'all' || showFoilsOnly) && activeTab === 'collection' && (
+              <button
+                onClick={() => {
+                  setFilter('all');
+                  setShowFoilsOnly(false);
+                  setElementType('all');
+                  setSearch('');
+                }}
+                className="px-6 py-2 bg-[var(--text)] text-[var(--surface)] font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-transform active:translate-y-1"
+              >
+                Clear Filters
+              </button>
+            )}
+            <button
+              onClick={() => navigate(activeTab === 'collection' ? '/store' : '/marketplace')}
+              className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-transform active:translate-y-1"
+            >
+              {activeTab === 'collection' ? 'Go to Store' : 'Go to Marketplace'}
+            </button>
+          </div>
+        </div>
       )}
 
       {selectedCard && (

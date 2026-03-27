@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
 import { ClickableUsername } from '../components/ClickableUsername';
-import { Loader2, ArrowRightLeft, Check, X, Trash2, Plus, Handshake } from 'lucide-react';
+import { Loader2, ArrowRightLeft, Check, X, Trash2, Plus, Handshake, Coins, Gem } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
 import { EmptyState } from '../components/EmptyState';
@@ -23,6 +23,8 @@ export function Trades() {
   const [requestedIds, setRequestedIds] = useState<string[]>([]);
   const [offeredGold, setOfferedGold] = useState(0);
   const [offeredGems, setOfferedGems] = useState(0);
+  const [requestedGold, setRequestedGold] = useState(0);
+  const [requestedGems, setRequestedGems] = useState(0);
   const [tradeMessage, setTradeMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -71,6 +73,7 @@ export function Trades() {
       p_sort_by: 'name',
       p_limit: 500,
       p_element_type: null,
+      p_is_foil: null,
       p_search: null,
       p_offset: 0
     });
@@ -204,53 +207,97 @@ export function Trades() {
               .map(f => <option key={f.id} value={f.id}>{f.username}</option>)
             }
           </select>
-          <div>
-            <p className="font-black mb-2 text-[var(--text)]">Cards you're offering (click to select):</p>
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto p-1">
-              {myCards.map(c => (
-                <button key={c.id} onClick={() => toggleCard(c.id, offeredIds, setOfferedIds)}
-                  className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", offeredIds.includes(c.id) ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-[var(--border)]")}>
-                  <CardDisplay card={c} showQuantity={false} showNewBadge={false} />
-                  <p className="text-[10px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {receiverId && (
-            <div>
-              <p className="font-black mb-2 text-[var(--text)]">Cards you're requesting (click to select):</p>
-              {loadingReceiverCards ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                </div>
-              ) : receiverCards.length === 0 ? (
-                <p className="text-sm text-slate-500 font-bold italic py-4 text-center bg-[var(--bg)] rounded-xl border-2 border-dashed border-[var(--border)]">
-                  This user has no public cards available for trade.
-                </p>
-              ) : (
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto p-1">
-                  {receiverCards.map(c => (
-                    <button key={c.id} onClick={() => toggleCard(c.id, requestedIds, setRequestedIds)}
-                      className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", requestedIds.includes(c.id) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>
-                      <CardDisplay card={cardDataToDisplay(c)} showQuantity={false} showNewBadge={false} />
-                      <p className="text-[10px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4 p-4 bg-blue-50/50 border-2 border-blue-200 rounded-xl">
+              <h3 className="font-black uppercase text-blue-700 flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 rotate-180" />
+                You Send
+              </h3>
+              <div>
+                <p className="font-black mb-2 text-sm text-slate-600">Cards to offer:</p>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-lg border-2 border-blue-100">
+                  {myCards.map(c => (
+                    <button key={c.id} onClick={() => toggleCard(c.id, offeredIds, setOfferedIds)}
+                      className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", offeredIds.includes(c.id) ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-[var(--border)]")}>
+                      <CardDisplay card={c} showQuantity={false} showNewBadge={false} />
+                      <p className="text-[8px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
                     </button>
                   ))}
                 </div>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="font-black block mb-1 text-xs text-slate-600">Gold to give:</label>
+                  <div className="relative">
+                    <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-600" />
+                    <input type="number" min={0} value={offeredGold} onChange={e => setOfferedGold(Number(e.target.value))}
+                      className="w-full border-2 border-blue-200 pl-9 pr-3 py-2 rounded-lg font-bold bg-white text-sm" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <label className="font-black block mb-1 text-xs text-slate-600">Gems to give:</label>
+                  <div className="relative">
+                    <Gem className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+                    <input type="number" min={0} value={offeredGems} onChange={e => setOfferedGems(Number(e.target.value))}
+                      className="w-full border-2 border-blue-200 pl-9 pr-3 py-2 rounded-lg font-bold bg-white text-sm" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-4 bg-emerald-50/50 border-2 border-emerald-200 rounded-xl">
+              <h3 className="font-black uppercase text-emerald-700 flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4" />
+                You Receive
+              </h3>
+              {receiverId ? (
+                <>
+                  <div>
+                    <p className="font-black mb-2 text-sm text-slate-600">Cards to request:</p>
+                    {loadingReceiverCards ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+                      </div>
+                    ) : receiverCards.length === 0 ? (
+                      <p className="text-xs text-slate-500 font-bold italic py-4 text-center bg-white rounded-lg border-2 border-dashed border-emerald-100">
+                        This user has no public cards.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-lg border-2 border-emerald-100">
+                        {receiverCards.map(c => (
+                          <button key={c.id} onClick={() => toggleCard(c.id, requestedIds, setRequestedIds)}
+                            className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", requestedIds.includes(c.id) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>
+                            <CardDisplay card={cardDataToDisplay(c)} showQuantity={false} showNewBadge={false} />
+                            <p className="text-[8px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="font-black block mb-1 text-xs text-slate-600">Gold to ask:</label>
+                      <div className="relative">
+                        <Coins className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-yellow-600" />
+                        <input type="number" min={0} value={requestedGold} onChange={e => setRequestedGold(Number(e.target.value))}
+                          className="w-full border-2 border-emerald-200 pl-9 pr-3 py-2 rounded-lg font-bold bg-white text-sm" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <label className="font-black block mb-1 text-xs text-slate-600">Gems to ask:</label>
+                      <div className="relative">
+                        <Gem className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+                        <input type="number" min={0} value={requestedGems} onChange={e => setRequestedGems(Number(e.target.value))}
+                          className="w-full border-2 border-emerald-200 pl-9 pr-3 py-2 rounded-lg font-bold bg-white text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="h-full flex items-center justify-center py-12 text-slate-400 font-bold italic text-sm text-center">
+                  Select a friend to see their cards
+                </div>
               )}
-            </div>
-          )}
-          <div className="flex gap-4">
-            <div>
-              <label className="font-black block mb-1 text-[var(--text)]">Gold to offer:</label>
-              <input type="number" min={0} value={offeredGold} onChange={e => setOfferedGold(Number(e.target.value))}
-                className="border-4 border-[var(--border)] p-3 rounded-xl font-bold w-40 bg-[var(--bg)] text-[var(--text)]" />
-            </div>
-            <div>
-              <label className="font-black block mb-1 text-[var(--text)]">Gems to offer:</label>
-              <input type="number" min={0} value={offeredGems} onChange={e => setOfferedGems(Number(e.target.value))}
-                className="border-4 border-[var(--border)] p-3 rounded-xl font-bold w-40 bg-[var(--bg)] text-[var(--text)]" />
             </div>
           </div>
           <div>

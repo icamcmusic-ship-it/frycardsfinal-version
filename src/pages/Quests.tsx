@@ -123,8 +123,8 @@ export function Quests() {
     );
   }
 
-  const activeQuests = quests.filter(q => !q.claimed);
-  const completedQuests = quests.filter(q => q.claimed);
+  const activeQuests = quests.filter(q => q.status !== 'claimed');
+  const completedQuests = quests.filter(q => q.status === 'claimed');
 
   const activeDaily = dailyMissions.filter(m => !m.is_claimed);
   const completedDaily = dailyMissions.filter(m => m.is_claimed);
@@ -309,7 +309,8 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
 }
 
 function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, onClaim: () => void | Promise<void>, claiming: boolean }) {
-  const isCompleted = quest.progress >= quest.target_value;
+  const isClaimed = quest.status === 'claimed';
+  const isCompleted = quest.status === 'completed' || isClaimed;
   const progressPercent = Math.min(100, (quest.progress / quest.target_value) * 100);
 
   return (
@@ -318,13 +319,13 @@ function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, 
       animate={{ opacity: 1, y: 0 }}
       className={cn(
         "bg-[var(--surface)] border-4 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-[6px_6px_0px_0px_var(--border)] transition-all",
-        quest.claimed ? "border-slate-300 bg-slate-50" : 
+        isClaimed ? "border-slate-300 bg-slate-50" : 
         isCompleted ? "border-emerald-500 bg-emerald-50" : "border-[var(--border)]"
       )}
     >
       <div className="flex-1 w-full">
         <div className="flex items-center gap-3 mb-2">
-          {quest.claimed ? (
+          {isClaimed ? (
             <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           ) : isCompleted ? (
             <Gift className="w-6 h-6 text-emerald-500 animate-bounce" />
@@ -335,7 +336,7 @@ function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, 
         </div>
         <p className="text-slate-600 font-bold mb-4">{quest.description}</p>
         
-        {!quest.claimed && (
+        {!isClaimed && (
           <div className="space-y-2">
             <div className="flex justify-between text-sm font-black uppercase">
               <span className="text-slate-500">Progress</span>
@@ -371,7 +372,7 @@ function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, 
           </div>
         </div>
 
-        {!quest.claimed && (
+        {!isClaimed && (
           <button
             onClick={onClaim}
             disabled={!isCompleted || claiming}
@@ -386,7 +387,7 @@ function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, 
           </button>
         )}
         
-        {quest.claimed && (
+        {isClaimed && (
           <div className="w-full py-2 px-4 rounded-xl font-black uppercase border-2 border-emerald-200 bg-emerald-100 text-emerald-600 flex items-center justify-center">
             Claimed
           </div>
