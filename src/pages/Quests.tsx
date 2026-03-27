@@ -15,6 +15,15 @@ export function Quests() {
 
   useEffect(() => {
     fetchAll();
+    
+    // Periodic refresh every 30s when visible
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchAll();
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [profile]);
 
   const fetchAll = async () => {
@@ -146,7 +155,17 @@ export function Quests() {
             <Zap className="w-6 h-6 text-yellow-500 fill-yellow-500" />
             Daily Missions
           </h2>
-          <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200 uppercase">Resets Daily</span>
+          <div className="flex items-center gap-3">
+            <span className={cn(
+              "text-xs font-black px-3 py-1 rounded-full border-2 uppercase",
+              completedDaily.length === dailyMissions.length && dailyMissions.length > 0
+                ? "bg-emerald-100 text-emerald-600 border-emerald-200"
+                : "bg-blue-100 text-blue-600 border-blue-200"
+            )}>
+              {completedDaily.length} / {dailyMissions.length} Done
+            </span>
+            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200 uppercase">Resets Daily</span>
+          </div>
         </div>
         
         <div className="grid gap-4">
@@ -313,6 +332,13 @@ function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, 
   const isCompleted = quest.status === 'completed' || isClaimed;
   const progressPercent = Math.min(100, (quest.current_value / quest.target_value) * 100);
 
+  const difficultyColors: Record<string, string> = {
+    easy: 'bg-green-200 text-green-800 border-green-400',
+    medium: 'bg-yellow-200 text-yellow-800 border-yellow-400',
+    hard: 'bg-red-200 text-red-800 border-red-400',
+    legendary: 'bg-purple-200 text-purple-800 border-purple-400 animate-pulse',
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -332,7 +358,13 @@ function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, 
           ) : (
             <Target className="w-6 h-6 text-blue-500" />
           )}
-          <h3 className="text-xl font-black uppercase text-[var(--text)]">{quest.title}</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-xl font-black uppercase text-[var(--text)]">{quest.title}</h3>
+            <span className={cn("text-[9px] font-black uppercase px-2 py-0.5 rounded-full border-2", 
+              difficultyColors[quest.difficulty ?? 'easy'])}>
+              {quest.difficulty ?? 'easy'}
+            </span>
+          </div>
         </div>
         <p className="text-slate-600 font-bold mb-4">{quest.description}</p>
         

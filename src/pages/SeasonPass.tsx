@@ -129,8 +129,9 @@ export function SeasonPass() {
           <p className="text-2xl font-black text-[var(--text)]">Level {userLevel}</p>
           <p className="font-mono font-bold text-slate-500">
             {xpToNext 
-              ? `${(userXP - prevXP).toLocaleString()} / ${(xpToNext - prevXP).toLocaleString()} XP (${Math.floor(progressPct)}%)` 
+              ? `${(userXP - prevXP).toLocaleString()} / ${(xpToNext - prevXP).toLocaleString()} XP` 
               : 'MAX LEVEL'}
+            {xpToNext && <span className="ml-2 text-xs font-bold text-slate-400">({Math.round(progressPct)}%)</span>}
           </p>
         </div>
         <div className="w-full h-4 bg-[var(--bg)] rounded-full border-2 border-[var(--border)] overflow-hidden">
@@ -148,10 +149,14 @@ export function SeasonPass() {
 
           return (
             <div key={tier.id}
-              className={cn("flex justify-between items-center p-5 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[4px_4px_0px_0px_var(--border)] relative overflow-hidden",
+              className={cn("flex justify-between items-center p-5 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[4px_4px_0px_0px_var(--border)] relative overflow-visible",
                 (isLocked || isClaimed) && "opacity-50",
                 isPremiumTier && !isPremium && "border-yellow-500/50 bg-yellow-50/10"
               )}>
+              
+              <div className="absolute -top-3 left-4 bg-[var(--border)] text-white font-black text-[10px] px-2 py-0.5 rounded-full z-20">
+                Tier {tier.tier}
+              </div>
               
               {isPremiumTier && (
                 <div className="absolute top-0 right-0 bg-yellow-400 text-black px-2 py-0.5 font-black text-[8px] uppercase rounded-bl-lg border-l-2 border-b-2 border-black z-10 flex items-center gap-1">
@@ -170,6 +175,11 @@ export function SeasonPass() {
                     {REWARD_ICONS[tier.reward_type] ?? <Gift className="w-5 h-5" />}
                   </div>
                   <div>
+                    {(tier.reward_type === 'card_back' || tier.reward_type === 'banner' || tier.reward_type === 'profile_banner') && (
+                      <span className="text-[8px] font-black text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded border border-yellow-400 uppercase mb-1 inline-block">
+                        ✨ Exclusive
+                      </span>
+                    )}
                     <h3 className="font-black text-base uppercase text-[var(--text)]">{tier.reward_label}</h3>
                     <p className="text-xs font-bold text-slate-500">Reach Level {tier.tier}</p>
                   </div>

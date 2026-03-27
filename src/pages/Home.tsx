@@ -11,9 +11,7 @@ export function Home() {
   const { profile } = useProfileStore();
   const [quests, setQuests] = useState<any[]>([]);
   const [loadingQuests, setLoadingQuests] = useState(true);
-  const [currentEnergy, setCurrentEnergy] = useState(() => {
-    return Number(profile?.energy || 0);
-  });
+  const [currentEnergy, setCurrentEnergy] = useState(0);
   const [nextRegen, setNextRegen] = useState<number | null>(null);
 
   const [stats, setStats] = useState<{ unique_cards: number; total_possible: number; total_cards: number } | null>(null);
@@ -28,46 +26,25 @@ export function Home() {
   useEffect(() => {
     if (profile) {
       fetchQuests();
-      fetchEnergy();
       
       supabase.rpc('get_my_collection_stats').then(({ data }) => {
         if (data) setStats(data);
       });
-      
-      const interval = setInterval(fetchEnergy, 5 * 60 * 1000); // Poll every 5 mins
-      return () => clearInterval(interval);
     }
   }, [profile]);
 
   useEffect(() => {
-    if (currentEnergy < (profile?.max_energy ?? 20) && profile?.energy_last_regen) {
-      const regenTime = new Date(profile.energy_last_regen).getTime() + 15 * 60 * 1000;
-      setNextRegen(regenTime);
+    if (profile) {
+      setCurrentEnergy(profile.energy);
       
-      const timer = setInterval(() => {
-        if (Date.now() >= regenTime) {
-          fetchEnergy();
-        } else {
-          setNextRegen(regenTime); // Force re-render for countdown
-        }
-      }, 1000);
-      return () => clearInterval(timer);
-    } else {
-      setNextRegen(null);
-    }
-  }, [currentEnergy, profile?.energy_last_regen, profile?.max_energy]);
-
-  const fetchEnergy = async () => {
-    if (!profile) return;
-    try {
-      const { data, error } = await supabase.rpc('get_current_energy', { p_user_id: profile.id });
-      if (!error && data !== null) {
-        setCurrentEnergy(data);
+      if (profile.energy < profile.max_energy && profile.energy_last_regen) {
+        const regenTime = new Date(profile.energy_last_regen).getTime() + 15 * 60 * 1000;
+        setNextRegen(regenTime);
+      } else {
+        setNextRegen(null);
       }
-    } catch (err) {
-      console.error('Error fetching energy:', err);
     }
-  };
+  }, [profile?.energy, profile?.energy_last_regen, profile?.max_energy]);
 
   const fetchQuests = async () => {
     try {
@@ -103,7 +80,7 @@ export function Home() {
         toast.success('Quest reward claimed!');
       }
       
-      fetchQuests();
+      await fetchQuests();
       
       // Refresh profile to update gold/gems
       await useProfileStore.getState().refreshProfile();

@@ -59,10 +59,10 @@ export function Collection() {
   const PAGE_SIZE = 20;
 
   useEffect(() => {
-    if (activeTab === 'sets') {
+    if (profile) {
       fetchSets();
     }
-  }, [activeTab]);
+  }, [profile]);
 
   const fetchSets = async () => {
     setLoadingSets(true);
@@ -134,11 +134,14 @@ export function Collection() {
       const rarityForApi = filter === 'all' ? null : 
         filter.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-');
         
+      const capitalizedElement = elementType === 'all' ? null : 
+        elementType.charAt(0).toUpperCase() + elementType.slice(1);
+
       const { data, error } = await supabase.rpc('get_user_collection', {
         p_user_id: profile?.id,
         p_rarity: rarityForApi,
         p_sort_by: sortBy,
-        p_element_type: elementType === 'all' ? null : elementType,
+        p_element_type: capitalizedElement,
         p_is_foil: showFoilsOnly || null,
         p_limit: PAGE_SIZE,
         p_offset: targetOffset,
@@ -400,6 +403,11 @@ export function Collection() {
               {stats.foil_cards > 0 && (
                 <p className="text-xs font-black text-yellow-600 mt-1 uppercase tracking-wider">✨ {stats.foil_cards} Foil Cards</p>
               )}
+              {sets.filter(s => s.is_complete && !s.is_claimed).length > 0 && (
+                <p className="text-xs font-black text-emerald-600 mt-1 uppercase tracking-wider flex items-center gap-1">
+                  <Trophy className="w-3 h-3" /> {sets.filter(s => s.is_complete && !s.is_claimed).length} Sets Ready to Claim!
+                </p>
+              )}
             </div>
             <div className="text-right">
               <p className="text-3xl font-black text-blue-500">{Math.round(stats.completion_pct ?? 0)}%</p>
@@ -543,7 +551,7 @@ export function Collection() {
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-        {['all', 'fire', 'water', 'earth', 'air', 'light', 'dark'].map((e) => (
+        {['all', 'fire', 'water', 'earth', 'wind', 'light', 'dark'].map((e) => (
           <button
             key={e}
             onClick={() => setElementType(e)}
@@ -559,7 +567,7 @@ export function Collection() {
               e === 'fire' ? "bg-red-500" :
               e === 'water' ? "bg-blue-500" :
               e === 'earth' ? "bg-amber-700" :
-              e === 'air' ? "bg-slate-300" :
+              e === 'wind' ? "bg-slate-300" :
               e === 'light' ? "bg-yellow-300" :
               e === 'dark' ? "bg-purple-900" : "bg-slate-400"
             )} />
@@ -731,24 +739,25 @@ export function Collection() {
                 variant: 'danger',
                 onConfirm: async () => {
                   try {
-                    let totalGold = 0;
-                    let successCount = 0;
-
-                    for (const id of selectedCardIds) {
-                      const card = cards.find(c => c.user_card_id === id);
-                      if (!card) continue;
-                      
-                      const { data, error } = await supabase.rpc('quicksell_card', {
-                        p_card_id: card.id,
-                        p_is_foil: card.is_foil || false,
-                        p_quantity: 1
-                      });
-                      
-                      if (!error && data) {
-                        totalGold += (data as any).gold_earned || 0;
-                        successCount++;
+                    const selectedList = selectedCardIds.map(id => cards.find(c => c.user_card_id === id)).filter(Boolean);
+                    
+                    const results = await Promise.all(selectedList.map(async (card) => {
+                      try {
+                        const { data, error } = await supabase.rpc('quicksell_card', {
+                          p_card_id: card.id,
+                          p_is_foil: card.is_foil || false,
+                          p_quantity: 1
+                        });
+                        if (error) throw error;
+                        return { success: true, gold: (data as any).gold_earned || 0 };
+                      } catch (err) {
+                        console.error('Failed to sell card:', card.id, err);
+                        return { success: false, gold: 0 };
                       }
-                    }
+                    }));
+
+                    const successCount = results.filter(r => r.success).length;
+                    const totalGold = results.reduce((acc, r) => acc + r.gold, 0);
 
                     if (successCount > 0) {
                       toast.success(`Sold ${successCount} cards for ${totalGold} gold!`, { 

@@ -990,6 +990,7 @@ export function Store() {
                         card={card}
                         className="aspect-[4/3]"
                         onSelect={() => setSelectedCard(card)}
+                        hideActions={true}
                       />
                     ))}
                   </div>

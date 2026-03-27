@@ -22,7 +22,7 @@ const elementColors: Record<string, string> = {
   'Light': 'bg-yellow-300 text-black',
 };
 
-export function CollectionCard({ card, className, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist, isWishlisted }: any) {
+export function CollectionCard({ card, className, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist, isWishlisted, hideActions = false }: any) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -155,7 +155,7 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, activ
             )}
           </div>
           
-          {activeTab === 'collection' && !card.is_locked && (
+          {activeTab === 'collection' && !card.is_locked && !hideActions && (
             <div className="flex flex-col w-full gap-2">
               {onList && (
                 <button

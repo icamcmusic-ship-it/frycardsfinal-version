@@ -10,20 +10,27 @@ interface SetProgressProps {
   set: {
     id: string;
     name: string;
-    description: string;
+    description: string | null;
     total_cards: number;
     owned_cards: number;
-    reward_type: 'gold' | 'gems' | 'pack';
-    reward_amount: number;
     is_claimed: boolean;
+    reward_type: 'gold' | 'gems' | 'item';
+    reward_amount: number;
+    reward_label: string | null;
+    reward_gold: number;
+    reward_gems: number;
+    theme_color: string | null;
+    is_complete: boolean;
   };
   onClaimed: () => void;
 }
 
 export function SetProgress({ set, onClaimed }: SetProgressProps) {
   const [claiming, setClaiming] = useState(false);
-  const progressPct = Math.min(100, (set.owned_cards / set.total_cards) * 100);
-  const isComplete = set.owned_cards >= set.total_cards;
+  const isComplete = set.is_complete;
+  const progressPct = set.total_cards > 0 
+    ? Math.min(100, (set.owned_cards / set.total_cards) * 100) 
+    : 0;
 
   const handleClaim = async () => {
     if (claiming || !isComplete || set.is_claimed) return;
@@ -43,10 +50,13 @@ export function SetProgress({ set, onClaimed }: SetProgressProps) {
   };
 
   return (
-    <div className={cn(
-      "bg-[var(--surface)] border-4 rounded-2xl p-6 shadow-[6px_6px_0px_0px_var(--border)] transition-all",
-      set.is_claimed ? "opacity-75 border-slate-300" : isComplete ? "border-emerald-500 bg-emerald-50" : "border-[var(--border)]"
-    )}>
+    <div 
+      style={set.theme_color && !set.is_claimed ? { borderLeftColor: set.theme_color } : undefined}
+      className={cn(
+        "bg-[var(--surface)] border-4 rounded-2xl p-6 shadow-[6px_6px_0px_0px_var(--border)] transition-all border-l-8",
+        set.is_claimed ? "opacity-75 border-slate-300" : isComplete ? "border-emerald-500 bg-emerald-50" : "border-[var(--border)]"
+      )}
+    >
       <div className="flex flex-col md:flex-row justify-between gap-6">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
@@ -82,7 +92,7 @@ export function SetProgress({ set, onClaimed }: SetProgressProps) {
               {set.reward_type === 'gold' ? <Coins className="w-5 h-5 text-yellow-500" /> : 
                set.reward_type === 'gems' ? <Gem className="w-5 h-5 text-emerald-500" /> : 
                <Gift className="w-5 h-5 text-purple-500" />}
-              <span>{set.reward_amount}</span>
+              <span>{set.reward_label || set.reward_amount}</span>
             </div>
           </div>
 
