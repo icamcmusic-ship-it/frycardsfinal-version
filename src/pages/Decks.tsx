@@ -204,11 +204,15 @@ export function Decks() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-black uppercase text-[var(--text)]">{editingDeck.id ? 'Edit Deck' : 'New Deck'}</h1>
           <div className="flex gap-2 items-center">
-            <div className={cn(
-              "px-3 py-1.5 rounded-lg border-2 font-black text-sm",
-              selectedCards.length === 20 ? "bg-green-400 text-black border-green-600" : "bg-yellow-400 text-black border-yellow-600"
+            <div className={cn("text-sm font-black px-3 py-1 rounded-full border-2",
+              selectedCards.length >= 5 && selectedCards.length <= 20
+                ? "bg-green-400 border-green-600 text-black"
+                : selectedCards.length > 20
+                ? "bg-red-500 border-red-700 text-white"
+                : "bg-yellow-400 border-yellow-600 text-black"
             )}>
               {selectedCards.length}/20
+              {selectedCards.length < 5 && <span className="ml-1 text-[10px]">(min 5)</span>}
             </div>
             <button 
               onClick={() => {
@@ -221,7 +225,7 @@ export function Decks() {
             </button>
             <button 
               onClick={editingDeck.id ? handleUpdateDeck : handleCreateDeck} 
-              disabled={selectedCards.length !== 20}
+              disabled={selectedCards.length < 5 || selectedCards.length > 20}
               className="px-4 py-2 bg-blue-500 disabled:opacity-50 text-white font-black rounded-xl border-2 border-[var(--border)] flex items-center gap-2"
             >
               <Save className="w-4 h-4" /> Save Deck

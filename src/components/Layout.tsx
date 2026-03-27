@@ -12,6 +12,7 @@ export function Layout() {
   const { profile, fetchProfile, setProfile } = useProfileStore();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [newCardCount, setNewCardCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -27,10 +28,28 @@ export function Layout() {
     }
   };
 
+  const fetchNewCardCount = async () => {
+    if (!user) return;
+    try {
+      const { data, count, error } = await supabase
+        .from('user_cards')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_new', true);
+      
+      if (!error) {
+        setNewCardCount(count ?? 0);
+      }
+    } catch (err) {
+      console.error('Error fetching new card count:', err);
+    }
+  };
+
   useEffect(() => {
     if (user) {
-      fetchProfile(user.id);
+      fetchProfile();
       fetchUnreadCount();
+      fetchNewCardCount();
 
       const profileChannel = supabase
         .channel('profile-updates')
@@ -39,8 +58,8 @@ export function Layout() {
           schema: 'public',
           table: 'profiles',
           filter: `id=eq.${user.id}`
-        }, (payload) => {
-          setProfile(payload.new as any);
+        }, () => {
+          fetchProfile();
         })
         .subscribe();
 
@@ -56,9 +75,22 @@ export function Layout() {
         })
         .subscribe();
 
+      const cardsChannel = supabase
+        .channel('user-cards')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'user_cards',
+          filter: `user_id=eq.${user.id}`
+        }, () => {
+          fetchNewCardCount();
+        })
+        .subscribe();
+
       return () => {
         profileChannel.unsubscribe();
         notifChannel.unsubscribe();
+        cardsChannel.unsubscribe();
       };
     }
   }, [user, fetchProfile, setProfile]);
@@ -117,7 +149,7 @@ export function Layout() {
           if (profile) {
             setProfile({ ...profile, energy: Math.min(profile.energy + 1, profile.max_energy) });
           }
-          fetchProfile(profile.id);
+          fetchProfile();
         } else {
           setNextRegen(regenTime); // Force re-render for countdown
         }
@@ -235,7 +267,7 @@ export function Layout() {
                       key={item.path}
                       to={item.path}
                       className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2",
+                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2 relative",
                         isActive 
                           ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold" 
                           : "text-[var(--text)] hover:text-black hover:bg-blue-50 border-transparent hover:border-[var(--border)] hover:shadow-[4px_4px_0px_0px_var(--border)] font-medium opacity-80 hover:opacity-100"
@@ -243,6 +275,11 @@ export function Layout() {
                     >
                       <Icon className={cn("w-5 h-5", isActive && "text-black")} />
                       <span>{item.name}</span>
+                      {item.path === '/collection' && newCardCount > 0 && (
+                        <span className="absolute top-2 right-2 bg-blue-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[var(--border)] animate-pulse">
+                          {newCardCount > 99 ? '99+' : newCardCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -268,12 +305,17 @@ export function Layout() {
                   to={item.path}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
-                    "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors",
+                    "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative",
                     isActive ? "text-blue-600 font-bold" : "text-[var(--text)] opacity-70 hover:opacity-100"
                   )}
                 >
                   <Icon className={cn("w-5 h-5", isActive && "text-blue-600")} />
                   <span className="text-[10px]">{item.name}</span>
+                  {item.path === '/collection' && newCardCount > 0 && (
+                    <span className="absolute top-2 right-4 bg-blue-500 text-white text-[8px] font-black w-3 h-3 rounded-full flex items-center justify-center border border-[var(--border)]">
+                      {newCardCount > 9 ? '!' : newCardCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

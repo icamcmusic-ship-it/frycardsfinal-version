@@ -74,6 +74,13 @@ export function Battle() {
 
       if (error) throw error;
 
+      // Submit result to Season Pass
+      try {
+        await supabase.rpc('submit_battle_result', { p_is_win: data.is_win });
+      } catch (spErr) {
+        console.error('Failed to submit season pass result:', spErr);
+      }
+
       setBattleResult(data);
       // Refresh profile to update energy/gold/xp
       await useProfileStore.getState().refreshProfile();

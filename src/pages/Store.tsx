@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon } from 'lucide-react';
-import { motion } from 'motion/react';
+import { PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon, LayoutGrid } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { CardDisplay } from '../components/CardDisplay';
@@ -11,7 +11,7 @@ import { Card3DModal } from '../components/Card3DModal';
 import { FlipCard } from '../components/FlipCard';
 import { EmptyState } from '../components/EmptyState';
 
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { audioService } from '../services/AudioService';
 
 const PACK_ODDS = [
@@ -25,6 +25,7 @@ const PACK_ODDS = [
 
 export function Store() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { profile } = useProfileStore();
   const [activeTab, setActiveTab] = useState<'packs' | 'banners' | 'card_backs' | 'inventory'>(
     location.pathname === '/inventory' ? 'inventory' : 'packs'
@@ -41,6 +42,8 @@ export function Store() {
   const [openingSummary, setOpeningSummary] = useState<{ xp_gained: number, new_card_count: number } | null>(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [revealedCards, setRevealedCards] = useState<any[]>([]);
+  const [showFoilSplash, setShowFoilSplash] = useState(false);
+  const [flippedIndexes, setFlippedIndexes] = useState<Set<number>>(new Set());
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
   const [inventory, setInventory] = useState<any[]>([]);
   const [useGems, setUseGems] = useState(false);
@@ -222,6 +225,7 @@ export function Store() {
           setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
           setCurrentCardIndex(0);
           setRevealedCards([]);
+          setFlippedIndexes(new Set());
           
           // Auto-transition after 1.5s if user hasn't clicked
           setTimeout(() => {
@@ -234,10 +238,11 @@ export function Store() {
 
         } catch (err: any) {
           toast.error(err.message || 'Failed to open pack');
-          setOpening(false);
           setPackOpeningStep('idle');
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
           audioService.play('error');
+        } finally {
+          setOpening(false);
         }
       }
     });
@@ -289,6 +294,7 @@ export function Store() {
       setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
       setCurrentCardIndex(0);
       setRevealedCards([]);
+      setFlippedIndexes(new Set());
       
       // Auto-transition after 1.5s if user hasn't clicked
       setTimeout(() => {
@@ -298,11 +304,11 @@ export function Store() {
 
       fetchPacks(); // Refresh pity counter
       setLastPackResults({ cards: data.cards, summary: { xp_gained: data.xp_gained, new_card_count: data.new_card_count } });
-
     } catch (err: any) {
       toast.error(err.message || 'Failed to open pack');
-      setOpening(false);
       setPackOpeningStep('idle');
+    } finally {
+      setOpening(false);
     }
   };
 
@@ -336,6 +342,7 @@ export function Store() {
       setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
       setCurrentCardIndex(0);
       setRevealedCards([]);
+      setFlippedIndexes(new Set());
       
       // Auto-transition after 1.5s if user hasn't clicked
       setTimeout(() => {
@@ -347,8 +354,9 @@ export function Store() {
       setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
     } catch (err: any) {
       toast.error(err.message || 'Failed to open all packs');
-      setOpening(false);
       setPackOpeningStep('idle');
+    } finally {
+      setOpening(false);
     }
   };
 
@@ -525,19 +533,30 @@ export function Store() {
 
                   <div className="p-6 flex flex-col flex-1">
                     <h3 className="text-2xl font-black text-[var(--text)] mb-2 uppercase">{pack.name}</h3>
+                    
+                    {/* Pity Progress Bar */}
                     {pack.next_pity_in !== undefined && (
-                      <div className={cn(
-                        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border-2 font-black text-[10px] uppercase tracking-wider mb-3",
-                        pack.next_pity_in === 1 
-                          ? "bg-blue-500 text-white border-blue-600 animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.5)]" 
-                          : "bg-blue-50 text-blue-600 border-blue-200"
-                      )}>
-                        <Sparkles className={cn("w-3 h-3", pack.next_pity_in === 1 ? "text-white" : "text-blue-500")} />
-                        {pack.next_pity_in === 1 
-                          ? "Guaranteed Rare Next Pack!" 
-                          : `Guaranteed Rare in ${pack.next_pity_in} packs`}
+                      <div className="mt-1 mb-4">
+                        <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                          <span className="flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-blue-500" />
+                            Rare+ Pity
+                          </span>
+                          <span>{pack.next_pity_in} packs away</span>
+                        </div>
+                        <div className="h-2.5 bg-[var(--bg)] rounded-full border-2 border-[var(--border)] overflow-hidden shadow-inner">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${((10 - pack.next_pity_in) / 10) * 100}%` }}
+                            className={cn(
+                              "h-full transition-all duration-500",
+                              pack.next_pity_in === 1 ? "bg-yellow-400 animate-pulse" : "bg-blue-500"
+                            )}
+                          />
+                        </div>
                       </div>
                     )}
+
                     <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
                     <p className="text-[10px] text-slate-400 italic mb-2">Pity system: Rare+ guaranteed after 10 pulls without one.</p>
                     
@@ -611,11 +630,11 @@ export function Store() {
                             </button>
                           </div>
                           <button 
-                            onClick={() => handleOpenPack(pack.id, false, pack.image_url, pack.name, pack.cost_gold, 5)}
-                            disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold * 5}
-                            className="w-full bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
+                            onClick={() => handleOpenPack(pack.id, false, pack.image_url, pack.name, pack.cost_gold, 10)}
+                            disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold * 10}
+                            className="w-full bg-purple-500 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
                           >
-                            Open 5x
+                            Open 10x ({(pack.cost_gold * 10).toLocaleString()} Gold)
                           </button>
                         </div>
                       )}
@@ -645,6 +664,13 @@ export function Store() {
                             className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
                           >
                             Open 5x
+                          </button>
+                          <button 
+                            onClick={() => handleOpenPack(pack.id, true, pack.image_url, pack.name, pack.cost_gems, 10)}
+                            disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems * 10}
+                            className="w-full bg-purple-500 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
+                          >
+                            Open 10x ({(pack.cost_gems * 10).toLocaleString()} Gems)
                           </button>
                         </div>
                       )}
@@ -824,12 +850,36 @@ export function Store() {
               setOpeningSummary(null);
               setCurrentCardIndex(0);
               setRevealedCards([]);
+              setFlippedIndexes(new Set());
             }}
             className="absolute top-4 right-4 text-white/60 hover:text-white font-black text-2xl"
           >
             ✕
           </button>
           
+          {/* Foil Splash Overlay */}
+          <AnimatePresence>
+            {showFoilSplash && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[999] pointer-events-none flex items-center justify-center"
+                style={{ background: 'radial-gradient(circle, rgba(255,215,0,0.4), transparent 70%)' }}
+              >
+                <motion.p
+                  initial={{ scale: 0.5, rotate: -10 }}
+                  animate={{ scale: 1.2, rotate: 3 }}
+                  exit={{ scale: 2, opacity: 0 }}
+                  className="text-6xl font-black text-yellow-400 uppercase tracking-widest drop-shadow-lg"
+                  style={{ textShadow: '0 0 30px gold' }}
+                >
+                  ✨ FOIL!
+                </motion.p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Particle burst — always visible */}
           {packOpeningStep !== 'idle' && (
             <div className="absolute inset-0 pointer-events-none">
@@ -893,46 +943,58 @@ export function Store() {
           )}
 
           {packOpeningStep === 'revealing' && openedCards && (
-            <div className="flex flex-col items-center gap-8 w-full max-w-4xl">
+            <div className="flex flex-col items-center gap-8 w-full max-w-6xl h-full overflow-y-auto py-12 scrollbar-hide">
               
-              {currentCardIndex < openedCards.length ? (
+              {revealedCards.length < openedCards.length ? (
                 <div className="relative w-full flex flex-col items-center">
                   <button
                     onClick={() => {
                       audioService.play('click');
-                      const remaining = openedCards.slice(currentCardIndex);
-                      setRevealedCards(prev => [...prev, ...remaining]);
-                      setCurrentCardIndex(openedCards.length);
+                      setRevealedCards([...openedCards]);
+                      setFlippedIndexes(new Set(openedCards.map((_, i) => i)));
                     }}
                     className="absolute top-0 right-0 px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-black rounded-xl border-2 border-white/40 transition-colors z-50"
                   >
                     Skip All
                   </button>
                   
-                  <p className="text-white/60 font-black text-sm uppercase tracking-widest mb-4">
-                    Card {currentCardIndex + 1} of {openedCards.length}
+                  <p className="text-white/60 font-black text-sm uppercase tracking-widest mb-8">
+                    Revealed {revealedCards.length} of {openedCards.length}
                   </p>
                   
-                  {/* Card Stack Effect */}
-                  <div className="relative w-64 h-[340px]">
-                    {/* Next card preview (blurred) */}
-                    {currentCardIndex + 1 < openedCards.length && (
-                      <div className="absolute inset-0 translate-x-2 translate-y-2 opacity-40 blur-[2px] scale-95">
-                        <div className="w-full h-full bg-slate-800 rounded-xl border-4 border-white/20" />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 w-full px-4">
+                    {openedCards.slice(0, revealedCards.length + 1).map((card, i) => (
+                      <div 
+                        key={i} 
+                        className="aspect-[3/4] w-full max-w-[200px] mx-auto"
+                        onClick={() => {
+                          if (!flippedIndexes.has(i)) {
+                            setFlippedIndexes(prev => new Set([...prev, i]));
+                            
+                            // Foil splash
+                            if (card.is_foil) {
+                              setShowFoilSplash(true);
+                              setTimeout(() => setShowFoilSplash(false), 1200);
+                            }
+
+                            // Delay adding to revealedCards to allow FlipCard animation
+                            setTimeout(() => {
+                              setRevealedCards(prev => {
+                                if (prev.some(c => c === card)) return prev;
+                                return [...prev, card];
+                              });
+                            }, 400);
+                          }
+                        }}
+                      >
+                        <FlipCard
+                          card={card}
+                          isFlipped={flippedIndexes.has(i)}
+                          cardBackUrl={profile?.card_back_url || null}
+                          onReveal={() => {}} // Handled by onClick above
+                        />
                       </div>
-                    )}
-                    
-                    {/* Current Card */}
-                    <FlipCard
-                      key={currentCardIndex}
-                      card={openedCards[currentCardIndex]}
-                      cardBackUrl={profile?.card_back_url || null}
-                      onReveal={() => {
-                        audioService.play(openedCards[currentCardIndex].rarity === 'Divine' || openedCards[currentCardIndex].rarity === 'Mythic' ? 'rare_reveal' : 'card_reveal');
-                        setRevealedCards(prev => [...prev, openedCards[currentCardIndex]]);
-                        setCurrentCardIndex(prev => prev + 1);
-                      }}
-                    />
+                    ))}
                   </div>
                 </div>
               ) : (
@@ -975,12 +1037,29 @@ export function Store() {
                     </div>
                   )}
                   
-                  <button
-                    onClick={() => { setPackOpeningStep('idle'); setOpening(false); setOpenedCards(null); setOpeningSummary(null); setCurrentCardIndex(0); setRevealedCards([]); }}
-                    className="px-8 py-4 bg-white text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                  >
-                    Done
-                  </button>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => { setPackOpeningStep('idle'); setOpening(false); setOpenedCards(null); setOpeningSummary(null); setCurrentCardIndex(0); setRevealedCards([]); }}
+                      className="px-8 py-4 bg-white text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1"
+                    >
+                      Done
+                    </button>
+                    <button
+                      onClick={() => { 
+                        navigate('/collection?sort=newest'); 
+                        setPackOpeningStep('idle'); 
+                        setOpening(false); 
+                        setOpenedCards(null); 
+                        setOpeningSummary(null); 
+                        setCurrentCardIndex(0); 
+                        setRevealedCards([]); 
+                      }}
+                      className="px-8 py-4 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 flex items-center gap-2"
+                    >
+                      <LayoutGrid className="w-5 h-5" />
+                      View in Collection
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

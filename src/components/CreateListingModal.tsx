@@ -30,6 +30,17 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
     }
   }, [selectedCard]);
 
+  const RARITY_FLOOR_GOLD: Record<string, number> = {
+    Common: 15, Uncommon: 40, Rare: 150,
+    'Super-Rare': 400, Mythic: 800, Divine: 1500,
+  };
+
+  useEffect(() => {
+    if (selectedCard && price === 0) {
+      setPrice(RARITY_FLOOR_GOLD[selectedCard.rarity] ?? 15);
+    }
+  }, [selectedCard]);
+
   const fetchMarketStats = async () => {
     if (!selectedCard) return;
     try {

@@ -9,6 +9,8 @@ const SOUNDS = {
   pack_open: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
   card_reveal: 'https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3',
   rare_reveal: 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3',
+  mythic_reveal: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Placeholder
+  divine_reveal: 'https://assets.mixkit.co/active_storage/sfx/2015/2015-preview.mp3', // Placeholder
   gold_gain: 'https://assets.mixkit.co/active_storage/sfx/2015/2015-preview.mp3',
   gem_gain: 'https://assets.mixkit.co/active_storage/sfx/2016/2016-preview.mp3',
 };

@@ -192,9 +192,17 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddT
               <p className="text-sm italic text-slate-500 mb-4">"{card.flavor_text || (card as any).description}"</p>
             )}
 
-            <div className="text-xs text-slate-400 font-bold">
-              <span>Copies owned: {card.quantity}</span>
-              {card.author && <span className="ml-4">Art by {card.author}</span>}
+            <div className="text-xs text-slate-400 font-bold flex flex-col gap-1">
+              <div className="flex items-center gap-4">
+                <span>Copies owned: {card.is_foil ? (card.foil_quantity ?? card.quantity) : card.quantity}</span>
+                {card.author && <span>Art by {card.author}</span>}
+              </div>
+              {!card.is_foil && (card.foil_quantity ?? 0) > 0 && (
+                <span className="text-yellow-600">✨ You also own {card.foil_quantity} foil {(card.foil_quantity ?? 0) === 1 ? 'copy' : 'copies'}</span>
+              )}
+              {card.is_foil && (card.quantity ?? 0) > 0 && (
+                <span className="text-slate-500">You also own {card.quantity} normal {(card.quantity ?? 0) === 1 ? 'copy' : 'copies'}</span>
+              )}
             </div>
 
             {/* Actions */}

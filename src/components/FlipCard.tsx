@@ -24,30 +24,36 @@ interface FlipCardProps {
   card: any;
   cardBackUrl: string | null;
   onReveal: () => void;
+  isFlipped?: boolean;
 }
 
 export const FlipCard: React.FC<FlipCardProps> = ({
   card,
   cardBackUrl,
   onReveal,
+  isFlipped,
 }) => {
-  const [flipped, setFlipped] = useState(false);
+  const [internalFlipped, setInternalFlipped] = useState(false);
+  const flipped = isFlipped !== undefined ? isFlipped : internalFlipped;
   const glowClass = RARITY_GLOW[card.rarity] ?? '';
   
   // Randomized entry rotation
   const randomRotation = useMemo(() => (Math.random() - 0.5) * 15, []);
 
+  const getRaritySound = (rarity: string) => {
+    if (rarity === 'Divine') return 'divine_reveal';
+    if (rarity === 'Mythic') return 'mythic_reveal';
+    if (['Rare', 'Super-Rare'].includes(rarity)) return 'rare_reveal';
+    return 'card_reveal';
+  };
+
   const handleClick = () => {
     if (flipped) return;
     audioService.play('click');
-    setFlipped(true);
+    setInternalFlipped(true);
     
     // Play rarity-specific sound
-    if (['Rare', 'Super-Rare', 'Mythic', 'Divine'].includes(card.rarity)) {
-      audioService.play('rare_reveal');
-    } else {
-      audioService.play('card_reveal');
-    }
+    audioService.play(getRaritySound(card.rarity));
 
     setTimeout(onReveal, 800);
   };

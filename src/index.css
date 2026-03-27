@@ -134,6 +134,28 @@
   --accent: #ec4899;
   --muted: #db2777;
 }
+@keyframes foil {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.foil-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.foil-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,215,0,0) 0%, rgba(255,215,0,0.15) 50%, rgba(255,215,0,0) 100%);
+  background-size: 200% 200%;
+  animation: foil 3s ease infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+
 body { background-color: var(--bg); color: var(--text); }
 
 @keyframes shimmer {

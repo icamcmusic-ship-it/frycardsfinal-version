@@ -182,6 +182,33 @@ export function PublicProfile() {
                 >
                   Block
                 </button>
+
+                <button 
+                  onClick={() => {
+                    setConfirmConfig({
+                      isOpen: true,
+                      title: 'Report User',
+                      message: `Are you sure you want to report ${profile.username} for inappropriate behavior?`,
+                      variant: 'warning',
+                      onConfirm: async () => {
+                        try {
+                          const { error } = await supabase.from('reports').insert({
+                            target_user_id: userId,
+                            reporter_id: (await supabase.auth.getUser()).data.user?.id,
+                            reason: 'Inappropriate behavior'
+                          });
+                          if (error) throw error;
+                          toast.success('User reported. Thank you for keeping the community safe!');
+                        } catch (err: any) {
+                          toast.error(err.message || 'Failed to report user');
+                        }
+                      }
+                    });
+                  }}
+                  className="px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-black text-sm uppercase rounded-xl border-2 border-yellow-200 hover:border-yellow-300 transition-colors"
+                >
+                  Report
+                </button>
                 
                 <button
                   onClick={toggleFollow}

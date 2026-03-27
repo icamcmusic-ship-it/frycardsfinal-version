@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { CardDisplay } from './CardDisplay';
-import { Check, Lock, Unlock, ShoppingCart, Plus, Star } from 'lucide-react';
+import { Check, Lock, Unlock, ShoppingCart, Plus, Star, Heart } from 'lucide-react';
 
-export function CollectionCard({ card, className, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist }: any) {
+const rarityColors: Record<string, string> = {
+  'Common':     'border-l-slate-400',
+  'Uncommon':   'border-l-green-500',
+  'Rare':       'border-l-blue-500',
+  'Super-Rare': 'border-l-purple-500',
+  'Mythic':     'border-l-yellow-500',
+  'Divine':     'border-l-red-500',
+};
+
+const elementColors: Record<string, string> = {
+  'Fire': 'bg-red-500 text-white',
+  'Water': 'bg-blue-500 text-white',
+  'Earth': 'bg-yellow-700 text-white',
+  'Wind': 'bg-teal-400 text-black',
+  'Dark': 'bg-purple-900 text-white',
+  'Light': 'bg-yellow-300 text-black',
+};
+
+export function CollectionCard({ card, className, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist, isWishlisted }: any) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -45,8 +63,67 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, activ
           {isSelected && <Check className="w-4 h-4" />}
         </div>
       )}
+
+      {/* NEW badge with animation */}
+      <AnimatePresence>
+        {card.is_new && (
+          <motion.div
+            initial={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5 }}
+            className="absolute top-1 left-1 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-40 shadow-sm"
+          >
+            NEW
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Foil Badge */}
+      {(card.foil_quantity > 0 || card.is_foil) && (
+        <div className="absolute top-1 right-1 bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border border-black shadow-sm z-40">
+          ✨ FOIL
+        </div>
+      )}
+
+      {/* Element Badge */}
+      {card.element && (
+        <div className="absolute top-1 left-1/2 -translate-x-1/2 z-40">
+          <span className={cn("text-[7px] font-black px-1.5 py-0.5 rounded uppercase border border-black/20 shadow-sm",
+            elementColors[card.element] ?? 'bg-slate-200 text-slate-700')}>
+            {card.element}
+          </span>
+        </div>
+      )}
       
-      <CardDisplay card={card} />
+      <div className={cn(
+        "relative border-4 border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface)]",
+        "border-l-[6px]", rarityColors[card.rarity] ?? 'border-l-slate-400',
+        card.is_foil && "ring-2 ring-yellow-400 ring-offset-1",
+        card.is_foil && "foil-shimmer"
+      )}>
+        <CardDisplay card={card} showNewBadge={false} />
+
+        {/* Wishlist Heart Icon */}
+        {onToggleWishlist && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleWishlist(); }}
+            className={cn(
+              "absolute bottom-1 right-1 w-7 h-7 rounded-full flex items-center justify-center border-2 border-[var(--border)] shadow-sm z-40 transition-all active:scale-90",
+              isWishlisted ? "bg-red-500 text-white" : "bg-white/80 text-slate-400 hover:text-red-500"
+            )}
+          >
+            <Heart className="w-3.5 h-3.5" fill={isWishlisted ? "currentColor" : "none"} />
+          </button>
+        )}
+
+        {/* Combat Stats Strip */}
+        {card.card_type === 'Unit' && (card.hp != null || card.attack != null) && (
+          <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white flex justify-around text-[9px] font-black py-1 z-20">
+            {card.attack != null && <span>⚔ {card.attack}</span>}
+            {card.hp != null && <span>❤ {card.hp}</span>}
+            {card.defense != null && <span>🛡 {card.defense}</span>}
+          </div>
+        )}
+      </div>
 
       {/* Action Overlay */}
       {!isBatchMode && (

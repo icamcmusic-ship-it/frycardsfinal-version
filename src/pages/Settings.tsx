@@ -132,7 +132,21 @@ export function Settings() {
     else setSettings(prev => ({ ...prev, [key]: value }));
 
     try {
-      const { error } = await supabase.rpc('upsert_user_settings', { p_settings: newSettings });
+      const { error } = await supabase.rpc('upsert_user_settings', {
+        p_master_volume: newSettings.master_volume,
+        p_music_volume: newSettings.music_volume,
+        p_sfx_volume: newSettings.sfx_volume,
+        p_audio_enabled: newSettings.audio_enabled,
+        p_music_enabled: newSettings.music_enabled,
+        p_sfx_enabled: newSettings.sfx_enabled,
+        p_game_style: newSettings.game_style,
+        p_low_perf_mode: newSettings.low_perf_mode,
+        p_notifications_enabled: newSettings.notifications_enabled,
+        p_trade_notifications: newSettings.trade_notifications,
+        p_auction_notifications: newSettings.auction_notifications,
+        p_friend_notifications: newSettings.friend_notifications,
+        p_show_online_status: newSettings.show_online_status
+      });
       if (error) throw error;
     } catch (err: any) {
       console.error('Error updating settings:', err);

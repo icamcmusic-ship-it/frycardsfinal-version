@@ -5,6 +5,7 @@ import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, 
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
+import { cn } from '../lib/utils';
 
 export function Home() {
   const { profile } = useProfileStore();
@@ -164,9 +165,19 @@ export function Home() {
           </p>
           
           {profile.daily_streak > 0 && (
-            <p className="text-sm font-bold text-black bg-orange-300 inline-flex items-center gap-1 px-3 py-1 border-2 border-black rounded-lg mt-1 mb-8 transform rotate-1">
-              🔥 {profile.daily_streak} Day Streak
-            </p>
+            <div className="flex flex-col gap-2 mb-8">
+              <p className="text-sm font-bold text-black bg-orange-300 inline-flex items-center gap-1 px-3 py-1 border-2 border-black rounded-lg transform rotate-1 w-fit">
+                🔥 {profile.daily_streak} Day Streak
+              </p>
+              <div className="flex gap-2">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className={cn(
+                    "w-6 h-6 rounded-full border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
+                    i < Math.min(profile.daily_streak, 7) ? "bg-green-400" : "bg-white/30"
+                  )} />
+                ))}
+              </div>
+            </div>
           )}
 
           <div className="flex flex-wrap gap-4 mt-8">

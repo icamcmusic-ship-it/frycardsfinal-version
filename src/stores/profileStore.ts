@@ -29,36 +29,25 @@ export interface Profile {
 interface ProfileState {
   profile: Profile | null;
   setProfile: (profile: Profile | null) => void;
-  fetchProfile: (userId: string) => Promise<void>;
+  fetchProfile: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
 export const useProfileStore = create<ProfileState>((set) => ({
   profile: null,
   setProfile: (profile) => set({ profile }),
-  fetchProfile: async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+  fetchProfile: async () => {
+    const { data, error } = await supabase.rpc('get_my_profile');
     
     if (data && !error) {
       set({ profile: data as Profile });
     }
   },
   refreshProfile: async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (data && !error) {
-        set({ profile: data as Profile });
-      }
+    const { data, error } = await supabase.rpc('get_my_profile');
+    
+    if (data && !error) {
+      set({ profile: data as Profile });
     }
   },
 }));

@@ -20,7 +20,7 @@ export function Collection() {
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(() => sessionStorage.getItem('col_filter') || 'all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'collection' | 'wishlist'>('collection');
@@ -42,8 +42,10 @@ export function Collection() {
     message: '',
     onConfirm: () => {},
   });
-  const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>('rarity');
-  const [elementType, setElementType] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>(() =>
+    (sessionStorage.getItem('col_sort') as any) || 'rarity'
+  );
+  const [elementType, setElementType] = useState<string>(() => sessionStorage.getItem('col_element') || 'all');
   const [showFoilsOnly, setShowFoilsOnly] = useState(false);
   const [stats, setStats] = useState<any>(null);
   const [viewSize, setViewSize] = useState<'normal' | 'large'>('large');
@@ -59,6 +61,10 @@ export function Collection() {
     }, 350);
     return () => clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => { sessionStorage.setItem('col_filter', filter); }, [filter]);
+  useEffect(() => { sessionStorage.setItem('col_sort', sortBy); }, [sortBy]);
+  useEffect(() => { sessionStorage.setItem('col_element', elementType); }, [elementType]);
 
   useEffect(() => {
     if (profile) {
@@ -256,7 +262,8 @@ export function Collection() {
           });
           if (error) throw error;
           
-          fetchCollection(); // Refresh
+          setOffset(0);
+          fetchCollection(false, 0); // Refresh from start
           toast.success(`Successfully milled ${data.quantity_milled} cards for ${data.gold_earned} Gold!`);
         } catch (err: any) {
           toast.error(err.message || 'Failed to mill');
@@ -278,7 +285,7 @@ export function Collection() {
         // Optimistic update
         const previousCards = [...cards];
         setCards(prev => prev.map(c => {
-          if (c.id !== card.id) return c;
+          if (c.user_card_id !== card.user_card_id) return c;
           const newQty = (c.quantity || 1) - 1;
           return newQty <= 0 ? null : { ...c, quantity: newQty };
         }).filter(Boolean) as any[]);
@@ -307,6 +314,8 @@ export function Collection() {
         }
         
         toast.success(`Sold for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
+        setOffset(0);
+        fetchCollection(false, 0); // Refresh from start
         fetchStats(); // Update stats in background
       }
     });
@@ -323,7 +332,10 @@ export function Collection() {
           const { data, error } = await supabase.rpc('mill_bulk_duplicates', { p_card_ids: null });
           if (error) throw error;
           
-          fetchCollection(); // Refresh
+          setOffset(0);
+          fetchCollection(false, 0); // Refresh from start
+          fetchStats();
+          useProfileStore.getState().refreshProfile();
           
           toast.success(`Successfully milled ${data.cards_milled} cards for ${data.gold_earned} Gold!`, { icon: '🪙' });
         } catch (err: any) {
@@ -460,6 +472,32 @@ export function Collection() {
         ))}
       </div>
 
+      <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+        {['all', 'fire', 'water', 'earth', 'air', 'light', 'dark'].map((e) => (
+          <button
+            key={e}
+            onClick={() => setElementType(e)}
+            className={cn(
+              "shrink-0 px-4 py-1.5 rounded-full font-black text-xs uppercase border-2 transition-all flex items-center gap-2",
+              elementType === e
+                ? "bg-[var(--text)] text-[var(--surface)] border-[var(--text)]"
+                : "bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400"
+            )}
+          >
+            <div className={cn(
+              "w-2 h-2 rounded-full",
+              e === 'fire' ? "bg-red-500" :
+              e === 'water' ? "bg-blue-500" :
+              e === 'earth' ? "bg-amber-700" :
+              e === 'air' ? "bg-slate-300" :
+              e === 'light' ? "bg-yellow-300" :
+              e === 'dark' ? "bg-purple-900" : "bg-slate-400"
+            )} />
+            {e}
+          </button>
+        ))}
+      </div>
+
       <div className="sticky top-16 z-30 bg-[var(--bg)]/90 backdrop-blur-sm py-4 border-b-2 border-[var(--border)] -mx-4 px-4 md:-mx-8 md:px-8">
         <div className="max-w-7xl mx-auto flex gap-2 overflow-x-auto pb-1 scrollbar-hide flex-nowrap items-center">
           <button
@@ -488,19 +526,6 @@ export function Collection() {
             onChange={(e) => setSearch(e.target.value)}
             className="shrink-0 w-48 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold placeholder-slate-400 focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
           />
-          <select
-            value={elementType}
-            onChange={(e) => setElementType(e.target.value)}
-            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_var(--border)]"
-          >
-            <option value="all">All Elements</option>
-            <option value="fire">Fire</option>
-            <option value="water">Water</option>
-            <option value="earth">Earth</option>
-            <option value="air">Air</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
 
           <button
             onClick={() => setViewSize(prev => prev === 'normal' ? 'large' : 'normal')}
@@ -514,10 +539,10 @@ export function Collection() {
 
       <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
         {filteredCards.map((card) => {
-          const selectionId = card.user_card_id || card.id;
+          const selectionId = card.user_card_id;
           return (
           <CollectionCard 
-            key={card.id}
+            key={card.user_card_id || card.id}
             card={card}
             isBatchMode={isBatchMode}
             isSelected={selectedCardIds.includes(selectionId)}
@@ -536,6 +561,7 @@ export function Collection() {
               setIsListingModalOpen(true);
             }}
             onToggleWishlist={() => handleToggleWishlist(card.id)}
+            isWishlisted={wishlistCardIds.has(card.id)}
           />
         )})}
       </div>
@@ -619,7 +645,7 @@ export function Collection() {
             <p className="font-black text-[var(--text)]">Selected {selectedCardIds.length} cards</p>
             <p className="text-[10px] font-bold text-slate-500 uppercase">
               {(() => {
-                const selectedList = selectedCardIds.map(id => cards.find(c => (c.user_card_id || c.id) === id)).filter(Boolean);
+                const selectedList = selectedCardIds.map(id => cards.find(c => c.user_card_id === id)).filter(Boolean);
                 const foils = selectedList.filter(c => c.is_foil).length;
                 const normal = selectedList.length - foils;
                 return `${normal} Normal • ${foils} Foil`;
@@ -639,12 +665,13 @@ export function Collection() {
                     let successCount = 0;
 
                     for (const id of selectedCardIds) {
-                      const card = cards.find(c => (c.user_card_id || c.id) === id);
+                      const card = cards.find(c => c.user_card_id === id);
                       if (!card) continue;
                       
                       const { data, error } = await supabase.rpc('quicksell_card', {
                         p_card_id: card.id,
-                        p_is_foil: card.is_foil || false
+                        p_is_foil: card.is_foil || false,
+                        p_quantity: 1
                       });
                       
                       if (!error && data) {
