@@ -3,7 +3,7 @@ import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
 import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
 
@@ -20,6 +20,10 @@ export function Home() {
   const [claimingQuest, setClaimingQuest] = useState<string | null>(null);
   const [claimingDaily, setClaimingDaily] = useState(false);
   const [reward, setReward] = useState<any>(null);
+  const [showSpinner, setShowSpinner] = useState(false);
+  const [spinnerSectors, setSpinnerSectors] = useState<any[]>([]);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [spinLandedIndex, setSpinLandedIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -112,21 +116,51 @@ export function Home() {
 
   const [showDailyPreview, setShowDailyPreview] = useState(false);
 
-  const handleClaimDailyReward = async () => {
-    if (claimingDaily) return;
+  const handleOpenSpinner = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_daily_spinner_sectors');
+      if (error) throw error;
+      setSpinnerSectors(data || []);
+      setShowSpinner(true);
+      setSpinLandedIndex(null);
+    } catch (err) {
+      console.error('Error fetching spinner sectors:', err);
+      toast.error('Failed to load spinner');
+    }
+  };
+
+  const handleSpin = async () => {
+    if (isSpinning || claimingDaily) return;
+    setIsSpinning(true);
     setClaimingDaily(true);
+    
     try {
       const { data, error } = await supabase.rpc('claim_daily_reward');
       if (error) throw error;
-      
-      setReward(data);
-      setShowDailyPreview(false);
-      
-      // Refresh profile
-      await useProfileStore.getState().refreshProfile();
+
+      // Find which sector the reward belongs to
+      const landedIndex = spinnerSectors.findIndex(s => 
+        s.reward_type === data.reward_type && s.reward_amount === data.reward_amount
+      );
+
+      // If not found (fallback), pick a random one that matches reward type
+      const finalIndex = landedIndex !== -1 ? landedIndex : 
+        spinnerSectors.findIndex(s => s.reward_type === data.reward_type);
+
+      setSpinLandedIndex(finalIndex);
+
+      // Wait for animation
+      setTimeout(async () => {
+        setIsSpinning(false);
+        setClaimingDaily(false);
+        setReward(data);
+        setShowSpinner(false);
+        await useProfileStore.getState().refreshProfile();
+      }, 4000);
+
     } catch (err: any) {
-      toast.error(err.message || 'Failed to claim daily reward');
-    } finally {
+      toast.error(err.message || 'Failed to claim reward');
+      setIsSpinning(false);
       setClaimingDaily(false);
     }
   };
@@ -208,11 +242,11 @@ export function Home() {
                 
                 <div className="flex items-center gap-4">
                   <button 
-                    onClick={() => setShowDailyPreview(true)}
+                    onClick={handleOpenSpinner}
                     className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
                   >
                     <Trophy className="w-6 h-6" />
-                    Claim Daily Reward
+                    Spin for Reward
                   </button>
                   
                   <div className="hidden sm:flex items-center gap-2 bg-black/10 backdrop-blur-sm border-2 border-black/20 rounded-xl px-3 py-2">
@@ -383,7 +417,7 @@ export function Home() {
             
             <div className="space-y-3">
               <button 
-                onClick={handleClaimDailyReward}
+                onClick={handleSpin}
                 disabled={claimingDaily}
                 className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-y-1 active:shadow-none flex items-center justify-center gap-3"
               >
@@ -404,6 +438,93 @@ export function Home() {
           </motion.div>
         </div>
       )}
+
+      {/* Spinner Modal */}
+      <AnimatePresence>
+        {showSpinner && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[var(--surface)] border-8 border-black rounded-3xl p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden"
+            >
+              <button 
+                onClick={() => !isSpinning && setShowSpinner(false)}
+                className="absolute top-4 right-4 p-2 hover:bg-black/5 rounded-full transition-colors"
+                disabled={isSpinning}
+              >
+                <Loader2 className={cn("w-6 h-6", isSpinning && "animate-spin")} />
+              </button>
+
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-black uppercase tracking-tighter mb-2">Daily Spinner</h2>
+                <p className="text-slate-500 font-bold">Spin the wheel to claim your daily reward!</p>
+              </div>
+
+              <div className="relative aspect-square w-full max-w-[280px] mx-auto mb-8">
+                {/* Pointer */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                  <div className="w-8 h-10 bg-red-500 border-4 border-black rounded-b-full shadow-lg" />
+                </div>
+
+                {/* Wheel */}
+                <motion.div 
+                  className="w-full h-full rounded-full border-8 border-black relative overflow-hidden shadow-2xl"
+                  animate={{ 
+                    rotate: isSpinning 
+                      ? 360 * 10 + (spinLandedIndex !== null ? (360 - (spinLandedIndex * (360 / spinnerSectors.length))) : 0)
+                      : spinLandedIndex !== null ? (360 - (spinLandedIndex * (360 / spinnerSectors.length))) : 0
+                  }}
+                  transition={{ 
+                    duration: isSpinning ? 4 : 0, 
+                    ease: [0.15, 0, 0.15, 1] 
+                  }}
+                >
+                  {spinnerSectors.map((sector, i) => {
+                    const angle = 360 / spinnerSectors.length;
+                    const rotation = i * angle;
+                    return (
+                      <div 
+                        key={i}
+                        className="absolute top-0 left-1/2 w-1/2 h-full origin-left"
+                        style={{ 
+                          transform: `rotate(${rotation}deg)`,
+                          backgroundColor: sector.color || '#ccc',
+                          clipPath: `polygon(0 0, 100% 0, 100% ${Math.tan((angle * Math.PI) / 180) * 100}%, 0 0)`
+                        }}
+                      >
+                        <div 
+                          className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90 text-[10px] font-black text-black whitespace-nowrap uppercase"
+                          style={{ transform: `rotate(${angle / 2}deg) translateY(-20px)` }}
+                        >
+                          {sector.label}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+
+                {/* Center Cap */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white border-4 border-black rounded-full z-10 flex items-center justify-center shadow-lg">
+                  <Sparkles className="w-6 h-6 text-yellow-500" />
+                </div>
+              </div>
+
+              <button
+                onClick={handleSpin}
+                disabled={isSpinning || claimingDaily}
+                className={cn(
+                  "w-full py-4 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-black font-black text-xl rounded-2xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] uppercase tracking-widest transition-all active:translate-y-1 active:shadow-none",
+                  isSpinning && "animate-pulse"
+                )}
+              >
+                {isSpinning ? 'Spinning...' : 'Spin Now!'}
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {reward && (
         <div 

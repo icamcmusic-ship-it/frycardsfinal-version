@@ -64,22 +64,22 @@ export function Battle() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setBattleLog(prev => [...prev, 'Final Round: Determining winner...']);
 
-      // Call backend to process battle
-      const { data, error } = await supabase.rpc('complete_battle', {
+      // REPLACE with:
+      const isWin = Math.random() < 0.55; // or your actual logic
+      const xpEarned = isWin ? 75 : 25;
+      const goldEarned = isWin ? 200 : 50;
+
+      const { data, error } = await supabase.rpc('submit_battle_result', {
         p_deck_id: selectedDeckId,
         p_opponent_type: 'pve',
+        p_result: isWin ? 'win' : 'loss',
+        p_xp_earned: xpEarned,
+        p_gold_earned: goldEarned,
         p_rounds_played: 5,
-        p_battle_log: JSON.stringify(battleLog)
+        p_battle_log: JSON.stringify(battleLog),
       });
 
       if (error) throw error;
-
-      // Submit result to Season Pass
-      try {
-        await supabase.rpc('submit_battle_result', { p_is_win: data.is_win });
-      } catch (spErr) {
-        console.error('Failed to submit season pass result:', spErr);
-      }
 
       setBattleResult(data);
       // Refresh profile to update energy/gold/xp

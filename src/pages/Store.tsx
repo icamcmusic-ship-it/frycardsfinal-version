@@ -118,7 +118,7 @@ export function Store() {
   };
 
   const fetchShopItems = async () => {
-    const { data } = await supabase.from('shop_items').select('*');
+    const { data } = await supabase.from('shop_items').select('*').eq('is_season_pass_exclusive', false);
     setShopItems(data || []);
   };
 
@@ -513,7 +513,7 @@ export function Store() {
                   className={cn("bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col", !canAfford && "opacity-60")}
                 >
                   <div className="aspect-[4/3] bg-blue-100 flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]">
-                    <div className="w-32 aspect-[3/4] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gradient-to-b from-slate-700 to-slate-900 relative transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)]">
+                    <div className="w-48 aspect-[4/3] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gradient-to-b from-slate-700 to-slate-900 relative transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)]">
                       <img
                         src={pack.image_url}
                         alt={pack.name}
@@ -534,31 +534,7 @@ export function Store() {
                   <div className="p-6 flex flex-col flex-1">
                     <h3 className="text-2xl font-black text-[var(--text)] mb-2 uppercase">{pack.name}</h3>
                     
-                    {/* Pity Progress Bar */}
-                    {pack.next_pity_in !== undefined && (
-                      <div className="mt-1 mb-4">
-                        <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
-                          <span className="flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-blue-500" />
-                            Rare+ Pity
-                          </span>
-                          <span>{pack.next_pity_in} packs away</span>
-                        </div>
-                        <div className="h-2.5 bg-[var(--bg)] rounded-full border-2 border-[var(--border)] overflow-hidden shadow-inner">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${((10 - pack.next_pity_in) / 10) * 100}%` }}
-                            className={cn(
-                              "h-full transition-all duration-500",
-                              pack.next_pity_in === 1 ? "bg-yellow-400 animate-pulse" : "bg-blue-500"
-                            )}
-                          />
-                        </div>
-                      </div>
-                    )}
-
                     <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
-                    <p className="text-[10px] text-slate-400 italic mb-2">Pity system: Rare+ guaranteed after 10 pulls without one.</p>
                     
                     <button onClick={() => setShowOdds(prev => ({...prev, [pack.id]: !prev[pack.id]}))}
                       className="text-xs text-slate-500 font-bold underline mt-1 mb-2">
@@ -785,7 +761,7 @@ export function Store() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {inventory.map(inv => (
                   <div key={inv.id || inv.pack_type_id} className="border-4 border-[var(--border)] bg-[var(--bg)] rounded-xl p-3 text-center transition-all">
-                    <div className="aspect-[3/4] rounded overflow-hidden mb-2 border-2 border-[var(--border)] bg-gray-200">
+                    <div className="aspect-[4/3] rounded overflow-hidden mb-2 border-2 border-[var(--border)] bg-gray-200">
                       <img src={inv.image_url} alt={inv.name} className="w-full h-full object-cover" />
                     </div>
                     <p className="text-xs font-black uppercase text-[var(--text)]">{inv.name}</p>
@@ -809,9 +785,14 @@ export function Store() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {userCosmetics.filter(c => c.item_type === slotType).map(c => (
                   <div key={c.user_item_id} className={cn(
-                    "border-4 rounded-xl p-3 text-center transition-all",
+                    "border-4 rounded-xl p-3 text-center transition-all relative",
                     c.is_equipped ? "border-yellow-500 bg-yellow-50" : "border-[var(--border)] bg-[var(--bg)]"
                   )}>
+                    {c.is_season_pass_exclusive && (
+                      <div className="absolute -top-2 -right-2 bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-black z-10 shadow-sm">
+                        ✨ EXCLUSIVE
+                      </div>
+                    )}
                     <div className={cn("rounded overflow-hidden mb-2 border-2 border-[var(--border)]", slotType === 'card_back' ? 'aspect-[3/4]' : 'aspect-video')}>
                       <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
                     </div>
@@ -924,7 +905,7 @@ export function Store() {
                   scale: { duration: 0.6, repeat: Infinity },
                   boxShadow: { duration: 1, repeat: Infinity }
                 }}
-                className="w-40 h-56 rounded-xl border-4 border-yellow-400 overflow-hidden shadow-[0_0_40px_rgba(250,204,21,0.6)] relative"
+                className="w-64 aspect-[4/3] rounded-xl border-4 border-yellow-400 overflow-hidden shadow-[0_0_40px_rgba(250,204,21,0.6)] relative"
               >
                 <img src={openingPackImageUrl} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
@@ -1007,7 +988,7 @@ export function Store() {
                       <CollectionCard
                         key={i}
                         card={card}
-                        className="aspect-[5/7]"
+                        className="aspect-[4/3]"
                         onSelect={() => setSelectedCard(card)}
                       />
                     ))}

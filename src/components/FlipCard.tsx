@@ -59,13 +59,13 @@ export const FlipCard: React.FC<FlipCardProps> = ({
   };
 
   const cardSize = {
-    'Divine':     'w-80 h-[426px]',
-    'Mythic':     'w-80 h-[426px]',
-    'Super-Rare': 'w-72 h-[384px]',
-    'Rare':       'w-64 h-[340px]',
-    'Uncommon':   'w-56 h-[298px]',
-    'Common':     'w-56 h-[298px]',
-  }[card.rarity] ?? 'w-64 h-[340px]';
+    'Divine':     'w-80 h-60',
+    'Mythic':     'w-80 h-60',
+    'Super-Rare': 'w-72 h-54',
+    'Rare':       'w-64 h-48',
+    'Uncommon':   'w-56 h-42',
+    'Common':     'w-56 h-42',
+  }[card.rarity] ?? 'w-64 h-48';
 
   return (
     <div className="relative flex items-center justify-center">

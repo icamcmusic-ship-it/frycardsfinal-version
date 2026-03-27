@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Search, Filter, Lock, Unlock, Zap, LayoutGrid, Coins, Star, PackageOpen, Check } from 'lucide-react';
+import { Loader2, Search, Filter, Lock, Unlock, Zap, LayoutGrid, Coins, Star, PackageOpen, Check, Trophy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
@@ -13,6 +13,7 @@ import { CreateListingModal } from '../components/CreateListingModal';
 import { Card3DModal } from '../components/Card3DModal';
 import { CollectionCard } from '../components/CollectionCard';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { SetProgress } from '../components/SetProgress';
 
 export function Collection() {
   const { profile } = useProfileStore();
@@ -23,8 +24,10 @@ export function Collection() {
   const [filter, setFilter] = useState(() => sessionStorage.getItem('col_filter') || 'all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'collection' | 'wishlist'>('collection');
+  const [activeTab, setActiveTab] = useState<'collection' | 'wishlist' | 'sets'>('collection');
   const [wishlist, setWishlist] = useState<any[]>([]);
+  const [sets, setSets] = useState<any[]>([]);
+  const [loadingSets, setLoadingSets] = useState(false);
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [isListingModalOpen, setIsListingModalOpen] = useState(false);
   const [cardToList, setCardToList] = useState<any>(null);
@@ -54,6 +57,25 @@ export function Collection() {
   const [offset, setOffset] = useState(0);
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
   const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    if (activeTab === 'sets') {
+      fetchSets();
+    }
+  }, [activeTab]);
+
+  const fetchSets = async () => {
+    setLoadingSets(true);
+    try {
+      const { data, error } = await supabase.rpc('get_set_progress');
+      if (error) throw error;
+      setSets(data || []);
+    } catch (err) {
+      console.error('Error fetching sets:', err);
+    } finally {
+      setLoadingSets(false);
+    }
+  };
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -420,6 +442,15 @@ export function Collection() {
             >
               Wishlist
             </button>
+            <button
+              onClick={() => setActiveTab('sets')}
+              className={cn(
+                "px-6 py-2 rounded-lg font-black text-sm uppercase transition-colors",
+                activeTab === 'sets' ? "bg-[var(--text)] text-[var(--surface)]" : "text-slate-600 hover:bg-slate-100"
+              )}
+            >
+              Sets
+            </button>
           </div>
 
           {activeTab === 'collection' && !isBatchMode && (
@@ -447,7 +478,46 @@ export function Collection() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      {activeTab === 'sets' ? (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-black uppercase text-[var(--text)] flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-emerald-500" />
+              Set Collections
+            </h2>
+            <p className="text-sm font-bold text-slate-500">Collect all cards in a set to earn unique rewards</p>
+          </div>
+
+          {loadingSets ? (
+            <div className="grid gap-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-40 bg-slate-100 animate-pulse rounded-2xl border-4 border-slate-200" />
+              ))}
+            </div>
+          ) : sets.length === 0 ? (
+            <EmptyState 
+              icon={Trophy}
+              title="No Sets Found" 
+              description="Set collection data is currently unavailable." 
+              ctaText="Back to Collection"
+              ctaAction={() => setActiveTab('collection')}
+            />
+          ) : (
+            <div className="grid gap-6">
+              {sets.map(set => (
+                <React.Fragment key={set.id}>
+                  <SetProgress 
+                    set={set} 
+                    onClaimed={fetchSets} 
+                  />
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-2 mb-4">
         {['all', 'common', 'uncommon', 'rare', 'super-rare', 'mythic', 'divine', 'foil'].map((r) => (
           <button
             key={r}
@@ -704,6 +774,8 @@ export function Collection() {
             Quick Sell Selected
           </button>
         </div>
+      )}
+        </>
       )}
       <ConfirmModal
         isOpen={confirmConfig.isOpen}

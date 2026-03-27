@@ -239,7 +239,7 @@ export function Quests() {
 function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mission: any, onClaim: () => void | Promise<void>, claiming: boolean }) {
   const isCompleted = mission.is_completed;
   const isClaimed = mission.is_claimed;
-  const progressPercent = Math.min(100, (mission.progress / mission.target_value) * 100);
+  const progressPercent = Math.min(100, (mission.current_value / mission.target_value) * 100);
 
   return (
     <motion.div 
@@ -266,7 +266,7 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] font-black uppercase">
               <span className="text-slate-500">Progress</span>
-              <span className="text-blue-600">{mission.progress} / {mission.target_value}</span>
+              <span className="text-blue-600">{mission.current_value} / {mission.target_value}</span>
             </div>
             <div className="h-2 bg-slate-200 rounded-full border border-[var(--border)] overflow-hidden">
               <div 
@@ -311,7 +311,7 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
 function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, onClaim: () => void | Promise<void>, claiming: boolean }) {
   const isClaimed = quest.status === 'claimed';
   const isCompleted = quest.status === 'completed' || isClaimed;
-  const progressPercent = Math.min(100, (quest.progress / quest.target_value) * 100);
+  const progressPercent = Math.min(100, (quest.current_value / quest.target_value) * 100);
 
   return (
     <motion.div 
@@ -341,7 +341,7 @@ function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, 
             <div className="flex justify-between text-sm font-black uppercase">
               <span className="text-slate-500">Progress</span>
               <span className={isCompleted ? "text-emerald-600" : "text-blue-600"}>
-                {quest.progress} / {quest.target_value}
+                {quest.current_value} / {quest.target_value}
               </span>
             </div>
             <div className="h-4 bg-slate-200 rounded-full border-2 border-[var(--border)] overflow-hidden">

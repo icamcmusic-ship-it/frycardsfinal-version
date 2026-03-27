@@ -127,7 +127,11 @@ export function SeasonPass() {
       <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
         <div className="flex justify-between items-center mb-3">
           <p className="text-2xl font-black text-[var(--text)]">Level {userLevel}</p>
-          <p className="font-mono font-bold text-slate-500">{userXP.toLocaleString()} XP{xpToNext ? ` / ${xpToNext.toLocaleString()}` : ''}</p>
+          <p className="font-mono font-bold text-slate-500">
+            {xpToNext 
+              ? `${(userXP - prevXP).toLocaleString()} / ${(xpToNext - prevXP).toLocaleString()} XP (${Math.floor(progressPct)}%)` 
+              : 'MAX LEVEL'}
+          </p>
         </div>
         <div className="w-full h-4 bg-[var(--bg)] rounded-full border-2 border-[var(--border)] overflow-hidden">
           <motion.div className="h-full bg-blue-500 rounded-full"
@@ -167,7 +171,7 @@ export function SeasonPass() {
                   </div>
                   <div>
                     <h3 className="font-black text-base uppercase text-[var(--text)]">{tier.reward_label}</h3>
-                    <p className="text-xs font-bold text-slate-500">{tier.xp_required.toLocaleString()} XP required</p>
+                    <p className="text-xs font-bold text-slate-500">Reach Level {tier.tier}</p>
                   </div>
                 </div>
               </div>
