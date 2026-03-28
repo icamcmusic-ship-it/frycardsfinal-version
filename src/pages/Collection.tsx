@@ -51,7 +51,9 @@ export function Collection() {
   const [elementType, setElementType] = useState<string>(() => sessionStorage.getItem('col_element') || 'all');
   const [showFoilsOnly, setShowFoilsOnly] = useState(false);
   const [stats, setStats] = useState<any>(null);
-  const [viewSize, setViewSize] = useState<'normal' | 'large'>('large');
+  const [viewSize, setViewSize] = useState<'normal' | 'large'>(() => 
+    (localStorage.getItem('col_view_size') as any) || 'normal'
+  );
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -87,6 +89,7 @@ export function Collection() {
   useEffect(() => { sessionStorage.setItem('col_filter', filter); }, [filter]);
   useEffect(() => { sessionStorage.setItem('col_sort', sortBy); }, [sortBy]);
   useEffect(() => { sessionStorage.setItem('col_element', elementType); }, [elementType]);
+  useEffect(() => { localStorage.setItem('col_view_size', viewSize); }, [viewSize]);
 
   useEffect(() => {
     if (profile) {
@@ -399,10 +402,10 @@ export function Collection() {
               <p className="text-sm font-black uppercase text-slate-500 mb-1">Collection Completion</p>
               <h2 className="text-3xl font-black text-[var(--text)]">
                 {stats.unique_cards} <span className="text-lg text-slate-400">/ {stats.total_possible}</span>
+                {stats.foil_cards > 0 && (
+                  <span className="ml-3 text-xl text-yellow-500">✨ {stats.foil_cards}</span>
+                )}
               </h2>
-              {stats.foil_cards > 0 && (
-                <p className="text-xs font-black text-yellow-600 mt-1 uppercase tracking-wider">✨ {stats.foil_cards} Foil Cards</p>
-              )}
               {sets.filter(s => s.is_complete && !s.is_claimed).length > 0 && (
                 <p className="text-xs font-black text-emerald-600 mt-1 uppercase tracking-wider flex items-center gap-1">
                   <Trophy className="w-3 h-3" /> {sets.filter(s => s.is_complete && !s.is_claimed).length} Sets Ready to Claim!
@@ -607,10 +610,11 @@ export function Collection() {
 
           <button
             onClick={() => setViewSize(prev => prev === 'normal' ? 'large' : 'normal')}
-            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2 hover:bg-slate-50 transition-colors"
+            title={viewSize === 'normal' ? 'Switch to Large Grid' : 'Switch to Normal Grid'}
           >
             <LayoutGrid className="w-5 h-5" />
-            {viewSize === 'normal' ? 'Large Grid' : 'Normal Grid'}
+            <span className="hidden sm:inline">{viewSize === 'normal' ? 'Large Grid' : 'Normal Grid'}</span>
           </button>
         </div>
       </div>

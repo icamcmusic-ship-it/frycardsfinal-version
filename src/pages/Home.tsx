@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
+import { ENERGY_REGEN_INTERVAL } from '../constants';
 import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -23,6 +24,13 @@ export function Home() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinLandedIndex, setSpinLandedIndex] = useState<number | null>(null);
 
+  const isDailyClaimable = () => {
+    if (!profile?.last_daily_claim) return true;
+    const lastClaim = profile.last_daily_claim; // e.g. "2026-03-12"
+    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD" in UTC
+    return today > lastClaim;
+  };
+
   useEffect(() => {
     if (profile) {
       fetchQuests();
@@ -30,6 +38,10 @@ export function Home() {
       supabase.rpc('get_my_collection_stats').then(({ data }) => {
         if (data) setStats(data);
       });
+      
+      if (isDailyClaimable()) {
+        setShowDailyPreview(true);
+      }
     }
   }, [profile]);
 
@@ -38,7 +50,7 @@ export function Home() {
       setCurrentEnergy(profile.energy);
       
       if (profile.energy < profile.max_energy && profile.energy_last_regen) {
-        const regenTime = new Date(profile.energy_last_regen).getTime() + 15 * 60 * 1000;
+        const regenTime = new Date(profile.energy_last_regen).getTime() + ENERGY_REGEN_INTERVAL;
         setNextRegen(regenTime);
       } else {
         setNextRegen(null);
@@ -140,13 +152,6 @@ export function Home() {
       setIsSpinning(false);
       setClaimingDaily(false);
     }
-  };
-
-  const isDailyClaimable = () => {
-    if (!profile?.last_daily_claim) return true;
-    const lastClaim = profile.last_daily_claim; // e.g. "2026-03-12"
-    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD" in UTC
-    return today > lastClaim;
   };
 
   if (!profile) {

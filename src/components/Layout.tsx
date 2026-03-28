@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
+import { ENERGY_REGEN_INTERVAL } from '../constants';
 import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers, Target, MessageSquare, Sword, Award, ShieldAlert } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
@@ -155,7 +156,7 @@ export function Layout() {
 
   useEffect(() => {
     if (profile && profile.energy < profile.max_energy && profile.energy_last_regen) {
-      const regenTime = new Date(profile.energy_last_regen).getTime() + 15 * 60 * 1000;
+      const regenTime = new Date(profile.energy_last_regen).getTime() + ENERGY_REGEN_INTERVAL;
       setNextRegen(regenTime);
       requestRef.current = requestAnimationFrame(animate);
     } else {

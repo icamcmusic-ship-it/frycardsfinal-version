@@ -87,8 +87,9 @@ export function Trades() {
     return () => clearInterval(timer);
   }, []);
 
-  const formatTradeExpiry = (createdAt: string) => {
-    const expiryTime = new Date(createdAt).getTime() + 48 * 60 * 60 * 1000; // 48 hours expiry
+  const formatTradeExpiry = (expiresAt: string) => {
+    if (!expiresAt) return 'N/A';
+    const expiryTime = new Date(expiresAt).getTime();
     const diff = expiryTime - now;
     if (diff <= 0) return 'Expired';
     
@@ -129,12 +130,12 @@ export function Trades() {
     try {
       const { data: tradeId, error } = await supabase.rpc('create_trade_rpc', {
         p_receiver_id: receiverId,
-        p_offered_card_ids: offeredIds,
-        p_requested_card_ids: requestedIds,
+        p_offered_card_ids: offeredIds.map(id => myCards.find(c => c.user_card_id === id)?.id).filter(Boolean),
+        p_requested_card_ids: requestedIds.map(id => receiverCards.find(c => c.user_card_id === id)?.id).filter(Boolean),
         p_offered_gold: offeredGold,
         p_offered_gems: offeredGems,
-        p_requested_gold: 0,
-        p_requested_gems: 0,
+        p_requested_gold: requestedGold,
+        p_requested_gems: requestedGems,
         p_message: tradeMessage,
       });
       if (error) throw error;
@@ -217,8 +218,8 @@ export function Trades() {
                 <p className="font-black mb-2 text-sm text-slate-600">Cards to offer:</p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-lg border-2 border-blue-100">
                   {myCards.map(c => (
-                    <button key={c.id} onClick={() => toggleCard(c.id, offeredIds, setOfferedIds)}
-                      className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", offeredIds.includes(c.id) ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-[var(--border)]")}>
+                    <button key={c.user_card_id} onClick={() => toggleCard(c.user_card_id, offeredIds, setOfferedIds)}
+                      className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", offeredIds.includes(c.user_card_id) ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-[var(--border)]")}>
                       <CardDisplay card={c} showQuantity={false} showNewBadge={false} />
                       <p className="text-[8px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
                     </button>
@@ -265,8 +266,8 @@ export function Trades() {
                     ) : (
                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-lg border-2 border-emerald-100">
                         {receiverCards.map(c => (
-                          <button key={c.id} onClick={() => toggleCard(c.id, requestedIds, setRequestedIds)}
-                            className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", requestedIds.includes(c.id) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>
+                          <button key={c.user_card_id} onClick={() => toggleCard(c.user_card_id, requestedIds, setRequestedIds)}
+                            className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", requestedIds.includes(c.user_card_id) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>
                             <CardDisplay card={cardDataToDisplay(c)} showQuantity={false} showNewBadge={false} />
                             <p className="text-[8px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
                           </button>
@@ -335,9 +336,9 @@ export function Trades() {
                   {trade.status === 'pending' && (
                     <span className={cn(
                       "text-[10px] font-black px-2 py-0.5 rounded border-2 uppercase",
-                      formatTradeExpiry(trade.created_at) === 'Expired' ? "bg-red-100 text-red-600 border-red-200" : "bg-blue-100 text-blue-600 border-blue-200"
+                      formatTradeExpiry(trade.expires_at) === 'Expired' ? "bg-red-100 text-red-600 border-red-200" : "bg-blue-100 text-blue-600 border-blue-200"
                     )}>
-                      Expires in {formatTradeExpiry(trade.created_at)}
+                      Expires in {formatTradeExpiry(trade.expires_at)}
                     </span>
                   )}
                 </div>

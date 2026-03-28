@@ -19,6 +19,7 @@ export function Marketplace() {
   const [hasNewListings, setHasNewListings] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'all' | 'watchlist' | 'my_listings'>('all');
+  const [offset, setOffset] = useState(0);
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [watchlistedIds, setWatchlistedIds] = useState<Set<string>>(new Set());
   const watchlistedIdsRef = React.useRef<Set<string>>(new Set());
@@ -195,14 +196,26 @@ export function Marketplace() {
     }
   };
 
-  const fetchMyListings = async () => {
+  const fetchMyListings = async (isLoadMore = false) => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase.rpc('get_my_listings');
+      if (!isLoadMore) {
+        setLoading(true);
+        setOffset(0);
+        setHasMore(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const nextOffset = isLoadMore ? myListings.length : 0;
+
+      const { data, error } = await supabase.rpc('get_my_listings', {
+        p_limit: 20,
+        p_offset: nextOffset
+      });
       if (error) throw error;
       
       // Normalize flat data into nested card object
-      const normalized = (data || []).map((item: any) => ({
+      const fetched = (data || []).map((item: any) => ({
         ...item,
         card_name: item.card_name,
         card_rarity: item.card_rarity,
@@ -218,11 +231,20 @@ export function Marketplace() {
           is_foil: item.is_foil,
         }
       }));
-      setMyListings(normalized);
+
+      if (isLoadMore) {
+        setMyListings(prev => [...prev, ...fetched]);
+      } else {
+        setMyListings(fetched);
+      }
+
+      setHasMore(fetched.length === 20);
+      setOffset(nextOffset + fetched.length);
     } catch (err) {
       console.error('Error fetching my listings:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -311,23 +333,37 @@ export function Marketplace() {
   useEffect(() => {
     const handleScroll = () => {
       if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
-        if (hasMore && !loadingMore && activeTab === 'all') {
-          fetchListings(true);
+        if (hasMore && !loadingMore) {
+          if (activeTab === 'all') fetchListings(true);
+          else if (activeTab === 'watchlist') fetchWatchlist(true);
+          else if (activeTab === 'my_listings') fetchMyListings(true);
         }
       }
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, listings.length, activeTab]);
+  }, [hasMore, loadingMore, listings.length, watchlist.length, myListings.length, activeTab]);
 
-  const fetchWatchlist = async () => {
+  const fetchWatchlist = async (isLoadMore = false) => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase.rpc('get_watchlist');
+      if (!isLoadMore) {
+        setLoading(true);
+        setOffset(0);
+        setHasMore(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const nextOffset = isLoadMore ? watchlist.length : 0;
+
+      const { data, error } = await supabase.rpc('get_watchlist', {
+        p_limit: 20,
+        p_offset: nextOffset
+      });
       if (error) throw error;
       
       // Normalize flat data into nested card object
-      const normalized = (data || []).map((item: any) => ({
+      const fetched = (data || []).map((item: any) => ({
         ...item,
         card_name: item.card_name,
         card_rarity: item.card_rarity,
@@ -343,11 +379,20 @@ export function Marketplace() {
           is_foil: item.is_foil,
         }
       }));
-      setWatchlist(normalized);
+
+      if (isLoadMore) {
+        setWatchlist(prev => [...prev, ...fetched]);
+      } else {
+        setWatchlist(fetched);
+      }
+
+      setHasMore(fetched.length === 20);
+      setOffset(nextOffset + fetched.length);
     } catch (err) {
       console.error('Error fetching watchlist:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -593,8 +638,10 @@ export function Marketplace() {
             onChange={(e) => setSortBy(e.target.value as any)}
             className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
           >
-            <option value="newest">Sort by Newest</option>
-            <option value="price">Sort by Price</option>
+            <option value="newest">Newest First</option>
+            <option value="price">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="ending_soon">Ending Soon</option>
           </select>
           
           <input 

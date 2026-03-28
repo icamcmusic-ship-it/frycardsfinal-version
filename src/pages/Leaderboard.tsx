@@ -6,8 +6,7 @@ import { cn } from '../lib/utils';
 
 const LEADERBOARD_TYPES = [
   { id: 'xp',           label: 'Top Level',     icon: Trophy,      scoreLabel: 'XP' },
-  { id: 'collection',   label: 'Most Cards',    icon: LayoutGrid,  scoreLabel: 'Cards' },
-  { id: 'unique_cards', label: 'Unique Cards',  icon: Library,     scoreLabel: 'Unique' },
+  { id: 'collection',   label: 'Unique Cards',  icon: Library,     scoreLabel: 'Unique' },
   { id: 'packs_opened', label: 'Packs Opened',  icon: Package,     scoreLabel: 'Packs' },
   { id: 'total_trades', label: 'Top Traders',   icon: Repeat,      scoreLabel: 'Trades' },
 ];

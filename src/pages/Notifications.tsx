@@ -23,6 +23,10 @@ export function Notifications() {
   const { profile } = useProfileStore();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     fetchNotifications();
@@ -49,16 +53,38 @@ export function Notifications() {
     };
   }, [profile?.id]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (isLoadMore = false) => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase.rpc('get_notifications', { p_limit: 50, p_offset: 0 });
+      if (!isLoadMore) {
+        setLoading(true);
+        setOffset(0);
+        setHasMore(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      const nextOffset = isLoadMore ? notifications.length : 0;
+
+      const { data, error } = await supabase.rpc('get_notifications', { 
+        p_limit: PAGE_SIZE, 
+        p_offset: nextOffset 
+      });
       if (error) throw error;
-      setNotifications(data || []);
+      
+      const fetched = data || [];
+      if (isLoadMore) {
+        setNotifications(prev => [...prev, ...fetched]);
+      } else {
+        setNotifications(fetched);
+      }
+
+      setHasMore(fetched.length === PAGE_SIZE);
+      setOffset(nextOffset + fetched.length);
     } catch (err) {
       console.error('Error fetching notifications:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -178,6 +204,24 @@ export function Notifications() {
               )}
             </motion.div>
           ))}
+          {hasMore && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => fetchNotifications(true)}
+                disabled={loadingMore}
+                className="px-8 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] disabled:opacity-50 transition-all active:translate-y-1"
+              >
+                {loadingMore ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Loading...
+                  </div>
+                ) : (
+                  'Load More Notifications'
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

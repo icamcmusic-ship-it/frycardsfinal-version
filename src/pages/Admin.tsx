@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Shield, Users, Package, Target, Settings, Plus, Edit2, Trash2, Search, AlertCircle } from 'lucide-react';
+import { Loader2, Shield, Users, Package, Target, Settings, Plus, Edit2, Trash2, Search, AlertCircle, X, LayoutGrid, Gift, Zap, ShoppingCart } from 'lucide-react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
@@ -14,6 +14,9 @@ export function Admin() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [formData, setFormData] = useState<any>({});
 
   useEffect(() => {
     if (profile?.is_admin) {
@@ -66,6 +69,54 @@ export function Admin() {
     return true;
   });
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    try {
+      const { error } = await supabase.from(activeTab === 'users' ? 'profiles' : activeTab === 'cards' ? 'cards' : activeTab === 'packs' ? 'pack_types' : activeTab === 'quests' ? 'quest_templates' : 'shop_items').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Item deleted');
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete');
+    }
+  };
+
+  const handleEdit = (item: any) => {
+    setEditingItem(item);
+    setFormData(item);
+    setIsModalOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingItem(null);
+    setFormData({});
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      const table = activeTab === 'users' ? 'profiles' : 
+                    activeTab === 'cards' ? 'cards' : 
+                    activeTab === 'packs' ? 'pack_types' : 
+                    activeTab === 'quests' ? 'quest_templates' : 
+                    'shop_items';
+      
+      if (editingItem) {
+        const { error } = await supabase.from(table).update(formData).eq('id', editingItem.id);
+        if (error) throw error;
+        toast.success('Item updated');
+      } else {
+        const { error } = await supabase.from(table).insert([formData]);
+        if (error) throw error;
+        toast.success('Item created');
+      }
+      setIsModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save');
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -73,6 +124,15 @@ export function Admin() {
           <Shield className="w-10 h-10 text-red-500" />
           Admin Control
         </h1>
+        {activeTab !== 'users' && (
+          <button
+            onClick={handleCreate}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Create New {activeTab.slice(0, -1)}
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -170,10 +230,10 @@ export function Admin() {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 hover:bg-blue-100 rounded-lg border-2 border-transparent hover:border-blue-200 transition-all">
+                        <button onClick={() => handleEdit(item)} className="p-2 hover:bg-blue-100 rounded-lg border-2 border-transparent hover:border-blue-200 transition-all">
                           <Edit2 className="w-4 h-4 text-blue-600" />
                         </button>
-                        <button className="p-2 hover:bg-red-100 rounded-lg border-2 border-transparent hover:border-red-200 transition-all">
+                        <button onClick={() => handleDelete(item.id)} className="p-2 hover:bg-red-100 rounded-lg border-2 border-transparent hover:border-red-200 transition-all">
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </button>
                       </div>
@@ -185,6 +245,162 @@ export function Admin() {
           </div>
         )}
       </div>
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-[var(--surface)] border-4 border-black rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <div className="p-6 border-b-4 border-black flex justify-between items-center sticky top-0 bg-[var(--surface)] z-10">
+              <h2 className="text-2xl font-black uppercase text-[var(--text)]">
+                {editingItem ? 'Edit' : 'Create'} {activeTab.slice(0, -1)}
+              </h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {activeTab === 'cards' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Name</label>
+                      <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Rarity</label>
+                      <select value={formData.rarity || ''} onChange={e => setFormData({...formData, rarity: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
+                        <option value="Common">Common</option>
+                        <option value="Uncommon">Uncommon</option>
+                        <option value="Rare">Rare</option>
+                        <option value="Super-Rare">Super-Rare</option>
+                        <option value="Mythic">Mythic</option>
+                        <option value="Divine">Divine</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Element</label>
+                      <select value={formData.element_type || ''} onChange={e => setFormData({...formData, element_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
+                        <option value="Fire">Fire</option>
+                        <option value="Water">Water</option>
+                        <option value="Earth">Earth</option>
+                        <option value="Air">Air</option>
+                        <option value="Light">Light</option>
+                        <option value="Dark">Dark</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Type</label>
+                      <input type="text" value={formData.card_type || ''} onChange={e => setFormData({...formData, card_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Image URL</label>
+                    <input type="text" value={formData.image_url || ''} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Flavor Text</label>
+                    <textarea value={formData.flavor_text || ''} onChange={e => setFormData({...formData, flavor_text: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold h-24" />
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'packs' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Name</label>
+                    <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Description</label>
+                    <textarea value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold h-24" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Cost Gold</label>
+                      <input type="number" value={formData.cost_gold || 0} onChange={e => setFormData({...formData, cost_gold: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Cost Gems</label>
+                      <input type="number" value={formData.cost_gems || 0} onChange={e => setFormData({...formData, cost_gems: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Image URL</label>
+                    <input type="text" value={formData.image_url || ''} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'quests' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Title</label>
+                    <input type="text" value={formData.title || ''} onChange={e => setFormData({...formData, title: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Description</label>
+                    <textarea value={formData.description || ''} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold h-24" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Gold</label>
+                      <input type="number" value={formData.reward_gold || 0} onChange={e => setFormData({...formData, reward_gold: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Gems</label>
+                      <input type="number" value={formData.reward_gems || 0} onChange={e => setFormData({...formData, reward_gems: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">XP</label>
+                      <input type="number" value={formData.reward_xp || 0} onChange={e => setFormData({...formData, reward_xp: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'shop' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Name</label>
+                    <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Type</label>
+                      <input type="text" value={formData.type || ''} onChange={e => setFormData({...formData, type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Value</label>
+                      <input type="number" value={formData.value || 0} onChange={e => setFormData({...formData, value: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Gold</label>
+                      <input type="number" value={formData.cost_gold || 0} onChange={e => setFormData({...formData, cost_gold: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Gems</label>
+                      <input type="number" value={formData.cost_gems || 0} onChange={e => setFormData({...formData, cost_gems: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Real Money ($)</label>
+                      <input type="number" value={formData.cost_real_money || 0} onChange={e => setFormData({...formData, cost_real_money: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="pt-4">
+                <button onClick={handleSave} className="w-full py-4 bg-emerald-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 uppercase">
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
