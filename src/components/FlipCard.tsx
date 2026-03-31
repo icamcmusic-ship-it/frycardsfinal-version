@@ -229,7 +229,7 @@ export const FlipCard: React.FC<FlipCardProps> = ({
             >
               <h4 className="text-white font-black text-lg uppercase leading-tight mb-1">{card.name}</h4>
               <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-3">
-                {card.card_type} {card.element ? `· ${card.element}` : ''}
+                {card.card_type}{card.sub_type ? ` · ${card.sub_type}` : ''}{card.element ? ` · ${card.element}` : ''}
               </p>
 
               {(card.hp || card.attack || card.defense) && (

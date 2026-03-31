@@ -18,6 +18,7 @@ const elementColors: Record<string, string> = {
   'Water': 'bg-blue-500 text-white',
   'Earth': 'bg-yellow-700 text-white',
   'Wind': 'bg-teal-400 text-black',
+  'Air': 'bg-teal-400 text-black',
   'Dark': 'bg-purple-900 text-white',
   'Light': 'bg-yellow-300 text-black',
 };

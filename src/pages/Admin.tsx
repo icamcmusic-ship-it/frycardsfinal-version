@@ -284,14 +284,21 @@ export function Admin() {
                         <option value="Fire">Fire</option>
                         <option value="Water">Water</option>
                         <option value="Earth">Earth</option>
-                        <option value="Air">Air</option>
+                        <option value="Wind">Wind</option>
                         <option value="Light">Light</option>
                         <option value="Dark">Dark</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-black uppercase text-slate-500 mb-1">Type</label>
-                      <input type="text" value={formData.card_type || ''} onChange={e => setFormData({...formData, card_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                      <select value={formData.card_type || 'Unit'} onChange={e => setFormData({...formData, card_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
+                        <option value="Unit">Unit</option>
+                        <option value="Event">Event</option>
+                        <option value="Location">Location</option>
+                        <option value="Artifact">Artifact</option>
+                        <option value="Leader">Leader</option>
+                        <option value="Sacred">Sacred</option>
+                      </select>
                     </div>
                   </div>
                   <div>

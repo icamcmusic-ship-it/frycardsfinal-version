@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
 import { ENERGY_REGEN_INTERVAL } from '../constants';
-import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift } from 'lucide-react';
+import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift, Package } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
 import { cn } from '../lib/utils';
+
+import { DailySpinner } from '../components/DailySpinner';
 
 export function Home() {
   const { profile } = useProfileStore();
@@ -18,11 +20,25 @@ export function Home() {
   const [stats, setStats] = useState<{ unique_cards: number; total_possible: number; total_cards: number } | null>(null);
   const [claimingQuest, setClaimingQuest] = useState<string | null>(null);
   const [claimingDaily, setClaimingDaily] = useState(false);
-  const [reward, setReward] = useState<any>(null);
   const [showSpinner, setShowSpinner] = useState(false);
-  const [spinnerSectors, setSpinnerSectors] = useState<any[]>([]);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [spinLandedIndex, setSpinLandedIndex] = useState<number | null>(null);
+  const [showDailyPreview, setShowDailyPreview] = useState(false);
+  const [userPacks, setUserPacks] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (profile) {
+      fetchUserPacks();
+    }
+  }, [profile]);
+
+  const fetchUserPacks = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_user_pack_inventory');
+      if (error) throw error;
+      setUserPacks(data || []);
+    } catch (err) {
+      console.error('Error fetching user packs:', err);
+    }
+  };
 
   const isDailyClaimable = () => {
     if (!profile?.last_daily_claim) return true;
@@ -103,55 +119,13 @@ export function Home() {
     }
   };
 
-  const [showDailyPreview, setShowDailyPreview] = useState(false);
-
-  const handleOpenSpinner = async () => {
-    try {
-      const { data, error } = await supabase.rpc('get_daily_spinner_sectors');
-      if (error) throw error;
-      setSpinnerSectors(data || []);
-      setShowSpinner(true);
-      setSpinLandedIndex(null);
-    } catch (err) {
-      console.error('Error fetching spinner sectors:', err);
-      toast.error('Failed to load spinner');
-    }
+  const handleOpenSpinner = () => {
+    setShowSpinner(true);
   };
 
   const handleSpin = async () => {
-    if (isSpinning || claimingDaily) return;
-    setIsSpinning(true);
-    setClaimingDaily(true);
-    
-    try {
-      const { data, error } = await supabase.rpc('claim_daily_reward');
-      if (error) throw error;
-
-      // Find which sector the reward belongs to
-      const landedIndex = spinnerSectors.findIndex(s => 
-        s.reward_type === data.reward_type && s.reward_amount === data.reward_amount
-      );
-
-      // If not found (fallback), pick a random one that matches reward type
-      const finalIndex = landedIndex !== -1 ? landedIndex : 
-        spinnerSectors.findIndex(s => s.reward_type === data.reward_type);
-
-      setSpinLandedIndex(finalIndex);
-
-      // Wait for animation
-      setTimeout(async () => {
-        setIsSpinning(false);
-        setClaimingDaily(false);
-        setReward(data);
-        setShowSpinner(false);
-        await useProfileStore.getState().refreshProfile();
-      }, 4000);
-
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to claim reward');
-      setIsSpinning(false);
-      setClaimingDaily(false);
-    }
+    setShowSpinner(true);
+    setShowDailyPreview(false);
   };
 
   if (!profile) {
@@ -313,6 +287,43 @@ export function Home() {
         </div>
       </div>
 
+      {/* My Packs Section */}
+      {userPacks.length > 0 && (
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_var(--border)]">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">
+              <Package className="w-6 h-6 text-indigo-500" />
+              My Packs
+            </h2>
+            <Link to="/store?tab=inventory" className="text-indigo-500 font-black uppercase text-sm hover:underline">View All</Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {userPacks.slice(0, 6).map((pack) => (
+              <Link
+                key={pack.pack_id}
+                to={`/store?open=${pack.pack_id}`}
+                className="group relative bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-3 shadow-[4px_4px_0px_0px_var(--border)] hover:translate-y-[-2px] transition-all"
+              >
+                <div className="aspect-[3/4] mb-2 overflow-hidden rounded-lg border-2 border-[var(--border)] bg-indigo-50 flex items-center justify-center">
+                  <img
+                    src={pack.image_url}
+                    alt={pack.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div className="text-center">
+                  <p className="font-black text-[10px] uppercase truncate text-[var(--text)]">{pack.name}</p>
+                  <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-black rounded-full border-2 border-black">
+                    {pack.quantity}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Daily Missions Preview */}
       <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_var(--border)]">
         <div className="flex items-center justify-between mb-6">
@@ -421,132 +432,10 @@ export function Home() {
         </div>
       )}
 
-      {/* Spinner Modal */}
-      <AnimatePresence>
-        {showSpinner && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[var(--surface)] border-8 border-black rounded-3xl p-8 max-w-md w-full shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden"
-            >
-              <button 
-                onClick={() => !isSpinning && setShowSpinner(false)}
-                className="absolute top-4 right-4 p-2 hover:bg-black/5 rounded-full transition-colors"
-                disabled={isSpinning}
-              >
-                <Loader2 className={cn("w-6 h-6", isSpinning && "animate-spin")} />
-              </button>
-
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-black uppercase tracking-tighter mb-2">Daily Spinner</h2>
-                <p className="text-slate-500 font-bold">Spin the wheel to claim your daily reward!</p>
-              </div>
-
-              <div className="relative aspect-square w-full max-w-[280px] mx-auto mb-8">
-                {/* Pointer */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                  <div className="w-8 h-10 bg-red-500 border-4 border-black rounded-b-full shadow-lg" />
-                </div>
-
-                {/* Wheel */}
-                <motion.div 
-                  className="w-full h-full rounded-full border-8 border-black relative overflow-hidden shadow-2xl"
-                  animate={{ 
-                    rotate: isSpinning 
-                      ? 360 * 10 + (spinLandedIndex !== null ? (360 - (spinLandedIndex * (360 / spinnerSectors.length))) : 0)
-                      : spinLandedIndex !== null ? (360 - (spinLandedIndex * (360 / spinnerSectors.length))) : 0
-                  }}
-                  transition={{ 
-                    duration: isSpinning ? 4 : 0, 
-                    ease: [0.15, 0, 0.15, 1] 
-                  }}
-                >
-                  {spinnerSectors.map((sector, i) => {
-                    const angle = 360 / spinnerSectors.length;
-                    const rotation = i * angle;
-                    return (
-                      <div 
-                        key={i}
-                        className="absolute top-0 left-1/2 w-1/2 h-full origin-left"
-                        style={{ 
-                          transform: `rotate(${rotation}deg)`,
-                          backgroundColor: sector.color || '#ccc',
-                          clipPath: `polygon(0 0, 100% 0, 100% ${Math.tan((angle * Math.PI) / 180) * 100}%, 0 0)`
-                        }}
-                      >
-                        <div 
-                          className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-90 text-[10px] font-black text-black whitespace-nowrap uppercase"
-                          style={{ transform: `rotate(${angle / 2}deg) translateY(-20px)` }}
-                        >
-                          {sector.label}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </motion.div>
-
-                {/* Center Cap */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white border-4 border-black rounded-full z-10 flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-6 h-6 text-yellow-500" />
-                </div>
-              </div>
-
-              <button
-                onClick={handleSpin}
-                disabled={isSpinning || claimingDaily}
-                className={cn(
-                  "w-full py-4 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-black font-black text-xl rounded-2xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] uppercase tracking-widest transition-all active:translate-y-1 active:shadow-none",
-                  isSpinning && "animate-pulse"
-                )}
-              >
-                {isSpinning ? 'Spinning...' : 'Spin Now!'}
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {reward && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          onClick={() => setReward(null)}
-        >
-          <motion.div 
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-8 max-w-sm w-full shadow-[8px_8px_0px_0px_var(--border)] text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-3xl font-black text-[var(--text)] uppercase mb-2">
-              {reward.reward_type === 'jackpot' ? '🎉 Jackpot!' :
-               reward.reward_type === 'gem_cache' ? '💎 Gem Cache!' :
-               reward.reward_type === 'gold_stash' ? '💰 Gold Stash!' :
-               reward.reward_type === 'rare_card' ? '✨ Rare Card!' :
-               reward.reward_type === 'pack_bundle' ? '📦 Pack Bundle!' :
-               reward.reward_type === 'milestone_7' ? '🌟 7-Day Milestone!' :
-               reward.reward_type === 'milestone_30' ? '🔥 30-Day Milestone!' :
-               'Reward Claimed!'}
-            </h2>
-            <div className="text-xl font-bold text-slate-700 mb-6">
-              {reward.gold_earned > 0 && <p className="text-yellow-600">+{reward.gold_earned} Gold</p>}
-              {reward.gems_earned > 0 && <p className="text-emerald-600">+{reward.gems_earned} Gems</p>}
-              {reward.xp_earned > 0 && <p className="text-blue-600">+{reward.xp_earned} XP</p>}
-              {reward.packs_earned > 0 && <p className="text-purple-600">+{reward.packs_earned} Packs</p>}
-              {reward.card_name && <p className="text-orange-500">New Card: {reward.card_name}</p>}
-              <p className="mt-2 text-sm font-black text-blue-500 uppercase">Streak: {reward.current_streak} days</p>
-            </div>
-            <button 
-              onClick={() => setReward(null)}
-              className="w-full py-3 bg-black text-white font-black rounded-xl border-4 border-black hover:bg-gray-800 transition-colors"
-            >
-              Collect
-            </button>
-          </motion.div>
-        </div>
-      )}
+      <DailySpinner 
+        isOpen={showSpinner} 
+        onClose={() => setShowSpinner(false)} 
+      />
     </motion.div>
   );
 }

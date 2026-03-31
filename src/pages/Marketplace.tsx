@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star, Sparkles, Bookmark } from 'lucide-react';
+import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star, Sparkles, Bookmark, X, History } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
@@ -9,6 +9,96 @@ import { CreateListingModal } from '../components/CreateListingModal';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { CardDisplay } from '../components/CardDisplay';
 import { ConfirmModal } from '../components/ConfirmModal';
+
+interface BidHistoryModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  listing: any;
+  bids: any[];
+  loading: boolean;
+}
+
+function BidHistoryModal({ isOpen, onClose, listing, bids, loading }: BidHistoryModalProps) {
+  if (!isOpen || !listing) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 w-full max-w-md shadow-[8px_8px_0px_0px_var(--border)]"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500 rounded-lg border-2 border-[var(--border)]">
+              <History className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-xl font-black uppercase text-[var(--text)]">Bid History</h2>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full text-[var(--text)]"><X /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 p-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl">
+            <img src={listing.card_image_url} alt={listing.card_name} className="w-12 h-12 object-cover rounded-lg border-2 border-[var(--border)]" />
+            <div>
+              <p className="font-black text-[var(--text)]">{listing.card_name}</p>
+              <p className="text-xs font-bold text-slate-500 uppercase">
+                {listing.listing_type === 'auction' ? 'Current Bid' : 'Price'}: {listing.price} {listing.currency === 'gold' ? 'Gold' : 'Gems'}
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 dark:bg-slate-900/50 border-2 border-[var(--border)] rounded-xl overflow-hidden">
+            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                </div>
+              ) : bids.length > 0 ? (
+                <div className="divide-y-2 divide-slate-100 dark:divide-slate-800">
+                  {bids.map((bid, i) => (
+                    <div key={i} className={cn(
+                      "flex justify-between items-center p-3 transition-colors",
+                      bid.is_winning ? "bg-emerald-50 dark:bg-emerald-900/20" : "hover:bg-slate-100 dark:hover:bg-slate-800/50"
+                    )}>
+                      <div className="flex items-center gap-2">
+                        {bid.is_winning && <Star className="w-4 h-4 text-emerald-500 fill-current" />}
+                        <span className={cn("font-bold text-sm", bid.is_winning ? "text-emerald-600" : "text-[var(--text)]")}>
+                          {bid.bidder_username}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center gap-1 justify-end">
+                          <span className="font-black text-sm text-[var(--text)]">{bid.bid_gold || bid.bid_gems}</span>
+                          {listing.currency === 'gold' ? <Coins className="w-3 h-3 text-yellow-500" /> : <Gem className="w-3 h-3 text-emerald-500" />}
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          {new Date(bid.bid_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-slate-400 font-bold uppercase text-xs">No bids yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full mt-6 py-3 bg-[var(--surface)] hover:bg-gray-100 dark:hover:bg-gray-800 text-[var(--text)] font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-transform active:translate-y-1 active:shadow-none uppercase"
+        >
+          Close
+        </button>
+      </motion.div>
+    </div>
+  );
+}
 
 export function Marketplace() {
   const { profile } = useProfileStore();
@@ -36,37 +126,31 @@ export function Marketplace() {
   const [elementFilter, setElementFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'price' | 'newest'>('newest');
   const [hoveredListing, setHoveredListing] = useState<string | null>(null);
-  const [expandedBids, setExpandedBids] = useState<Set<string>>(new Set());
+  const [showBidHistoryModal, setShowBidHistoryModal] = useState(false);
+  const [selectedListingForBids, setSelectedListingForBids] = useState<any>(null);
   const [bidHistories, setBidHistories] = useState<Record<string, any[]>>({});
   const [loadingBids, setLoadingBids] = useState<Set<string>>(new Set());
 
   const toggleBidHistory = async (listingId: string) => {
-    if (expandedBids.has(listingId)) {
-      setExpandedBids(prev => {
+    const listing = [...listings, ...watchlist, ...myListings].find(l => l.id === listingId);
+    setSelectedListingForBids(listing);
+    setShowBidHistoryModal(true);
+
+    if (bidHistories[listingId]) return;
+
+    setLoadingBids(prev => new Set(prev).add(listingId));
+    try {
+      const { data, error } = await supabase.rpc('get_bid_history', { p_listing_id: listingId });
+      if (error) throw error;
+      setBidHistories(prev => ({ ...prev, [listingId]: data || [] }));
+    } catch (err) {
+      console.error('Error fetching bid history:', err);
+    } finally {
+      setLoadingBids(prev => {
         const next = new Set(prev);
         next.delete(listingId);
         return next;
       });
-      return;
-    }
-
-    setExpandedBids(prev => new Set(prev).add(listingId));
-    
-    if (!bidHistories[listingId]) {
-      setLoadingBids(prev => new Set(prev).add(listingId));
-      try {
-        const { data, error } = await supabase.rpc('get_bid_history', { p_listing_id: listingId });
-        if (error) throw error;
-        setBidHistories(prev => ({ ...prev, [listingId]: data || [] }));
-      } catch (err) {
-        console.error('Error fetching bid history:', err);
-      } finally {
-        setLoadingBids(prev => {
-          const next = new Set(prev);
-          next.delete(listingId);
-          return next;
-        });
-      }
     }
   };
 
@@ -217,17 +301,8 @@ export function Marketplace() {
       // Normalize flat data into nested card object
       const fetched = (data || []).map((item: any) => ({
         ...item,
-        card_name: item.card_name,
-        card_rarity: item.card_rarity,
         card: {
-          id: item.card_id,
-          name: item.card_name,
-          rarity: item.card_rarity,
-          element: item.card_element,
-          card_type: item.card_type,
-          image_url: item.card_image_url,
-          is_video: item.card_is_video,
-          flavor_text: item.card_flavor_text,
+          ...(item.card || {}),
           is_foil: item.is_foil,
         }
       }));
@@ -264,7 +339,7 @@ export function Marketplace() {
       // Fetch total count for pagination indicator
       if (!isLoadMore) {
         let countQuery = supabase
-          .from('market_listings')
+          .from('market_listings_view')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'active');
         
@@ -291,17 +366,8 @@ export function Marketplace() {
       // Normalize flat data into nested card object
       const fetchedListings = (data || []).map((item: any) => ({
         ...item,
-        card_name: item.card_name,
-        card_rarity: item.card_rarity,
         card: {
-          id: item.card_id,
-          name: item.card_name,
-          rarity: item.card_rarity,
-          element: item.card_element,
-          card_type: item.card_type,
-          image_url: item.card_image_url,
-          is_video: item.card_is_video,
-          flavor_text: item.card_flavor_text,
+          ...(item.card || {}),
           is_foil: item.is_foil,
         }
       }));
@@ -365,17 +431,8 @@ export function Marketplace() {
       // Normalize flat data into nested card object
       const fetched = (data || []).map((item: any) => ({
         ...item,
-        card_name: item.card_name,
-        card_rarity: item.card_rarity,
         card: {
-          id: item.card_id,
-          name: item.card_name,
-          rarity: item.card_rarity,
-          element: item.card_element,
-          card_type: item.card_type,
-          image_url: item.card_image_url,
-          is_video: item.card_is_video,
-          flavor_text: item.card_flavor_text,
+          ...(item.card || {}),
           is_foil: item.is_foil,
         }
       }));
@@ -682,7 +739,7 @@ export function Marketplace() {
             <option value="Fire">Fire</option>
             <option value="Water">Water</option>
             <option value="Earth">Earth</option>
-            <option value="Air">Air</option>
+            <option value="Wind">Wind</option>
             <option value="Light">Light</option>
             <option value="Dark">Dark</option>
           </select>
@@ -812,49 +869,11 @@ export function Marketplace() {
                       onClick={() => toggleBidHistory(listing.id)}
                       className="text-[10px] font-black text-blue-500 hover:text-blue-600 underline uppercase mt-1"
                     >
-                      {expandedBids.has(listing.id) ? 'Hide Bids' : 'View Bids'}
+                      View Bids
                     </button>
                   </div>
                 )}
               </div>
-
-              <AnimatePresence>
-                {expandedBids.has(listing.id) && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="bg-slate-50 border-2 border-slate-200 rounded-xl p-3 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-                      <p className="text-[10px] font-black uppercase text-slate-400 border-b border-slate-200 pb-1">Bid History</p>
-                      {loadingBids.has(listing.id) ? (
-                        <div className="flex justify-center py-2">
-                          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                        </div>
-                      ) : bidHistories[listing.id]?.length > 0 ? (
-                        bidHistories[listing.id].map((bid, i) => (
-                          <div key={i} className={cn(
-                            "flex justify-between items-center text-[10px] font-bold",
-                            bid.is_winning ? "text-emerald-600" : "text-slate-500"
-                          )}>
-                            <div className="flex items-center gap-1">
-                              {bid.is_winning && <Star className="w-2.5 h-2.5 fill-current" />}
-                              <span>{bid.bidder_username}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span>{bid.bid_gold || bid.bid_gems}</span>
-                              <span className="text-[8px] opacity-60">{new Date(bid.bid_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-[10px] text-center text-slate-400 py-2">No bids yet</p>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
               {activeTab === 'my_listings' ? (
                 listing.status === 'active' ? (
@@ -951,6 +970,14 @@ export function Marketplace() {
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
       )}
+
+      <BidHistoryModal
+        isOpen={showBidHistoryModal}
+        onClose={() => setShowBidHistoryModal(false)}
+        listing={selectedListingForBids}
+        bids={selectedListingForBids ? bidHistories[selectedListingForBids.id] || [] : []}
+        loading={selectedListingForBids ? loadingBids.has(selectedListingForBids.id) : false}
+      />
     </div>
   );
 }

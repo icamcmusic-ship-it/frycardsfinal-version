@@ -11,7 +11,7 @@ import { Card3DModal } from '../components/Card3DModal';
 import { FlipCard } from '../components/FlipCard';
 import { EmptyState } from '../components/EmptyState';
 
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { audioService } from '../services/AudioService';
 
 const PACK_ODDS = [
@@ -26,10 +26,13 @@ const PACK_ODDS = [
 export function Store() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { profile } = useProfileStore();
-  const [activeTab, setActiveTab] = useState<'packs' | 'inventory'>(
-    location.pathname === '/inventory' ? 'inventory' : 'packs'
-  );
+  
+  const openPackId = searchParams.get('open');
+  const initialTab = searchParams.get('tab') === 'inventory' ? 'inventory' : 'packs';
+  
+  const [activeTab, setActiveTab] = useState<'packs' | 'inventory'>(initialTab);
   const [packs, setPacks] = useState<any[]>([]);
   const [userCosmetics, setUserCosmetics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +56,17 @@ export function Store() {
     message: string;
     onConfirm: () => void;
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+  useEffect(() => {
+    if (openPackId && inventory.length > 0 && !opening) {
+      const packToOpen = inventory.find(p => p.pack_type_id === openPackId);
+      if (packToOpen) {
+        handleOpenFromInventory(packToOpen.pack_type_id, packToOpen.image_url);
+        // Clear the param after opening
+        navigate('/store?tab=inventory', { replace: true });
+      }
+    }
+  }, [openPackId, inventory, opening]);
 
   const tabLabels: Record<string, string> = {
     packs: 'Packs',
@@ -676,26 +690,35 @@ export function Store() {
                 <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">Buy some from the shop and stash them!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
                 {inventory.map((inv) => (
                   <div 
                     key={inv.pack_type_id}
-                    className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-4 group"
+                    className="group relative bg-[var(--bg)] border-4 border-[var(--border)] rounded-2xl p-4 shadow-[8px_8px_0px_0px_var(--border)] hover:translate-y-[-4px] transition-all"
                   >
-                    <div className="w-16 h-16 bg-blue-100 rounded-lg border-2 border-[var(--border)] overflow-hidden shrink-0">
-                      <img src={inv.image_url} alt={inv.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                    <div className="aspect-[3/4] mb-4 overflow-hidden rounded-xl border-2 border-[var(--border)] bg-indigo-50 flex items-center justify-center">
+                      <img
+                        src={inv.image_url}
+                        alt={inv.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        referrerPolicy="no-referrer"
+                      />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-black text-[var(--text)] uppercase truncate">{inv.name}</h3>
-                      <p className="text-xs font-bold text-slate-500">Quantity: {inv.quantity}</p>
+                    <div className="text-center space-y-3">
+                      <div>
+                        <p className="font-black text-sm uppercase truncate text-[var(--text)]">{inv.name}</p>
+                        <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-black rounded-full border-2 border-black">
+                          {inv.quantity} PACKS
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleOpenFromInventory(inv.pack_type_id, inv.image_url)}
+                        disabled={opening}
+                        className="w-full py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 active:shadow-none uppercase text-xs"
+                      >
+                        Open One
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleOpenFromInventory(inv.pack_type_id, inv.image_url)}
-                      disabled={opening}
-                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] transition-transform active:translate-y-0.5 uppercase text-xs"
-                    >
-                      Open
-                    </button>
                   </div>
                 ))}
               </div>

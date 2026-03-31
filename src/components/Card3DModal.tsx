@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, LayoutGrid, ShoppingBag, Plus, Coins, Trophy, Star } from 'lucide-react';
-import { cn, getCardBackUrl } from '../lib/utils';
+import { cn, getCardBackUrl, getRarityStyles } from '../lib/utils';
 
 interface Card3DModalProps {
   card: any;
@@ -166,14 +166,28 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddT
               )}
             </div>
             <div className="flex flex-wrap gap-2 mb-4">
-              <span className="text-xs font-black px-2 py-1 rounded border-2 border-[var(--border)] bg-gray-100 text-black">{card.rarity}</span>
-              <span className="text-xs font-bold px-2 py-1 rounded border-2 border-[var(--border)] bg-gray-100 text-black">{card.card_type}</span>
+              <span className={cn("text-xs font-black px-2 py-1 rounded-full border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]",
+                getRarityStyles(card.rarity, card.is_foil ?? false))}>
+                {card.is_foil ? `✨ Foil ${card.rarity}` : card.rarity}
+              </span>
+              <span className="text-xs font-bold px-2 py-1 rounded border-2 border-[var(--border)] bg-gray-100 text-black">
+                {card.card_type}{card.sub_type ? ` · ${card.sub_type}` : ''}
+              </span>
               {card.element && <span className="text-xs font-bold px-2 py-1 rounded border-2 border-blue-300 bg-blue-50 text-blue-700">{card.element}</span>}
-              {card.is_foil && <span className="text-xs font-black px-2 py-1 rounded border-2 border-yellow-400 bg-yellow-50 text-yellow-700">✨ FOIL</span>}
             </div>
 
+            {card.keywords && card.keywords.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-4">
+                {card.keywords.map((kw: string) => (
+                  <span key={kw} className="text-[10px] font-black uppercase px-2 py-0.5 bg-slate-800 text-white rounded-full border border-slate-600">
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Stats */}
-            {!['Location', 'Artifact', 'Event', 'Leader'].includes(card.card_type || '') && (card.hp != null || card.attack != null || card.defense != null) && (
+            {!['Location', 'Artifact', 'Event', 'Leader', 'Sacred'].includes(card.card_type || '') && (card.hp != null || card.attack != null || card.defense != null) && (
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {card.hp != null && <div className="text-center bg-red-50 border-2 border-red-200 rounded-xl p-2"><p className="text-xs text-red-400 font-bold">HP</p><p className="text-xl font-black text-red-600">{card.hp}</p></div>}
                 {card.attack != null && <div className="text-center bg-orange-50 border-2 border-orange-200 rounded-xl p-2"><p className="text-xs text-orange-400 font-bold">ATK</p><p className="text-xl font-black text-orange-600">{card.attack}</p></div>}
@@ -181,10 +195,34 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddT
               </div>
             )}
 
+            {(card.dice_cost != null || card.bounty != null) && (
+              <div className="flex gap-3 mb-4">
+                {card.dice_cost != null && (
+                  <div className="text-center bg-purple-50 border-2 border-purple-200 rounded-xl p-2 flex-1">
+                    <p className="text-xs text-purple-400 font-bold">DICE COST</p>
+                    <p className="text-xl font-black text-purple-600">{card.dice_cost}</p>
+                  </div>
+                )}
+                {(card.bounty ?? 0) > 0 && (
+                  <div className="text-center bg-yellow-50 border-2 border-yellow-200 rounded-xl p-2 flex-1">
+                    <p className="text-xs text-yellow-500 font-bold">BOUNTY</p>
+                    <p className="text-xl font-black text-yellow-600">{card.bounty}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {card.ability_text && (
               <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 mb-4">
                 <p className="text-xs font-black uppercase text-slate-400 mb-1">Ability</p>
                 <p className="text-sm font-bold text-[var(--text)]">{card.ability_text}</p>
+              </div>
+            )}
+
+            {card.secondary_ability_text && (
+              <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 mb-4">
+                <p className="text-xs font-black uppercase text-slate-400 mb-1">Secondary Ability</p>
+                <p className="text-sm font-bold text-[var(--text)]">{card.secondary_ability_text}</p>
               </div>
             )}
 

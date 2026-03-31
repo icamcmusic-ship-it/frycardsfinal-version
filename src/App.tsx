@@ -27,6 +27,7 @@ import { Battle } from './pages/Battle';
 import { Achievements } from './pages/Achievements';
 import { Admin } from './pages/Admin';
 import { Loader2 } from 'lucide-react';
+import { FloatingChat } from './components/FloatingChat';
 
 export default function App() {
   const { user, initialized, setUser, setSession, setInitialized } = useAuthStore();
@@ -119,6 +120,7 @@ export default function App() {
           </Route>
         )}
       </Routes>
+      <FloatingChat />
     </BrowserRouter>
   );
 }

@@ -45,23 +45,128 @@ export const NeoCard: React.FC<NeoCardProps> = ({ card, onQuickSell, onClick }) 
         {card.rarity}
       </div>
 
-      {/* Hover Overlay */}
-      <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 p-4 flex flex-col justify-center items-center text-white text-center">
-        <div className="text-center mb-4">
-          <p className="text-white font-black text-sm uppercase tracking-widest">{card.name}</p>
-          <p className="text-gray-300 text-xs font-bold mt-1">{card.rarity} · {card.card_type}</p>
+      {/* Rarity-specific hover overlay */}
+      <div className={cn(
+        "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 p-4 flex flex-col justify-between",
+        // Base overlay per rarity
+        card.is_foil
+          ? "bg-gradient-to-br from-black/85 via-purple-950/80 to-black/85"
+          : card.rarity === 'Divine'
+          ? "bg-gradient-to-br from-black/90 via-red-950/80 to-black/90"
+          : card.rarity === 'Mythic'
+          ? "bg-gradient-to-br from-black/90 via-yellow-950/80 to-black/90"
+          : card.rarity === 'Super-Rare'
+          ? "bg-gradient-to-br from-black/88 via-purple-950/75 to-black/88"
+          : card.rarity === 'Rare'
+          ? "bg-gradient-to-br from-black/88 via-blue-950/75 to-black/88"
+          : card.rarity === 'Uncommon'
+          ? "bg-gradient-to-br from-black/85 via-green-950/70 to-black/85"
+          : "bg-black/80"
+      )}>
+        {/* Top: Name + type line */}
+        <div>
+          {/* Rarity-specific name styling */}
+          <p className={cn(
+            "font-black text-sm uppercase tracking-widest leading-tight mb-1",
+            card.is_foil
+              ? "bg-gradient-to-r from-pink-300 via-yellow-200 to-cyan-300 bg-clip-text text-transparent drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]"
+              : card.rarity === 'Divine'
+              ? "text-red-300 drop-shadow-[0_0_12px_rgba(239,68,68,0.9)] animate-[pulse_2s_ease-in-out_infinite]"
+              : card.rarity === 'Mythic'
+              ? "text-yellow-300 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]"
+              : card.rarity === 'Super-Rare'
+              ? "bg-gradient-to-r from-purple-300 via-pink-200 to-purple-300 bg-clip-text text-transparent"
+              : card.rarity === 'Rare'
+              ? "text-blue-200 drop-shadow-[0_0_6px_rgba(59,130,246,0.7)]"
+              : "text-white"
+          )}>
+            {card.name}
+          </p>
+
+          {/* Rarity/type badge line */}
+          <p className={cn(
+            "text-[10px] font-bold uppercase tracking-widest",
+            card.is_foil
+              ? "text-yellow-300"
+              : card.rarity === 'Divine'
+              ? "text-red-400"
+              : card.rarity === 'Mythic'
+              ? "text-yellow-500"
+              : card.rarity === 'Super-Rare'
+              ? "text-purple-300"
+              : card.rarity === 'Rare'
+              ? "text-blue-300"
+              : "text-gray-400"
+          )}>
+            {card.is_foil ? '✨ Foil' : card.rarity} · {card.card_type}
+            {card.element ? ` · ${card.element}` : ''}
+          </p>
+
+          {/* Flavor text — rarity-specific container */}
           {card.flavor_text && (
-            <div className="mt-4 p-3 bg-[var(--surface)]/10 border border-[var(--border)]/20 rounded-lg backdrop-blur-sm">
-              <p className="text-gray-200 text-[11px] italic leading-snug">"{card.flavor_text}"</p>
+            <div className={cn(
+              "mt-3 p-2.5 rounded-lg border backdrop-blur-sm",
+              card.is_foil
+                ? "bg-gradient-to-r from-pink-500/10 via-yellow-500/10 to-cyan-500/10 border-yellow-300/30"
+                : card.rarity === 'Divine'
+                ? "bg-red-900/30 border-red-500/40"
+                : card.rarity === 'Mythic'
+                ? "bg-yellow-900/30 border-yellow-400/40"
+                : card.rarity === 'Super-Rare'
+                ? "bg-purple-900/30 border-purple-400/40"
+                : card.rarity === 'Rare'
+                ? "bg-blue-900/30 border-blue-400/40"
+                : "bg-white/5 border-white/10"
+            )}>
+              {/* Rarity-specific flavor text prefix */}
+              {(card.rarity === 'Divine' || card.rarity === 'Mythic') && (
+                <p className={cn(
+                  "text-[8px] font-black uppercase tracking-[0.2em] mb-1",
+                  card.rarity === 'Divine' ? "text-red-400" : "text-yellow-400"
+                )}>
+                  {card.rarity === 'Divine' ? '⚡ Sacred Lore' : '✦ Ancient Wisdom'}
+                </p>
+              )}
+              {card.is_foil && (
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-1 text-yellow-300">
+                  ✨ Prismatic Lore
+                </p>
+              )}
+              <p className={cn(
+                "text-[10px] italic leading-snug",
+                card.is_foil
+                  ? "text-pink-100"
+                  : card.rarity === 'Divine'
+                  ? "text-red-100"
+                  : card.rarity === 'Mythic'
+                  ? "text-yellow-100"
+                  : card.rarity === 'Super-Rare'
+                  ? "text-purple-100"
+                  : card.rarity === 'Rare'
+                  ? "text-blue-100"
+                  : "text-gray-200"
+              )}>
+                "{card.flavor_text}"
+              </p>
             </div>
           )}
         </div>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            onQuickSell();
-          }}
-          className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-lg border-2 border-black transition-transform active:scale-95 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 uppercase tracking-wider text-xs"
+
+        {/* Bottom: Quick sell button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onQuickSell(); }}
+          className={cn(
+            "w-full py-2 font-black rounded-lg border-2 transition-transform active:scale-95 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 uppercase tracking-wider text-xs text-white",
+            card.rarity === 'Divine'
+              ? "bg-red-600 hover:bg-red-500 border-red-800"
+              : card.rarity === 'Mythic'
+              ? "bg-yellow-600 hover:bg-yellow-500 border-yellow-800 text-black"
+              : card.rarity === 'Super-Rare'
+              ? "bg-purple-600 hover:bg-purple-500 border-purple-800"
+              : card.rarity === 'Rare'
+              ? "bg-blue-600 hover:bg-blue-500 border-blue-800"
+              : "bg-emerald-500 hover:bg-emerald-600 border-black"
+          )}
         >
           Quick Sell
         </button>
