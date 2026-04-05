@@ -152,6 +152,18 @@ export function PublicProfile() {
                   <span className="inline-flex px-4 py-2 bg-yellow-100 border-2 border-yellow-400 rounded-xl font-bold text-yellow-700 uppercase text-sm">
                     Request Pending
                   </span>
+                ) : profile.friendship_status === 'incoming' ? (
+                  <div className="flex flex-col gap-2">
+                    <span className="inline-flex px-4 py-2 bg-blue-100 border-2 border-blue-400 rounded-xl font-bold text-blue-700 uppercase text-sm">
+                      Sent you a request
+                    </span>
+                    <button 
+                      onClick={() => navigate('/social')}
+                      className="text-[10px] font-black uppercase text-blue-600 hover:underline"
+                    >
+                      Go to Social to Accept
+                    </button>
+                  </div>
                 ) : (
                   <button onClick={sendRequest}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-transform active:translate-y-1 uppercase text-sm">

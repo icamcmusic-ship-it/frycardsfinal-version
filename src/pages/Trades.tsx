@@ -167,6 +167,12 @@ export function Trades() {
     name: c.name || 'Unknown Card'
   });
 
+  const filteredTrades = trades.filter(trade => {
+    if (trade.status !== 'pending') return true;
+    const expiryTime = new Date(trade.expires_at).getTime();
+    return expiryTime > now;
+  });
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -318,7 +324,7 @@ export function Trades() {
       )}
 
       <div className="grid gap-6">
-        {trades.length === 0 && (
+        {filteredTrades.length === 0 && (
           <EmptyState 
             icon={Handshake}
             title="No active trades"
@@ -327,7 +333,7 @@ export function Trades() {
             ctaAction={() => setShowCreate(true)}
           />
         )}
-        {trades.map(trade => (
+        {filteredTrades.map(trade => (
           <div key={trade.id} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
             <div className="flex justify-between items-start flex-wrap gap-4">
               <div>

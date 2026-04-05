@@ -241,17 +241,28 @@ export function Collection() {
 
   const handleToggleLock = async (userCardId: string) => {
     try {
+      // Optimistic update
+      setCards(prev => prev.map(c => 
+        c.user_card_id === userCardId ? { ...c, is_locked: !c.is_locked } : c
+      ));
+
       const { data, error } = await supabase.rpc('toggle_card_lock', {
         p_user_card_id: userCardId
       });
       if (error) throw error;
       
-      const newLockedState = data;
-      toast.success(newLockedState ? 'Card locked!' : 'Card unlocked!');
-      setCards(cards.map(c => c.user_card_id === userCardId ? { ...c, is_locked: newLockedState } : c));
-    } catch (err) {
+      const newLockedState = (data as any)?.is_locked as boolean;
+      toast.success(newLockedState ? 'Card locked!' : 'Card unlocked!', { id: `lock-${userCardId}` });
+      
+      // Sync with actual state from server
+      setCards(prev => prev.map(c => 
+        c.user_card_id === userCardId ? { ...c, is_locked: newLockedState } : c
+      ));
+    } catch (err: any) {
+      // Revert optimistic update on error
+      fetchCollection();
       console.error('Error toggling lock:', err);
-      toast.error('Failed to toggle lock');
+      toast.error(err.message || 'Failed to toggle lock');
     }
   };
 
@@ -597,7 +608,7 @@ export function Collection() {
           >
             <option value="rarity">Sort by Rarity</option>
             <option value="newest">Sort by Newest</option>
-            <option value="price">Sort by Price</option>
+            <option value="price">Sort by Value</option>
           </select>
           
           <input

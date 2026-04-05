@@ -41,6 +41,7 @@ export function Settings() {
     auction_notifications: true,
     friend_notifications: true,
     show_online_status: true,
+    is_public: true,
   });
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
@@ -94,6 +95,7 @@ export function Settings() {
           auction_notifications: data.auction_notifications,
           friend_notifications: data.friend_notifications,
           show_online_status: data.show_online_status,
+          is_public: data.is_public ?? true,
         });
         if (data.game_style) setGameStyle(data.game_style as any);
         
@@ -145,7 +147,8 @@ export function Settings() {
         p_trade_notifications: newSettings.trade_notifications,
         p_auction_notifications: newSettings.auction_notifications,
         p_friend_notifications: newSettings.friend_notifications,
-        p_show_online_status: newSettings.show_online_status
+        p_show_online_status: newSettings.show_online_status,
+        p_is_public: newSettings.is_public
       });
       if (error) throw error;
     } catch (err: any) {
@@ -307,6 +310,7 @@ export function Settings() {
             { key: 'auction_notifications', label: 'Auction Notifications', value: settings.auction_notifications },
             { key: 'friend_notifications', label: 'Friend Notifications', value: settings.friend_notifications },
             { key: 'show_online_status', label: 'Show Online Status', value: settings.show_online_status },
+            { key: 'is_public', label: 'Public Profile', value: settings.is_public },
           ].map(({ key, label, value }) => (
             <div key={key} className="flex items-center justify-between">
               <span className="font-bold text-[var(--text)]">{label}</span>

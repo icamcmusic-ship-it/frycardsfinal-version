@@ -32,8 +32,9 @@ export function Store() {
   const openPackId = searchParams.get('open');
   const initialTab = searchParams.get('tab') === 'inventory' ? 'inventory' : 'packs';
   
-  const [activeTab, setActiveTab] = useState<'packs' | 'inventory'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'packs' | 'inventory' | 'shop'>(initialTab);
   const [packs, setPacks] = useState<any[]>([]);
+  const [shopItems, setShopItems] = useState<any[]>([]);
   const [userCosmetics, setUserCosmetics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
@@ -71,6 +72,7 @@ export function Store() {
   const tabLabels: Record<string, string> = {
     packs: 'Packs',
     inventory: 'Inventory',
+    shop: 'Shop',
   };
 
   useEffect(() => {
@@ -102,8 +104,18 @@ export function Store() {
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchPacks(), fetchUserCosmetics(), fetchInventory(), fetchWishlistCardIds()]);
+    await Promise.all([fetchPacks(), fetchUserCosmetics(), fetchInventory(), fetchWishlistCardIds(), fetchShopItems()]);
     setLoading(false);
+  };
+
+  const fetchShopItems = async () => {
+    try {
+      const { data, error } = await supabase.from('shop_items').select('*').order('cost_gold', { ascending: true });
+      if (error) throw error;
+      setShopItems(data || []);
+    } catch (err) {
+      console.error('Error fetching shop items:', err);
+    }
   };
 
   const fetchWishlistCardIds = async () => {
@@ -151,7 +163,7 @@ export function Store() {
         toast.error(error?.message || data?.error || 'Failed to equip');
         return;
       }
-      toast.success('Equipped!', { icon: '✨' });
+      toast.success('Profile updated!', { icon: '✨' });
       fetchUserCosmetics();
       useProfileStore.getState().refreshProfile();
     } catch (err: any) {
@@ -163,6 +175,7 @@ export function Store() {
     try {
       const { error } = await supabase.rpc('unequip_cosmetic_type', { p_item_type: itemType });
       if (error) throw error;
+      toast.success('Profile updated!', { icon: '✨' });
       fetchUserCosmetics();
       useProfileStore.getState().refreshProfile();
     } catch (err: any) {
@@ -350,6 +363,32 @@ export function Store() {
     }
   };
 
+  const handleBuyShopItem = async (item: any) => {
+    if (!profile) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Buy Item',
+      message: `Are you sure you want to buy ${item.name} for ${item.cost_gold > 0 ? `${item.cost_gold} Gold` : `${item.cost_gems} Gems`}?`,
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.rpc('buy_shop_item', {
+            p_shop_item_id: item.id,
+            p_use_gems: item.cost_gems > 0 && item.cost_gold === 0
+          });
+
+          if (error) throw error;
+          
+          toast.success(`${item.name} purchased!`, { icon: '🛍️' });
+          useProfileStore.getState().refreshProfile();
+          fetchUserCosmetics();
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to buy item');
+        }
+      }
+    });
+  };
+
   const handleToggleWishlist = async (cardId: string) => {
     try {
       const { data, error } = await supabase.rpc('toggle_wishlist', { p_card_id: cardId });
@@ -524,11 +563,16 @@ export function Store() {
                   <div className="p-6 flex flex-col flex-1">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="text-2xl font-black text-[var(--text)] uppercase">{pack.name}</h3>
-                      {pack.next_pity_in <= 3 && (
-                        <div className="bg-blue-100 text-blue-600 px-2 py-1 rounded-lg border-2 border-blue-200 text-[10px] font-black uppercase animate-pulse">
-                          ⚡ Pity in {pack.next_pity_in}
+                      <div className="flex flex-col items-end gap-1">
+                        {pack.next_pity_in <= 3 && (
+                          <div className="bg-blue-100 text-blue-600 px-2 py-1 rounded-lg border-2 border-blue-200 text-[10px] font-black uppercase animate-pulse">
+                            ⚡ Pity in {pack.next_pity_in}
+                          </div>
+                        )}
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                          Pity: {10 - pack.next_pity_in}/10
                         </div>
-                      )}
+                      </div>
                     </div>
                     
                     <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
@@ -538,43 +582,59 @@ export function Store() {
                       {showOdds[pack.id] ? 'Hide Odds' : 'View Odds'}
                     </button>
                     {showOdds[pack.id] && (
-                      <div className="mb-4 space-y-1 text-xs font-bold border-t border-[var(--border)] pt-2">
-                        {PACK_ODDS.map(o => {
-                          let displayPct = o.pct;
-                          let isPityBoosted = false;
-                          
-                          if (pack.next_pity_in === 1) {
-                            if (o.rarity === 'Common' || o.rarity === 'Uncommon') {
-                              displayPct = '0%';
-                            } else if (o.rarity === 'Rare') {
-                              // In pity, Rare becomes the baseline (80%+)
-                              displayPct = '80%*';
-                              isPityBoosted = true;
-                            } else {
-                              // Higher rarities also get a slight boost or stay same
-                              // This is just for display to show pity is active
-                              isPityBoosted = true;
+                      <div className="mb-4 space-y-3 border-t border-[var(--border)] pt-4">
+                        <div className="space-y-2">
+                          {PACK_ODDS.map(o => {
+                            const pctValue = parseInt(o.pct);
+                            let displayPct = o.pct;
+                            let isPityBoosted = false;
+                            
+                            if (pack.next_pity_in === 1) {
+                              if (o.rarity === 'Common' || o.rarity === 'Uncommon') {
+                                displayPct = '0%';
+                              } else if (o.rarity === 'Rare') {
+                                displayPct = '80%*';
+                                isPityBoosted = true;
+                              } else {
+                                isPityBoosted = true;
+                              }
                             }
-                          }
 
-                          return (
-                            <div key={o.rarity} className="flex justify-between items-center">
-                              <span className={cn(o.color, isPityBoosted && "font-black underline decoration-2 underline-offset-2")}>
-                                {o.rarity}
-                                {isPityBoosted && o.rarity === 'Rare' && <span className="ml-1 text-[8px] opacity-70">(Pity)</span>}
-                              </span>
-                              <span className={cn("text-[var(--text)]", isPityBoosted && "text-blue-600 font-black")}>
-                                {displayPct}
-                              </span>
-                            </div>
-                          );
-                        })}
+                            return (
+                              <div key={o.rarity} className="space-y-1">
+                                <div className="flex justify-between items-center text-[10px] font-black uppercase">
+                                  <span className={cn(o.color, isPityBoosted && "underline decoration-2 underline-offset-2")}>
+                                    {o.rarity}
+                                    {isPityBoosted && o.rarity === 'Rare' && <span className="ml-1 text-[8px] opacity-70">(Pity)</span>}
+                                  </span>
+                                  <span className={cn("text-[var(--text)]", isPityBoosted && "text-blue-600")}>
+                                    {displayPct}
+                                  </span>
+                                </div>
+                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                  <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: isPityBoosted && o.rarity === 'Rare' ? '80%' : isPityBoosted && (o.rarity === 'Common' || o.rarity === 'Uncommon') ? '0%' : o.pct }}
+                                    className={cn(
+                                      "h-full rounded-full",
+                                      o.rarity === 'Common' ? "bg-slate-400" :
+                                      o.rarity === 'Uncommon' ? "bg-green-500" :
+                                      o.rarity === 'Rare' ? "bg-blue-500" :
+                                      o.rarity === 'Super-Rare' ? "bg-purple-500" :
+                                      o.rarity === 'Mythic' ? "bg-yellow-500" : "bg-red-500"
+                                    )}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                         {pack.next_pity_in === 1 && (
-                          <p className="text-[9px] text-blue-500 italic mt-1">* Pity active: Guaranteed Rare or better.</p>
+                          <p className="text-[9px] text-blue-500 italic font-bold">* Pity active: Guaranteed Rare or better.</p>
                         )}
                         {pack.foil_chance && (
-                          <div className="flex justify-between text-yellow-600">
-                            <span>Foil Chance</span>
+                          <div className="flex justify-between items-center text-[10px] font-black uppercase text-yellow-600 pt-1">
+                            <span>✨ Foil Chance</span>
                             <span>{(Number(pack.foil_chance) * 100).toFixed(2)}%</span>
                           </div>
                         )}
@@ -660,9 +720,67 @@ export function Store() {
     </div>
   )}
 
+      {activeTab === 'shop' && (
+        <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {shopItems.length === 0 ? (
+              <div className="col-span-full text-center py-12 bg-[var(--bg)] rounded-xl border-2 border-dashed border-[var(--border)]">
+                <p className="text-slate-500 font-bold">The shop is currently empty.</p>
+                <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">Check back later for new items!</p>
+              </div>
+            ) : (
+              shopItems.map((item) => {
+                const canAfford = item.cost_gold > 0 
+                  ? (profile?.gold_balance ?? 0) >= item.cost_gold
+                  : (profile?.gem_balance ?? 0) >= item.cost_gems;
+
+                return (
+                  <motion.div 
+                    key={item.id}
+                    whileHover={{ y: -4 }}
+                    className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] flex flex-col gap-4"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-black uppercase text-[var(--text)]">{item.name}</h3>
+                      <div className="px-2 py-1 bg-slate-100 border-2 border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500">
+                        {item.type}
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 flex items-center justify-center py-4">
+                      {item.type === 'pack' ? (
+                        <PackageOpen className="w-16 h-16 text-blue-500" />
+                      ) : (
+                        <Shirt className="w-16 h-16 text-purple-500" />
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className="flex items-center gap-1 font-black text-lg">
+                        {item.cost_gems > 0 ? (
+                          <Gem className="w-5 h-5 text-emerald-500" />
+                        ) : (
+                          <Coins className="w-5 h-5 text-yellow-500" />
+                        )}
+                        {item.cost_gold > 0 ? item.cost_gold : item.cost_gems}
+                      </div>
+                      <button
+                        onClick={() => handleBuyShopItem(item)}
+                        disabled={!canAfford}
+                        className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 active:shadow-none uppercase text-xs"
+                      >
+                        Buy Now
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
       {activeTab === 'inventory' && (
         <div className="space-y-8">
-          {/* Packs Section */}
           <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">

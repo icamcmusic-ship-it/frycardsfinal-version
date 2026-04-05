@@ -124,7 +124,7 @@ export function Marketplace() {
   const [filter, setFilter] = useState('all');
   const [rarityFilter, setRarityFilter] = useState('all');
   const [elementFilter, setElementFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'price' | 'newest'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc' | 'ending_soon'>('newest');
   const [hoveredListing, setHoveredListing] = useState<string | null>(null);
   const [showBidHistoryModal, setShowBidHistoryModal] = useState(false);
   const [selectedListingForBids, setSelectedListingForBids] = useState<any>(null);
@@ -696,7 +696,7 @@ export function Marketplace() {
             className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
           >
             <option value="newest">Newest First</option>
-            <option value="price">Price: Low to High</option>
+            <option value="price_asc">Price: Low to High</option>
             <option value="price_desc">Price: High to Low</option>
             <option value="ending_soon">Ending Soon</option>
           </select>
@@ -810,13 +810,44 @@ export function Marketplace() {
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-[10px] text-slate-500 font-bold">Seller: {listing.seller_name}</p>
                       {profile?.id !== listing.seller_id && (
-                        <button 
-                          onClick={() => handleBlockUser(listing.seller_id, listing.seller_name)}
-                          className="text-[10px] text-red-500 hover:text-red-700 font-bold underline"
-                          title="Block Seller"
-                        >
-                          Block
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleBlockUser(listing.seller_id, listing.seller_name)}
+                            className="text-[10px] text-red-500 hover:text-red-700 font-bold underline"
+                            title="Block Seller"
+                          >
+                            Block
+                          </button>
+                          <span className="text-slate-300">•</span>
+                          <button 
+                            onClick={() => {
+                              setConfirmModal({
+                                isOpen: true,
+                                title: 'Report Listing',
+                                message: `Are you sure you want to report this listing for ${listing.card_name}?`,
+                                variant: 'warning',
+                                onConfirm: async () => {
+                                  try {
+                                    const { error } = await supabase.from('reports').insert({
+                                      reporter_id: profile?.id,
+                                      target_id: listing.id,
+                                      target_type: 'market_listing',
+                                      reason: 'Reported from marketplace UI'
+                                    });
+                                    if (error) throw error;
+                                    toast.success('Listing reported. Thank you!');
+                                  } catch (err: any) {
+                                    toast.error(err.message || 'Failed to report listing');
+                                  }
+                                }
+                              });
+                            }}
+                            className="text-[10px] text-slate-400 hover:text-red-500 font-bold underline"
+                            title="Report Listing"
+                          >
+                            Report
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -852,8 +883,13 @@ export function Marketplace() {
                     ) : (
                       <Coins className="w-4 h-4 text-yellow-500" />
                     )}
-                    {listing.type === 'auction' ? (listing.current_bid_gold || listing.current_bid_gems || listing.price) : listing.price}
+                    {listing.type === 'auction' 
+                      ? (listing.current_bid_gold || listing.current_bid_gems || listing.price) 
+                      : listing.price}
                   </div>
+                  {listing.type === 'auction' && !listing.highest_bidder_name && (
+                    <p className="text-[10px] text-blue-500 font-black uppercase">Starting Bid</p>
+                  )}
                   {listing.type === 'auction' && listing.highest_bidder_name && (
                     <p className="text-[10px] text-slate-500 font-bold truncate max-w-[100px]">by {listing.highest_bidder_name}</p>
                   )}
