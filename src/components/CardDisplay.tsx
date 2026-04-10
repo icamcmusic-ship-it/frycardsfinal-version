@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { cn, getRarityStyles } from '../lib/utils';
-import { Sword, Shield, Heart, Sparkles, Lock, Unlock, Star } from 'lucide-react';
+import { Sword, Shield, Heart, Sparkles, Lock, Unlock, Star, Zap, Dice5 } from 'lucide-react';
 
 interface CardDisplayProps {
   card: {
@@ -45,7 +45,6 @@ export function CardDisplay({
   activeTab
 }: CardDisplayProps) {
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -54,17 +53,6 @@ export function CardDisplay({
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setMousePos({ x, y });
-
-    // 3D Tilt for Mythic and Divine
-    if (card.rarity === 'Mythic' || card.rarity === 'Divine') {
-      const tiltX = (y - 50) / 5; // max 10deg
-      const tiltY = (x - 50) / -5; // max 10deg
-      setTilt({ x: tiltX, y: tiltY });
-    }
-  };
-
-  const handleMouseLeave = () => {
-    setTilt({ x: 0, y: 0 });
   };
 
   const rarityBorder: Record<string, string> = {
@@ -76,146 +64,168 @@ export function CardDisplay({
     'Common':     'border-slate-400',
   };
 
+  const RARITY_GRADIENTS: Record<string, string> = {
+    Divine: 'from-red-900 to-red-600',
+    Mythic: 'from-yellow-900 to-yellow-600',
+    'Super-Rare': 'from-purple-900 to-purple-600',
+    Rare: 'from-blue-900 to-blue-600',
+    Uncommon: 'from-green-900 to-green-600',
+    Common: 'from-slate-900 to-slate-600',
+  };
+
   const border = rarityBorder[card.rarity] ?? rarityBorder['Common'];
 
   return (
     <div 
       ref={cardRef}
       onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{ 
-        perspective: '1000px',
-        transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
-        transition: tilt.x === 0 ? 'transform 0.5s ease' : 'none'
-      }}
       className={cn(
-        'relative w-full aspect-[3/4] rounded-xl border-4 group cursor-pointer transition-all duration-300 overflow-hidden',
+        'relative w-full aspect-[3/4] rounded-xl border-4 group cursor-pointer transition-all duration-300 overflow-hidden bg-slate-950',
         border,
         className
       )}
     >
-      {/* Artwork Container - Always Full Height */}
-      <div className="absolute inset-0 bg-slate-900">
+      {/* Background Art - Full Card */}
+      <div className="absolute inset-0 z-0">
         {card.is_video ? (
-          <video src={card.image_url} autoPlay muted loop playsInline
-            className="w-full h-full object-cover" />
+          <video src={card.image_url} autoPlay muted loop playsInline className="w-full h-full object-cover opacity-85" />
         ) : (
-          <img src={card.image_url} alt={card.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            onError={(e) => { e.currentTarget.src = '/fallback-card.png'; }} />
+          <img src={card.image_url} alt={card.name} className="w-full h-full object-cover opacity-85" referrerPolicy="no-referrer" />
+        )}
+        
+        {/* Foil Shimmer */}
+        {(card.is_foil || (card.foil_quantity ?? 0) > 0) && (
+          <div 
+            className="absolute inset-0 pointer-events-none z-10 mix-blend-color-dodge opacity-30"
+            style={{
+              background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,0.8) 0%, transparent 50%), 
+                           repeating-linear-gradient(${mousePos.x + mousePos.y}deg, 
+                             rgba(255,0,0,0.1) 0%, 
+                             rgba(255,255,0,0.1) 10%, 
+                             rgba(0,255,0,0.1) 20%, 
+                             rgba(0,255,255,0.1) 30%, 
+                             rgba(0,0,255,0.1) 40%, 
+                             rgba(255,0,255,0.1) 50%, 
+                             rgba(255,0,0,0.1) 60%)`,
+              backgroundSize: '200% 200%',
+              backgroundPosition: `${mousePos.x}% ${mousePos.y}%`
+            }}
+          />
         )}
       </div>
 
-      {/* Hover Info Panel - Slides up from bottom */}
-      <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-[0.23,1,0.32,1] z-30">
+      {/* Content Overlay */}
+      <div className="relative z-10 flex flex-col h-full p-1.5">
+        {/* Card Header */}
         <div className={cn(
-          "pt-12 pb-4 px-4 bg-gradient-to-t from-black/95 via-black/80 to-transparent",
+          "flex items-center justify-between px-1.5 py-1 rounded-t-lg border-b border-white/10 bg-gradient-to-r backdrop-blur-md",
+          RARITY_GRADIENTS[card.rarity] ? RARITY_GRADIENTS[card.rarity].split(' ').map(c => c + '/30').join(' ') : 'from-slate-800/30 to-slate-600/30'
         )}>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="text-white font-black text-lg uppercase leading-tight">{card.name}</h4>
-            <div className="flex gap-2">
-              {onToggleLock && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onToggleLock(); }}
-                  className={cn(
-                    "p-1.5 rounded-lg border border-white/20 transition-transform active:scale-95",
-                    card.is_locked ? "bg-red-500/80 text-white" : "bg-white/10 text-white hover:bg-white/20"
-                  )}
-                >
-                  {card.is_locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                </button>
-              )}
-              {onToggleWishlist && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onToggleWishlist(); }}
-                  className={cn(
-                    "p-1.5 rounded-lg border border-white/20 transition-transform active:scale-95",
-                    isWishlisted ? "bg-yellow-500/80 text-white" : "bg-white/10 text-white hover:bg-white/20"
-                  )}
-                >
-                  <Star className={cn("w-3 h-3", isWishlisted && "fill-current")} />
-                </button>
-              )}
+          <div className="flex items-center gap-1 min-w-0">
+            <div className="w-4 h-4 rounded-full bg-white/20 border border-white/40 flex items-center justify-center shadow-inner shrink-0">
+              <Zap className="w-2.5 h-2.5 text-white fill-white" />
+            </div>
+            <h3 className="text-white font-black text-[10px] uppercase tracking-tight drop-shadow-md truncate">
+              {card.name}
+            </h3>
+          </div>
+          <div className="flex items-center gap-0.5 bg-black/30 px-1 py-0.5 rounded border border-white/10 shrink-0">
+            <Heart className="w-2.5 h-2.5 text-red-400 fill-red-400" />
+            <span className="text-white font-black text-[9px]">{card.hp || '??'}</span>
+          </div>
+        </div>
+
+        {/* Spacer to push content to bottom */}
+        <div className="flex-1 relative">
+          {/* Rarity Badge - Floating in middle-right */}
+          <div className="absolute bottom-2 right-0 z-30">
+            <div className={cn(
+              "px-1 py-0.5 rounded border border-black/30 shadow-sm flex items-center gap-0.5 backdrop-blur-sm",
+              getRarityStyles(card.rarity, card.is_foil ?? false).replace(/bg-\w+-\d+/, (m) => m + '/30')
+            )}>
+              <Star className="w-2 h-2 fill-current" />
+              <span className="text-[7px] font-black uppercase">{card.rarity}</span>
             </div>
           </div>
 
-          {(card.flavor_text || (card as any).description) && (
-            <p className="text-gray-300 text-[10px] italic leading-relaxed line-clamp-3">
-              {card.flavor_text || (card as any).description}
-            </p>
+          {/* NEW Badge - Floating in top-left */}
+          {showNewBadge && card.is_new && (
+            <div className="absolute top-0 left-0 z-30 bg-yellow-400/50 text-black text-[7px] font-black px-1 py-0.5 rounded border border-black/20 shadow-sm uppercase animate-bounce backdrop-blur-sm">
+              New!
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Mythic Particle Effect */}
-      {card.rarity === 'Mythic' && (
-        <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
-          {[...Array(10)].map((_, i) => (
-            <div 
-              key={i} 
-              className="absolute w-1 h-1 bg-yellow-400 rounded-full animate-[particleFloat_2s_infinite]"
-              style={{ 
-                left: `${Math.random() * 100}%`, 
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 2}s`
-              }} 
-            />
-          ))}
+        {/* Stats Bar */}
+        <div className="grid grid-cols-3 gap-0.5 bg-black/20 p-0.5 border-t border-white/10 backdrop-blur-sm">
+          <div className="bg-orange-500/30 rounded border border-white/10 flex items-center justify-center gap-0.5 py-0.5 shadow-inner">
+            <Sword className="w-2.5 h-2.5 text-white" />
+            <span className="text-white font-black text-[9px]">{(card as any).attack || 0}</span>
+          </div>
+          <div className="bg-blue-500/30 rounded border border-white/10 flex items-center justify-center gap-0.5 py-0.5 shadow-inner">
+            <Shield className="w-2.5 h-2.5 text-white" />
+            <span className="text-white font-black text-[9px]">{(card as any).defense || 0}</span>
+          </div>
+          <div className="bg-purple-500/30 rounded border border-white/10 flex items-center justify-center gap-0.5 py-0.5 shadow-inner">
+            <Dice5 className="w-2.5 h-2.5 text-white" />
+            <span className="text-white font-black text-[9px]">{(card as any).dice || 0}</span>
+          </div>
         </div>
-      )}
-      {/* Divine God Rays */}
-      {card.rarity === 'Divine' && (
-        <div className="absolute -inset-12 -z-10 rounded-full animate-[spin_15s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(239,68,68,0.3)_30deg,transparent_60deg,rgba(239,68,68,0.3)_90deg,transparent_120deg,rgba(239,68,68,0.3)_150deg,transparent_180deg,rgba(239,68,68,0.3)_210deg,transparent_240deg,rgba(239,68,68,0.3)_270deg,transparent_300deg,rgba(239,68,68,0.3)_330deg,transparent_360deg)] opacity-60 blur-xl" />
-      )}
 
-      {/* Foil / Holographic Effects */}
-      {(card.is_foil || (card.foil_quantity ?? 0) > 0) && (
-        <div 
-          className="absolute inset-0 pointer-events-none z-30 mix-blend-color-dodge opacity-40"
-          style={{
-            background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,0.8) 0%, transparent 50%), 
-                         repeating-linear-gradient(${mousePos.x + mousePos.y}deg, 
-                           rgba(255,0,0,0.1) 0%, 
-                           rgba(255,255,0,0.1) 10%, 
-                           rgba(0,255,0,0.1) 20%, 
-                           rgba(0,255,255,0.1) 30%, 
-                           rgba(0,0,255,0.1) 40%, 
-                           rgba(255,0,255,0.1) 50%, 
-                           rgba(255,0,0,0.1) 60%)`,
-            backgroundSize: '200% 200%',
-            backgroundPosition: `${mousePos.x}% ${mousePos.y}%`
-          }}
-        />
-      )}
-
-      {/* Super-Rare Prismatic Sweep */}
-      {card.rarity === 'Super-Rare' && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-30 mix-blend-overlay">
-          <div className="w-[200%] h-[200%] absolute top-0 left-0 bg-gradient-to-r from-transparent via-purple-300/40 to-transparent animate-[sweep_4s_ease-in-out_infinite]" />
+        {/* Text Area */}
+        <div className="bg-white/5 p-1.5 flex flex-col border-x border-white/10 border-b border-white/10 overflow-hidden backdrop-blur-md">
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
+            <p className="text-white/80 font-black text-[8px] uppercase mb-0.5 tracking-tight truncate">
+              {card.card_type} {(card as any).sub_type && `• ${(card as any).sub_type}`}
+            </p>
+            <div className="h-px bg-white/10 mb-1" />
+            <p className="text-white text-[9px] font-bold leading-tight mb-1 line-clamp-2 drop-shadow-sm">
+              {card.ability_text || (card as any).description || "No ability text."}
+            </p>
+            {card.flavor_text && (
+              <p className="text-white/50 text-[8px] italic leading-tight border-t border-white/5 pt-1 line-clamp-1">
+                "{card.flavor_text}"
+              </p>
+            )}
+          </div>
         </div>
-      )}
 
-      {/* Rarity Badges */}
-      <div className={cn(
-        "absolute top-2 left-2 z-40 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]",
-        getRarityStyles(card.rarity, card.is_foil ?? false)
-      )}>
-        {card.is_foil ? <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" /> Foil</span> : card.rarity}
+        {/* Footer */}
+        <div className="flex items-center justify-between px-1.5 py-0.5 bg-black/30 rounded-b-lg backdrop-blur-md border-t border-white/10">
+          <span className="text-[7px] font-black text-white/40 uppercase tracking-widest">
+            {card.element || 'Neutral'}
+          </span>
+          <div className="flex gap-1">
+            {onToggleLock && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleLock(); }}
+                className={cn(
+                  "p-0.5 rounded transition-transform active:scale-95",
+                  card.is_locked ? "text-red-400" : "text-white/30 hover:text-white"
+                )}
+              >
+                {card.is_locked ? <Lock className="w-2.5 h-2.5" /> : <Unlock className="w-2.5 h-2.5" />}
+              </button>
+            )}
+            {onToggleWishlist && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleWishlist(); }}
+                className={cn(
+                  "p-0.5 rounded transition-transform active:scale-95",
+                  isWishlisted ? "text-yellow-400" : "text-white/30 hover:text-white"
+                )}
+              >
+                <Star className={cn("w-2.5 h-2.5", isWishlisted && "fill-current")} />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Quantity badge */}
       {showQuantity && card.quantity != null && card.quantity > 1 && (
-        <div className="absolute top-2 right-2 z-40 bg-black/80 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md border border-white/30">
+        <div className="absolute top-1 right-1 z-40 bg-black/50 text-white text-[8px] font-black px-1 py-0.5 rounded border border-white/10 backdrop-blur-sm">
           ×{card.quantity}
-        </div>
-      )}
-
-      {/* NEW badge */}
-      {showNewBadge && card.is_new && (
-        <div className="absolute top-8 left-2 z-40 bg-green-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-black animate-bounce uppercase">
-          New!
         </div>
       )}
     </div>

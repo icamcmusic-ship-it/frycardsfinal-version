@@ -148,72 +148,110 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
         </div>
 
         {!selectedCard ? (
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-            {loading ? <Loader2 className="animate-spin text-[var(--text)]" /> : collection.map(card => (
-              <button key={card.id} onClick={() => setSelectedCard(card)} className="relative border-2 border-[var(--border)] rounded-lg p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 bg-[var(--bg)]">
-                <CardDisplay card={card} showQuantity={false} showNewBadge={false} />
-                <p className="text-xs font-bold mt-1 truncate text-[var(--text)]">{card.name}</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+            {loading ? (
+              <div className="col-span-full flex justify-center py-12">
+                <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+              </div>
+            ) : collection.map(card => (
+              <button 
+                key={card.id} 
+                onClick={() => setSelectedCard(card)} 
+                className="group relative flex flex-col gap-2 transition-transform hover:-translate-y-1"
+              >
+                <div className="relative w-full aspect-[3/4] border-4 border-[var(--border)] rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_var(--border)] group-hover:shadow-[6px_6px_0px_0px_var(--border)] transition-all">
+                  <CardDisplay card={card} showQuantity={false} showNewBadge={false} />
+                  <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/10 transition-colors pointer-events-none" />
+                </div>
+                <div className="px-1 text-center">
+                  <p className="text-sm font-black uppercase truncate text-[var(--text)]">{card.name}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    {card.rarity} • {card.element || 'Neutral'}
+                  </p>
+                </div>
               </button>
             ))}
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 border-2 border-[var(--border)] p-4 rounded-xl bg-[var(--bg)]">
-              {selectedCard.is_video ? (
-                <video src={selectedCard.image_url} autoPlay muted loop playsInline className="w-20 h-20 object-cover rounded" />
-              ) : (
-                <img src={selectedCard.image_url} alt={selectedCard.name} className="w-20 h-20 object-cover rounded" />
-              )}
-              <div>
-                <p className="font-black text-lg text-[var(--text)]">{selectedCard.name}</p>
-                <button onClick={() => setSelectedCard(null)} className="text-blue-500 font-bold text-sm underline">Change Card</button>
-                
-                {marketStats && (
-                  <div className="mt-2 p-2 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                    <p className="text-[10px] font-black uppercase text-blue-600 mb-1">Market Insight</p>
-                    <p className="text-xs font-bold text-blue-800">
-                      {marketStats.count} active listings. Lowest: {marketStats.min_gold > 0 ? `${marketStats.min_gold} Gold` : ''} {marketStats.min_gems > 0 ? `${marketStats.min_gems} Gems` : ''}
-                    </p>
-                  </div>
-                )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex flex-col gap-4">
+              <div className="w-full max-w-[280px] mx-auto">
+                <CardDisplay card={selectedCard} showQuantity={false} showNewBadge={false} />
               </div>
+              <button 
+                onClick={() => setSelectedCard(null)} 
+                className="py-2 px-4 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl font-black text-sm uppercase text-[var(--text)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                Change Card
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setListingType('fixed_price')} className={cn("p-4 border-4 rounded-xl font-black transition-colors", listingType === 'fixed_price' ? "border-[var(--border)] bg-blue-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}>Fixed Price</button>
-              <button onClick={() => setListingType('auction')} className={cn("p-4 border-4 rounded-xl font-black transition-colors", listingType === 'auction' ? "border-[var(--border)] bg-blue-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}>Auction</button>
+            <div className="space-y-4">
+              {marketStats && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border-4 border-blue-200 dark:border-blue-800 rounded-xl">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Package className="w-4 h-4 text-blue-600" />
+                    <p className="text-[10px] font-black uppercase text-blue-600">Market Insight</p>
+                  </div>
+                  <p className="text-xs font-bold text-blue-800 dark:text-blue-200">
+                    {marketStats.count} active listings. Lowest: {marketStats.min_gold > 0 ? `${marketStats.min_gold} Gold` : ''} {marketStats.min_gems > 0 ? `${marketStats.min_gems} Gems` : ''}
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setListingType('fixed_price')} className={cn("p-3 border-4 rounded-xl font-black text-sm uppercase transition-all", listingType === 'fixed_price' ? "border-[var(--border)] bg-blue-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}>Fixed Price</button>
+                <button onClick={() => setListingType('auction')} className={cn("p-3 border-4 rounded-xl font-black text-sm uppercase transition-all", listingType === 'auction' ? "border-[var(--border)] bg-blue-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}>Auction</button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button onClick={() => setCurrency('gold')} className={cn("p-3 border-4 rounded-xl font-black text-sm uppercase transition-all flex items-center justify-center gap-2", currency === 'gold' ? "border-[var(--border)] bg-yellow-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}><Coins className="w-4 h-4" /> Gold</button>
+                <button onClick={() => setCurrency('gems')} className={cn("p-3 border-4 rounded-xl font-black text-sm uppercase transition-all flex items-center justify-center gap-2", currency === 'gems' ? "border-[var(--border)] bg-emerald-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}><Gem className="w-4 h-4" /> Gems</button>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{listingType === 'auction' ? 'Starting Bid' : 'Price'} ({currency === 'gold' ? 'Gold' : 'Gems'})</label>
+                <div className="relative">
+                  <input type="number" min="0" placeholder="0" value={price || ''} onChange={e => setPrice(Number(e.target.value))} className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-black bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500 shadow-[2px_2px_0px_0px_var(--border)]" />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    {currency === 'gold' ? <Coins className="w-5 h-5 text-yellow-500" /> : <Gem className="w-5 h-5 text-emerald-500" />}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Duration</label>
+                <div className="relative">
+                  <select value={duration} onChange={e => setDuration(Number(e.target.value))} className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-black bg-[var(--bg)] text-[var(--text)] appearance-none focus:outline-none focus:border-blue-500 shadow-[2px_2px_0px_0px_var(--border)]">
+                    <option value={12}>12 Hours</option>
+                    <option value={24}>24 Hours</option>
+                    <option value={48}>48 Hours</option>
+                    <option value={72}>72 Hours</option>
+                  </select>
+                  <Clock className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {selectedCard.foil_quantity > 0 && (
+                <label className="flex items-center gap-3 p-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl font-black text-sm uppercase text-[var(--text)] cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors">
+                  <input type="checkbox" checked={isFoil} onChange={e => setIsFoil(e.target.checked)} className="w-5 h-5 rounded border-4 border-[var(--border)] text-blue-500 focus:ring-0" />
+                  List as Foil Card
+                </label>
+              )}
+
+              <button 
+                onClick={handleSubmit} 
+                disabled={submitting} 
+                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-all active:translate-y-1 active:shadow-none uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span>Listing...</span>
+                  </div>
+                ) : 'Confirm Listing'}
+              </button>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => setCurrency('gold')} className={cn("p-4 border-4 rounded-xl font-black transition-colors flex items-center justify-center gap-2", currency === 'gold' ? "border-[var(--border)] bg-yellow-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}><Coins className="w-5 h-5" /> Gold</button>
-              <button onClick={() => setCurrency('gems')} className={cn("p-4 border-4 rounded-xl font-black transition-colors flex items-center justify-center gap-2", currency === 'gems' ? "border-[var(--border)] bg-emerald-400 text-black shadow-[4px_4px_0px_0px_var(--border)]" : "border-slate-300 bg-[var(--bg)] text-slate-500 hover:border-slate-400")}><Gem className="w-5 h-5" /> Gems</button>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-slate-500 uppercase">{listingType === 'auction' ? 'Starting Bid' : 'Price'} ({currency === 'gold' ? 'Gold' : 'Gems'})</label>
-              <input type="number" min="0" placeholder="0" value={price || ''} onChange={e => setPrice(Number(e.target.value))} className="border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500" />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-slate-500 uppercase">Duration</label>
-              <select value={duration} onChange={e => setDuration(Number(e.target.value))} className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500">
-                <option value={12}>12 Hours</option>
-                <option value={24}>24 Hours</option>
-                <option value={48}>48 Hours</option>
-                <option value={72}>72 Hours</option>
-              </select>
-            </div>
-
-            {selectedCard.foil_quantity > 0 && (
-              <label className="flex items-center gap-2 font-bold text-[var(--text)] cursor-pointer">
-                <input type="checkbox" checked={isFoil} onChange={e => setIsFoil(e.target.checked)} className="w-5 h-5 rounded border-2 border-[var(--border)]" />
-                List as Foil
-              </label>
-            )}
-
-            <button onClick={handleSubmit} disabled={submitting} className="w-full py-4 bg-emerald-500 text-white font-black text-xl rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]">
-              {submitting ? 'Listing...' : 'Create Listing'}
-            </button>
           </div>
         )}
       </div>

@@ -81,9 +81,10 @@ export function Battle() {
 
       if (error) throw error;
 
-      setBattleResult(data);
-      // Refresh profile to update energy/gold/xp
+      // Refresh profile to update energy/gold/xp BEFORE setting result
       await useProfileStore.getState().refreshProfile();
+      
+      setBattleResult(data);
 
       if (data.is_win) {
         toast.success('Victory!', { icon: '🏆' });

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, LayoutGrid, ShoppingBag, Plus, Coins, Trophy, Star } from 'lucide-react';
 import { cn, getCardBackUrl, getRarityStyles } from '../lib/utils';
 
+import { CardDisplay } from './CardDisplay';
+
 interface Card3DModalProps {
   card: any;
   cardBackUrl: string | null;
@@ -40,17 +42,6 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddT
 
   const handleMouseLeave = () => { setRotateX(0); setRotateY(0); };
 
-  const rarityBorder: Record<string, string> = {
-    'Divine':     'border-red-500',
-    'Mythic':     'border-yellow-400',
-    'Super-Rare': 'border-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.7)]',
-    'Rare':       'border-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]',
-    'Uncommon':   'border-green-500',
-    'Common':     'border-slate-400',
-  };
-
-  const border = rarityBorder[card.rarity] ?? rarityBorder['Common'];
-
   return (
     <AnimatePresence>
       <motion.div
@@ -74,13 +65,13 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddT
           <div
             ref={cardRef}
             className="shrink-0 cursor-pointer"
-            style={{ perspective: '1000px', width: 240 }}
+            style={{ perspective: '1000px', width: 280 }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             onClick={() => setIsFlipped(f => !f)}
           >
             <motion.div
-              style={{ transformStyle: 'preserve-3d', width: 240, height: 320 }}
+              style={{ transformStyle: 'preserve-3d', width: 280, height: 373 }}
               animate={{
                 rotateX: isFlipped ? 0 : rotateX,
                 rotateY: isFlipped ? 180 : rotateY,
@@ -89,46 +80,15 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddT
             >
               {/* Front */}
               <div
-                className={cn("absolute inset-0 rounded-2xl overflow-hidden border-4 shadow-[0_20px_60px_rgba(0,0,0,0.8)]", border)}
+                className="absolute inset-0 rounded-2xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
                 style={{ backfaceVisibility: 'hidden' }}
               >
-                {/* Divine God Rays */}
-                {card.rarity === 'Divine' && (
-                  <div className="absolute -inset-12 -z-10 rounded-full animate-[spin_15s_linear_infinite] bg-[conic-gradient(from_0deg,transparent_0deg,rgba(239,68,68,0.3)_30deg,transparent_60deg,rgba(239,68,68,0.3)_90deg,transparent_120deg,rgba(239,68,68,0.3)_150deg,transparent_180deg,rgba(239,68,68,0.3)_210deg,transparent_240deg,rgba(239,68,68,0.3)_270deg,transparent_300deg,rgba(239,68,68,0.3)_330deg,transparent_360deg)] opacity-60 blur-xl" />
-                )}
-
-                {/* Mythic Particle Effect */}
-                {card.rarity === 'Mythic' && (
-                  <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
-                    {[...Array(10)].map((_, i) => (
-                      <div 
-                        key={i} 
-                        className="absolute w-1 h-1 bg-yellow-400 rounded-full animate-[particleFloat_2s_infinite]"
-                        style={{ 
-                          left: `${Math.random() * 100}%`, 
-                          top: `${Math.random() * 100}%`,
-                          animationDelay: `${Math.random() * 2}s`
-                        }} 
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {card.is_video
-                  ? <video src={card.image_url} autoPlay muted loop className="w-full h-full object-cover bg-black" />
-                  : <img src={card.image_url} alt={card.name} className="w-full h-full object-cover bg-black" />}
-
-                {/* Foil shimmer overlay */}
-                {(card.is_foil || (card.foil_quantity ?? 0) > 0) && (
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent animate-[foilShimmer_2s_linear_infinite] pointer-events-none z-10" />
-                )}
-
-                {/* Super-Rare Prismatic Sweep */}
-                {card.rarity === 'Super-Rare' && (
-                  <div className="absolute inset-0 overflow-hidden pointer-events-none z-30 mix-blend-overlay">
-                    <div className="w-[200%] h-[200%] absolute top-0 left-0 bg-gradient-to-r from-transparent via-purple-300/40 to-transparent animate-[sweep_4s_ease-in-out_infinite]" />
-                  </div>
-                )}
+                <CardDisplay 
+                  card={card} 
+                  showQuantity={false} 
+                  showNewBadge={false}
+                  className="w-full h-full border-0" // Remove border as CardDisplay has its own
+                />
               </div>
               {/* Back */}
               <div

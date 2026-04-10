@@ -22,8 +22,19 @@ export function Quests() {
         fetchAll();
       }
     }, 30000);
+
+    // Refresh on tab focus
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAll();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [profile]);
 
   const fetchAll = async () => {
@@ -258,7 +269,7 @@ export function Quests() {
 function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mission: any, onClaim: () => void | Promise<void>, claiming: boolean }) {
   const isCompleted = mission.is_completed;
   const isClaimed = mission.is_claimed;
-  const progressPercent = Math.min(100, (mission.current_value / mission.target_value) * 100);
+  const progressPercent = Math.min(100, (mission.progress / mission.target_value) * 100);
 
   return (
     <motion.div 
@@ -285,12 +296,12 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] font-black uppercase">
               <span className="text-slate-500">Progress</span>
-              <span className="text-blue-600">{mission.current_value} / {mission.target_value}</span>
+              <span className="text-blue-600">{mission.progress} / {mission.target_value}</span>
             </div>
             <div className="h-2 bg-slate-200 rounded-full border border-[var(--border)] overflow-hidden">
               <div 
                 className={cn("h-full transition-all duration-500", isCompleted ? "bg-yellow-400" : "bg-blue-400")}
-                style={{ width: `${progressPercent}%` }}
+                style={{ width: `${Math.min(100, (mission.progress / mission.target_value) * 100)}%` }}
               />
             </div>
           </div>

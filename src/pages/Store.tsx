@@ -59,6 +59,14 @@ export function Store() {
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   useEffect(() => {
+    if (profile) {
+      // Increment mission progress for visiting shop
+      supabase.rpc('increment_mission_progress', { p_mission_type: 'visit_shop', p_amount: 1 })
+        .then(({ error }) => { if (error) console.error('Error incrementing mission progress:', error); });
+    }
+  }, [profile]);
+
+  useEffect(() => {
     if (openPackId && inventory.length > 0 && !opening) {
       const packToOpen = inventory.find(p => p.pack_type_id === openPackId);
       if (packToOpen) {
@@ -1000,6 +1008,7 @@ export function Store() {
                           isFlipped={flippedIndexes.has(i)}
                           cardBackUrl={profile?.card_back_url || null}
                           onReveal={() => {}} // Handled by onClick above
+                          onSelect={() => setSelectedCard(card)}
                         />
                       </div>
                     ))}

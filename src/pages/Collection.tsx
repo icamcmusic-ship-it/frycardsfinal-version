@@ -63,6 +63,9 @@ export function Collection() {
   useEffect(() => {
     if (profile) {
       fetchSets();
+      // Increment mission progress for viewing collection
+      supabase.rpc('increment_mission_progress', { p_mission_type: 'view_collection', p_amount: 1 })
+        .then(({ error }) => { if (error) console.error('Error incrementing mission progress:', error); });
     }
   }, [profile]);
 

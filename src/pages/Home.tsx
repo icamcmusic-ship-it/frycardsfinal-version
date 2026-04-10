@@ -43,8 +43,9 @@ export function Home() {
   const isDailyClaimable = () => {
     if (!profile?.last_daily_claim) return true;
     const lastClaim = profile.last_daily_claim; // e.g. "2026-03-12"
-    const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD" in UTC
-    return today > lastClaim;
+    const today = new Date();
+    const localDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    return localDate > lastClaim;
   };
 
   useEffect(() => {

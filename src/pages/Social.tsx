@@ -67,12 +67,17 @@ export function Social() {
       const messageData = {
         user_id: profile?.id,
         username: profile?.username,
+        content: newMessage.trim(),
         body: newMessage.trim(),
         created_at: new Date().toISOString()
       };
 
       const { error } = await supabase.from('messages_history').insert(messageData);
       if (error) throw error;
+
+      // Increment mission progress for sending a chat message
+      supabase.rpc('increment_mission_progress', { p_mission_type: 'chat_message', p_amount: 1 })
+        .then(({ error }) => { if (error) console.error('Error incrementing mission progress:', error); });
 
       await supabase.channel('global').send({
         type: 'broadcast',

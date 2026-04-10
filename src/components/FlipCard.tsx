@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, getRarityStyles, getCardBackUrl } from '../lib/utils';
+import { cn, getCardBackUrl } from '../lib/utils';
 import { audioService } from '../services/AudioService';
-import { Heart, Sword, Shield, Sparkles } from 'lucide-react';
+import { CollectionCard } from './CollectionCard';
 
 const RARITY_GLOW: Record<string, string> = {
   Divine: 'shadow-[0_0_60px_rgba(239,68,68,1)]',
@@ -25,6 +25,7 @@ interface FlipCardProps {
   cardBackUrl: string | null;
   onReveal: () => void;
   isFlipped?: boolean;
+  onSelect?: () => void;
 }
 
 export const FlipCard: React.FC<FlipCardProps> = ({
@@ -32,12 +33,12 @@ export const FlipCard: React.FC<FlipCardProps> = ({
   cardBackUrl,
   onReveal,
   isFlipped,
+  onSelect,
 }) => {
   const [internalFlipped, setInternalFlipped] = useState(false);
   const flipped = isFlipped !== undefined ? isFlipped : internalFlipped;
   const glowClass = RARITY_GLOW[card.rarity] ?? '';
   
-  // Randomized entry rotation
   const randomRotation = useMemo(() => (Math.random() - 0.5) * 15, []);
 
   const getRaritySound = (rarity: string) => {
@@ -48,28 +49,18 @@ export const FlipCard: React.FC<FlipCardProps> = ({
   };
 
   const handleClick = () => {
-    if (flipped) return;
+    if (flipped) {
+      if (onSelect) onSelect();
+      return;
+    }
     audioService.play('click');
     setInternalFlipped(true);
-    
-    // Play rarity-specific sound
     audioService.play(getRaritySound(card.rarity));
-
     setTimeout(onReveal, 800);
   };
 
-  const cardSize = {
-    'Divine':     'w-80 h-60',
-    'Mythic':     'w-80 h-60',
-    'Super-Rare': 'w-72 h-54',
-    'Rare':       'w-64 h-48',
-    'Uncommon':   'w-56 h-42',
-    'Common':     'w-56 h-42',
-  }[card.rarity] ?? 'w-64 h-48';
-
   return (
-    <div className="relative flex items-center justify-center">
-      {/* Full-screen Rarity Burst */}
+    <div className="relative flex items-center justify-center w-full h-full">
       <AnimatePresence>
         {flipped && (
           <motion.div
@@ -87,35 +78,6 @@ export const FlipCard: React.FC<FlipCardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Directional Confetti for Divine/Mythic */}
-      {flipped && ['Divine', 'Mythic'].includes(card.rarity) && (
-        <div className="absolute inset-0 pointer-events-none z-[110]">
-          {[...Array(24)].map((_, i) => {
-            const angle = (i / 24) * Math.PI * 2;
-            const distance = 300 + Math.random() * 200;
-            return (
-              <motion.div
-                key={i}
-                className="absolute w-2 h-2 rounded-full"
-                style={{ 
-                  left: '50%', 
-                  top: '50%',
-                  backgroundColor: RARITY_COLORS[card.rarity]
-                }}
-                initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
-                animate={{
-                  x: Math.cos(angle) * distance,
-                  y: Math.sin(angle) * distance,
-                  opacity: 0,
-                  scale: 0,
-                }}
-                transition={{ duration: 1.2, ease: "easeOut", delay: 0.1 }}
-              />
-            );
-          })}
-        </div>
-      )}
-
       <motion.div
         initial={{ scale: 0, rotateZ: randomRotation, y: 100 }}
         animate={{ scale: 1, rotateZ: 0, y: 0 }}
@@ -125,38 +87,28 @@ export const FlipCard: React.FC<FlipCardProps> = ({
           damping: 20,
           delay: 0.1
         }}
-        className={cn("relative cursor-pointer select-none", cardSize)}
+        className="relative cursor-pointer select-none w-full h-full"
         style={{ perspective: '1200px' }}
         onClick={handleClick}
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        onDragEnd={(_, info) => {
-          if (Math.abs(info.offset.x) > 50 && !flipped) {
-            handleClick();
-          }
-        }}
       >
         <motion.div
           className="relative w-full h-full"
           style={{ transformStyle: 'preserve-3d' }}
           animate={{ rotateY: flipped ? 180 : 0 }}
-          transition={{ 
-            duration: 0.7, 
-            ease: [0.23, 1, 0.32, 1] // Custom physical snap easing
-          }}
+          transition={{ duration: 0.7, ease: [0.23, 1, 0.32, 1] }}
         >
           {/* BACK FACE */}
           <div
-            className="absolute inset-0 rounded-xl border-4 border-[var(--border)] overflow-hidden shadow-2xl"
+            className="absolute inset-0 rounded-xl border-4 border-black overflow-hidden shadow-2xl"
             style={{ backfaceVisibility: 'hidden' }}
           >
             <img src={getCardBackUrl(cardBackUrl)} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             {!flipped && (
-              <div className="absolute inset-0 flex items-end justify-center pb-8 bg-gradient-to-t from-black/40 to-transparent">
+              <div className="absolute inset-0 flex items-end justify-center pb-8 bg-gradient-to-t from-black/60 to-transparent">
                 <motion.p
                   animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
-                  className="text-white text-sm font-black uppercase tracking-[0.2em] drop-shadow-lg"
+                  className="text-white text-[10px] font-black uppercase tracking-[0.2em] drop-shadow-[1px_1px_0px_rgba(0,0,0,1)]"
                 >
                   Tap to reveal
                 </motion.p>
@@ -164,103 +116,20 @@ export const FlipCard: React.FC<FlipCardProps> = ({
             )}
           </div>
 
-          {/* FRONT FACE */}
+          {/* FRONT FACE - CollectionCard */}
           <div
             className={cn(
-              'absolute inset-0 rounded-xl border-4 border-[var(--border)] overflow-hidden',
+              'absolute inset-0 rounded-xl overflow-hidden',
               glowClass
             )}
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
           >
-            {/* Artwork */}
-            <div className="absolute inset-0 bg-slate-900">
-              {card.is_video ? (
-                <video src={card.image_url} autoPlay muted loop playsInline className="w-full h-full object-cover" />
-              ) : (
-                <img src={card.image_url} alt={card.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-              )}
-            </div>
-
-            {/* Foil Effect */}
-            {card.is_foil && (
-              <motion.div 
-                animate={{ 
-                  backgroundPosition: ['0% 0%', '100% 100%'],
-                  opacity: [0.3, 0.5, 0.3]
-                }}
-                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/10 pointer-events-none mix-blend-overlay z-20" 
-                style={{ backgroundSize: '200% 200%' }}
-              />
-            )}
-
-            {/* Rarity/New Badges */}
-            <div className="absolute top-3 right-3 z-30">
-              <motion.span 
-                initial={{ scale: 0, rotate: -20 }}
-                animate={flipped ? { scale: 1, rotate: 0 } : {}}
-                transition={{ delay: 0.4, type: 'spring' }}
-                className={cn(
-                  'text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border-2 shadow-[3px_3px_0px_rgba(0,0,0,1)]',
-                  getRarityStyles(card.rarity, card.is_foil)
-                )}
-              >
-                {card.is_foil ? <span className="flex items-center gap-1"><Sparkles className="w-3 h-3" /> Foil</span> : card.rarity}
-              </motion.span>
-            </div>
-
-            {card.is_new && (
-              <motion.div 
-                initial={{ scale: 0, x: -20 }}
-                animate={flipped ? { scale: 1, x: 0 } : {}}
-                transition={{ delay: 0.5, type: 'spring' }}
-                className="absolute top-3 left-3 z-30 bg-green-500 text-white text-[10px] font-black px-2 py-1 rounded-md border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)]"
-              >
-                NEW!
-              </motion.div>
-            )}
-
-            {/* Info Panel - Slides in from bottom */}
-            <motion.div 
-              initial={{ y: '100%' }}
-              animate={flipped ? { y: 0 } : { y: '100%' }}
-              transition={{ delay: 0.5, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-              className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent pt-12 pb-4 px-4 z-20"
-            >
-              <h4 className="text-white font-black text-lg uppercase leading-tight mb-1">{card.name}</h4>
-              <p className="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-3">
-                {card.card_type}{card.sub_type ? ` · ${card.sub_type}` : ''}{card.element ? ` · ${card.element}` : ''}
-              </p>
-
-              {(card.hp || card.attack || card.defense) && (
-                <div className="flex gap-4 mb-3">
-                  {card.hp && (
-                    <div className="flex items-center gap-1.5">
-                      <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-                      <span className="text-white font-black text-sm">{card.hp}</span>
-                    </div>
-                  )}
-                  {card.attack && (
-                    <div className="flex items-center gap-1.5">
-                      <Sword className="w-3.5 h-3.5 text-orange-500" />
-                      <span className="text-white font-black text-sm">{card.attack}</span>
-                    </div>
-                  )}
-                  {card.defense && (
-                    <div className="flex items-center gap-1.5">
-                      <Shield className="w-3.5 h-3.5 text-blue-500" />
-                      <span className="text-white font-black text-sm">{card.defense}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {(card.flavor_text || card.description) && (
-                <p className="text-gray-300 text-[10px] italic leading-relaxed line-clamp-2">
-                  {card.flavor_text || card.description}
-                </p>
-              )}
-            </motion.div>
+            <CollectionCard
+              card={card}
+              className="w-full h-full"
+              hideActions={true}
+              onSelect={onSelect}
+            />
           </div>
         </motion.div>
       </motion.div>

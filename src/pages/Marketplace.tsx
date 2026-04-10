@@ -868,8 +868,8 @@ export function Marketplace() {
                 </div>
               </div>
               
-              <div className="flex-1 flex items-center justify-center py-4 relative">
-                <div className="w-full max-w-[200px]">
+              <div className="flex-1 flex items-center justify-center py-2 relative">
+                <div className="w-full max-w-[240px]">
                   <CardDisplay card={{ ...listing.card, is_foil: listing.is_foil }} showQuantity={false} showNewBadge={false} />
                 </div>
               </div>
