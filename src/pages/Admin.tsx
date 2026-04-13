@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Shield, Users, Package, Target, Settings, Plus, Edit2, Trash2, Search, AlertCircle, X, LayoutGrid, Gift, Zap, ShoppingCart } from 'lucide-react';
+import { Loader2, Shield, Users, Package, Target, Settings, Plus, Edit2, Trash2, Search, AlertCircle, X, LayoutGrid, Gift, Zap, ShoppingCart, Star } from 'lucide-react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
 
-type AdminTab = 'users' | 'cards' | 'packs' | 'quests' | 'shop';
+type AdminTab = 'users' | 'cards' | 'packs' | 'quests' | 'shop' | 'season_pass';
 
 export function Admin() {
   const { profile } = useProfileStore();
@@ -44,6 +44,9 @@ export function Admin() {
         case 'shop':
           query = supabase.from('shop_items').select('*');
           break;
+        case 'season_pass':
+          query = supabase.from('season_pass_tiers').select('*').order('tier_number', { ascending: true });
+          break;
       }
 
       if (query) {
@@ -72,7 +75,14 @@ export function Admin() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
     try {
-      const { error } = await supabase.from(activeTab === 'users' ? 'profiles' : activeTab === 'cards' ? 'cards' : activeTab === 'packs' ? 'pack_types' : activeTab === 'quests' ? 'quest_templates' : 'shop_items').delete().eq('id', id);
+      const table = activeTab === 'users' ? 'profiles' : 
+                    activeTab === 'cards' ? 'cards' : 
+                    activeTab === 'packs' ? 'pack_types' : 
+                    activeTab === 'quests' ? 'quest_templates' : 
+                    activeTab === 'shop' ? 'shop_items' :
+                    'season_pass_tiers';
+      
+      const { error } = await supabase.from(table).delete().eq('id', id);
       if (error) throw error;
       toast.success('Item deleted');
       fetchData();
@@ -99,7 +109,8 @@ export function Admin() {
                     activeTab === 'cards' ? 'cards' : 
                     activeTab === 'packs' ? 'pack_types' : 
                     activeTab === 'quests' ? 'quest_templates' : 
-                    'shop_items';
+                    activeTab === 'shop' ? 'shop_items' :
+                    'season_pass_tiers';
       
       if (editingItem) {
         const { error } = await supabase.from(table).update(formData).eq('id', editingItem.id);
@@ -143,6 +154,7 @@ export function Admin() {
           { id: 'packs', label: 'Packs', icon: Package },
           { id: 'quests', label: 'Quests', icon: Target },
           { id: 'shop', label: 'Shop', icon: Settings },
+          { id: 'season_pass', label: 'Pass', icon: Star },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -218,6 +230,7 @@ export function Admin() {
                         {activeTab === 'users' && <p>{item.email} • Lvl {item.level}</p>}
                         {activeTab === 'cards' && <p>{item.rarity} • {item.element_type}</p>}
                         {activeTab === 'packs' && <p>{item.price_gold} Gold • {item.price_gems} Gems</p>}
+                        {activeTab === 'season_pass' && <p>Tier {item.tier_number} • {item.xp_required} XP</p>}
                       </div>
                     </td>
                     <td className="p-4">
@@ -394,6 +407,49 @@ export function Admin() {
                     <div>
                       <label className="block text-xs font-black uppercase text-slate-500 mb-1">Real Money ($)</label>
                       <input type="number" value={formData.cost_real_money || 0} onChange={e => setFormData({...formData, cost_real_money: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'season_pass' && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Tier Number</label>
+                      <input type="number" value={formData.tier_number || 0} onChange={e => setFormData({...formData, tier_number: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">XP Required</label>
+                      <input type="number" value={formData.xp_required || 0} onChange={e => setFormData({...formData, xp_required: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Reward Type</label>
+                      <select value={formData.reward_type || 'gold'} onChange={e => setFormData({...formData, reward_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
+                        <option value="gold">Gold</option>
+                        <option value="gems">Gems</option>
+                        <option value="pack">Pack</option>
+                        <option value="card">Card</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Reward Amount</label>
+                      <input type="number" value={formData.reward_amount || 0} onChange={e => setFormData({...formData, reward_amount: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Reward ID (Optional)</label>
+                      <input type="text" value={formData.reward_id || ''} onChange={e => setFormData({...formData, reward_id: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" placeholder="Pack ID or Card ID" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Premium Only</label>
+                      <select value={formData.is_premium ? 'true' : 'false'} onChange={e => setFormData({...formData, is_premium: e.target.value === 'true'})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
+                        <option value="false">Free Tier</option>
+                        <option value="true">Premium Tier</option>
+                      </select>
                     </div>
                   </div>
                 </>

@@ -380,12 +380,14 @@ export function Store() {
       message: `Are you sure you want to buy ${item.name} for ${item.cost_gold > 0 ? `${item.cost_gold} Gold` : `${item.cost_gems} Gems`}?`,
       onConfirm: async () => {
         try {
-          const { error } = await supabase.rpc('buy_shop_item', {
+          const { data, error } = await supabase.rpc('buy_shop_item', {
             p_shop_item_id: item.id,
             p_use_gems: item.cost_gems > 0 && item.cost_gold === 0
           });
 
-          if (error) throw error;
+          if (error || data?.success === false) {
+            throw new Error(data?.error || error?.message || 'Failed to purchase item');
+          }
           
           toast.success(`${item.name} purchased!`, { icon: '🛍️' });
           useProfileStore.getState().refreshProfile();
@@ -751,16 +753,20 @@ export function Store() {
                     <div className="flex items-center justify-between">
                       <h3 className="text-xl font-black uppercase text-[var(--text)]">{item.name}</h3>
                       <div className="px-2 py-1 bg-slate-100 border-2 border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500">
-                        {item.type}
+                        {item.item_type}
                       </div>
                     </div>
                     
                     <div className="flex-1 flex items-center justify-center py-4">
-                      {item.type === 'pack' ? (
-                        <PackageOpen className="w-16 h-16 text-blue-500" />
-                      ) : (
-                        <Shirt className="w-16 h-16 text-purple-500" />
-                      )}
+                      <img 
+                        src={item.image_url} 
+                        alt={item.name}
+                        className="w-24 h-24 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.png';
+                        }}
+                        referrerPolicy="no-referrer"
+                      />
                     </div>
 
                     <div className="flex items-center justify-between mt-auto">

@@ -206,6 +206,13 @@ export function Home() {
                     Spin for Reward
                   </button>
                   
+                  {profile.last_reward_type && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-sm border-2 border-black/20 rounded-lg">
+                      <p className="text-[10px] font-black uppercase text-black/60">Last Won:</p>
+                      <p className="text-[10px] font-black uppercase text-black">{profile.last_reward_type.replace(/_/g, ' ')}</p>
+                    </div>
+                  )}
+                  
                   <div className="hidden sm:flex items-center gap-2 bg-black/10 backdrop-blur-sm border-2 border-black/20 rounded-xl px-3 py-2">
                     <div className="text-[10px] font-black uppercase text-black/60 leading-none">
                       Potential<br/>Rewards

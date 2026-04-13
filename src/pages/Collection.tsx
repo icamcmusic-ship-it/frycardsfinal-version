@@ -49,7 +49,9 @@ export function Collection() {
     (sessionStorage.getItem('col_sort') as any) || 'rarity'
   );
   const [elementType, setElementType] = useState<string>(() => sessionStorage.getItem('col_element') || 'all');
-  const [showFoilsOnly, setShowFoilsOnly] = useState(false);
+  const [foilFilter, setFoilFilter] = useState<'all' | 'foil' | 'non-foil'>(() => 
+    (sessionStorage.getItem('col_foil_filter') as any) || 'all'
+  );
   const [stats, setStats] = useState<any>(null);
   const [viewSize, setViewSize] = useState<'normal' | 'large'>(() => 
     (localStorage.getItem('col_view_size') as any) || 'normal'
@@ -92,6 +94,7 @@ export function Collection() {
   useEffect(() => { sessionStorage.setItem('col_filter', filter); }, [filter]);
   useEffect(() => { sessionStorage.setItem('col_sort', sortBy); }, [sortBy]);
   useEffect(() => { sessionStorage.setItem('col_element', elementType); }, [elementType]);
+  useEffect(() => { sessionStorage.setItem('col_foil_filter', foilFilter); }, [foilFilter]);
   useEffect(() => { localStorage.setItem('col_view_size', viewSize); }, [viewSize]);
 
   useEffect(() => {
@@ -105,7 +108,7 @@ export function Collection() {
       fetchStats();
       fetchWishlistCardIds();
     }
-  }, [profile, activeTab, sortBy, filter, elementType, debouncedSearch, showFoilsOnly]);
+  }, [profile, activeTab, sortBy, filter, elementType, debouncedSearch, foilFilter]);
 
   const fetchWishlistCardIds = async () => {
     try {
@@ -148,7 +151,7 @@ export function Collection() {
         p_rarity: rarityForApi,
         p_sort_by: sortBy,
         p_element_type: capitalizedElement,
-        p_is_foil: showFoilsOnly || null,
+        p_is_foil: foilFilter === 'all' ? null : foilFilter === 'foil',
         p_limit: PAGE_SIZE,
         p_offset: targetOffset,
         p_search: debouncedSearch || null
@@ -543,26 +546,39 @@ export function Collection() {
       ) : (
         <>
           <div className="flex flex-wrap gap-2 mb-4">
-        {['all', 'common', 'uncommon', 'rare', 'super-rare', 'mythic', 'divine', 'foil'].map((r) => (
+        {['all', 'common', 'uncommon', 'rare', 'super-rare', 'mythic', 'divine'].map((r) => (
           <button
             key={r}
-            onClick={() => {
-              if (r === 'foil') {
-                setShowFoilsOnly(true);
-                setFilter('all');
-              } else {
-                setShowFoilsOnly(false);
-                setFilter(r);
-              }
-            }}
+            onClick={() => setFilter(r)}
             className={cn(
               "px-4 py-1.5 rounded-full font-black text-xs uppercase border-2 transition-all",
-              (filter === r || (r === 'foil' && showFoilsOnly))
+              filter === r
                 ? "bg-[var(--text)] text-[var(--surface)] border-[var(--text)]" 
                 : "bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400"
             )}
           >
-            {r === 'foil' ? '✨ Foil' : r}
+            {r}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {[
+          { id: 'all', label: 'All Versions' },
+          { id: 'foil', label: '✨ Foil Only' },
+          { id: 'non-foil', label: 'Standard Only' }
+        ].map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFoilFilter(f.id as any)}
+            className={cn(
+              "px-4 py-1.5 rounded-full font-black text-xs uppercase border-2 transition-all",
+              foilFilter === f.id
+                ? "bg-[var(--text)] text-[var(--surface)] border-[var(--text)]" 
+                : "bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400"
+            )}
+          >
+            {f.label}
           </button>
         ))}
       </div>
@@ -691,17 +707,17 @@ export function Collection() {
         <div className="flex flex-col items-center justify-center py-12 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[8px_8px_0px_0px_var(--border)]">
           <PackageOpen className="w-16 h-16 text-slate-300 mb-4" />
           <h3 className="text-2xl font-black text-[var(--text)] uppercase mb-2">
-            {activeTab === 'collection' ? (filter !== 'all' || showFoilsOnly ? `No ${showFoilsOnly ? 'Foil' : filter} cards found` : 'Collection is empty') : 'Wishlist is empty'}
+            {activeTab === 'collection' ? (filter !== 'all' || foilFilter !== 'all' ? `No ${foilFilter !== 'all' ? foilFilter.replace('-', ' ') : filter} cards found` : 'Collection is empty') : 'Wishlist is empty'}
           </h3>
           <p className="text-slate-500 font-bold mb-6 max-w-md text-center">
-            {activeTab === 'collection' ? (filter !== 'all' || showFoilsOnly ? 'Try adjusting your filters to find more cards.' : 'Your collection is looking a little empty! Head to the Store to open some packs.') : 'Add items to your wishlist to track them'}
+            {activeTab === 'collection' ? (filter !== 'all' || foilFilter !== 'all' ? 'Try adjusting your filters to find more cards.' : 'Your collection is looking a little empty! Head to the Store to open some packs.') : 'Add items to your wishlist to track them'}
           </p>
           <div className="flex gap-4">
-            {(filter !== 'all' || showFoilsOnly) && activeTab === 'collection' && (
+            {(filter !== 'all' || foilFilter !== 'all') && activeTab === 'collection' && (
               <button
                 onClick={() => {
                   setFilter('all');
-                  setShowFoilsOnly(false);
+                  setFoilFilter('all');
                   setElementType('all');
                   setSearch('');
                 }}

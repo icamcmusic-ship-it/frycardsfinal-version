@@ -24,6 +24,7 @@ export interface Profile {
   card_back_url: string | null;
   is_public: boolean;
   is_admin: boolean;
+  last_reward_type: string | null;
 }
 
 interface ProfileState {

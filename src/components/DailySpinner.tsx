@@ -68,12 +68,9 @@ export function DailySpinner({ isOpen, onClose }: DailySpinnerProps) {
       const { data, error } = await supabase.rpc('claim_daily_reward');
       if (error) throw error;
 
-      // Find which sector the reward belongs to
-      const landedIndex = pieSegments.findIndex(s => 
-        s.reward_type === data.reward_type && s.reward_amount === data.reward_amount
-      );
-
-      const targetSegment = pieSegments[landedIndex !== -1 ? landedIndex : 0];
+      // Use spin_result (1-8) from RPC to determine where to land
+      const landedIndex = (data.spin_result || 1) - 1;
+      const targetSegment = pieSegments[landedIndex];
       
       // Calculate rotation to land on the segment
       // The pointer is at the top (0 degrees)
