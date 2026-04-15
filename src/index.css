@@ -200,6 +200,8 @@ body { background-color: var(--bg); color: var(--text); }
 .brut-shadow { box-shadow: 8px 8px 0px 0px #111; }
 .brut-shadow-sm { box-shadow: 4px 4px 0px 0px #111; }
 
+.container-type-inline-size { container-type: inline-size; }
+
 .card-base {
     width: 100%;
     aspect-ratio: 3/4;
@@ -319,4 +321,8 @@ body { background-color: var(--bg); color: var(--text); }
 @keyframes holo-shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+}
+
+.pb-nav-safe { 
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom)); 
 }

@@ -204,7 +204,7 @@ export function Marketplace() {
         
         // Find the card name from the current state
         const listing = [...listings, ...watchlist, ...myListings].find(l => l.id === updated.id);
-        const cardName = listing?.card_name || listing?.card?.name || 'card';
+        const cardName = listing?.card_name || 'card';
         
         // Check if this listing is in our watchlist
         if (watchlistedIdsRef.current.has(updated.id)) {
@@ -752,6 +752,22 @@ export function Marketplace() {
             <option value="ice">Ice</option>
             <option value="void">Void</option>
           </select>
+
+          {(search || filter !== 'all' || rarityFilter !== 'all' || elementFilter !== 'all' || sortBy !== 'newest') && (
+            <button
+              onClick={() => {
+                setSearch('');
+                setFilter('all');
+                setRarityFilter('all');
+                setElementFilter('all');
+                setSortBy('newest');
+              }}
+              className="shrink-0 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 font-black rounded-xl border-4 border-red-200 shadow-[4px_4px_0px_0px_#fecaca] flex items-center gap-2 transition-all active:translate-y-1 active:shadow-none uppercase text-xs"
+            >
+              <X className="w-4 h-4" />
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -886,7 +902,7 @@ export function Marketplace() {
               </div>
               
               <div className="flex-1 flex items-center justify-center py-2 relative">
-                <div className="w-full max-w-[240px]">
+                <div className="w-full max-w-[240px] container-type-inline-size">
                   <CardDisplay card={{ ...listing.card, is_foil: listing.is_foil }} showQuantity={false} showNewBadge={false} />
                 </div>
               </div>

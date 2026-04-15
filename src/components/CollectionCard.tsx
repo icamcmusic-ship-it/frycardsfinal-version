@@ -24,7 +24,7 @@ const elementColors: Record<string, string> = {
   'void':    'bg-slate-950 text-white',
 };
 
-export function CollectionCard({ card, className, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist, isWishlisted, hideActions = false }: any) {
+export function CollectionCard({ card, className, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist, isWishlisted, hideActions = false, showQuantity = false }: any) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -69,6 +69,7 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, activ
       <CardDisplay 
         card={card} 
         showNewBadge={true} 
+        showQuantity={showQuantity && (card.quantity || 0) > 1}
         onToggleLock={() => onToggleLock && onToggleLock()}
         onToggleWishlist={() => onToggleWishlist && onToggleWishlist()}
         isWishlisted={isWishlisted}

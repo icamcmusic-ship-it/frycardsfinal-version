@@ -20,6 +20,13 @@ export function Social() {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -40,7 +47,7 @@ export function Social() {
     const channel = supabase
       .channel('global')
       .on('broadcast', { event: 'new_message' }, (payload) => {
-        setMessages(prev => [payload.payload, ...prev].slice(0, 50));
+        setMessages(prev => [...prev, payload.payload].slice(-50));
       })
       .subscribe();
 
@@ -53,7 +60,7 @@ export function Social() {
     const { data } = await supabase
       .from('messages_history')
       .select('*')
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .limit(50);
     setMessages(data || []);
   };
@@ -218,7 +225,7 @@ export function Social() {
               <MessageSquare /> Global Chat
             </h2>
             
-            <div className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar flex flex-col-reverse">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-4 mb-4 pr-2 custom-scrollbar flex flex-col">
               <AnimatePresence initial={false}>
                 {messages.map((msg, i) => (
                   <motion.div 

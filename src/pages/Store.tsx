@@ -10,6 +10,8 @@ import { CollectionCard } from '../components/CollectionCard';
 import { Card3DModal } from '../components/Card3DModal';
 import { FlipCard } from '../components/FlipCard';
 import { EmptyState } from '../components/EmptyState';
+import { ShopSection } from '../components/ShopSection';
+import { PackOpeningFan } from '../components/PackOpeningFan';
 
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { audioService } from '../services/AudioService';
@@ -43,10 +45,6 @@ export function Store() {
   const [packOpeningStep, setPackOpeningStep] = useState<'idle' | 'shaking' | 'revealing'>('idle');
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
   const [openingSummary, setOpeningSummary] = useState<{ xp_gained: number, new_card_count: number } | null>(null);
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [revealedCards, setRevealedCards] = useState<any[]>([]);
-  const [showFoilSplash, setShowFoilSplash] = useState(false);
-  const [flippedIndexes, setFlippedIndexes] = useState<Set<number>>(new Set());
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
   const [inventory, setInventory] = useState<any[]>([]);
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
@@ -98,8 +96,6 @@ export function Store() {
         setOpening(false);
         setOpenedCards(null);
         setOpeningSummary(null);
-        setCurrentCardIndex(0);
-        setRevealedCards([]);
       }
     };
     window.addEventListener('keydown', handler);
@@ -229,9 +225,6 @@ export function Store() {
           
           setOpenedCards(allCards);
           setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
-          setCurrentCardIndex(0);
-          setRevealedCards([]);
-          setFlippedIndexes(new Set());
           
           // Auto-transition after 1.5s if user hasn't clicked
           setTimeout(() => {
@@ -294,9 +287,6 @@ export function Store() {
       
       setOpenedCards(data.cards);
       setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
-      setCurrentCardIndex(0);
-      setRevealedCards([]);
-      setFlippedIndexes(new Set());
       
       // Auto-transition after 1.5s if user hasn't clicked
       setTimeout(() => {
@@ -352,9 +342,6 @@ export function Store() {
       
       setOpenedCards(allCards);
       setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
-      setCurrentCardIndex(0);
-      setRevealedCards([]);
-      setFlippedIndexes(new Set());
       
       // Auto-transition after 1.5s if user hasn't clicked
       setTimeout(() => {
@@ -363,6 +350,9 @@ export function Store() {
       }, 1500);
 
       setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
+      
+      // Refresh inventory
+      fetchInventory();
     } catch (err: any) {
       toast.error(err.message || 'Failed to open all packs');
       setPackOpeningStep('idle');
@@ -731,67 +721,11 @@ export function Store() {
   )}
 
       {activeTab === 'shop' && (
-        <div className="space-y-8">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {shopItems.length === 0 ? (
-              <div className="col-span-full text-center py-12 bg-[var(--bg)] rounded-xl border-2 border-dashed border-[var(--border)]">
-                <p className="text-slate-500 font-bold">The shop is currently empty.</p>
-                <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">Check back later for new items!</p>
-              </div>
-            ) : (
-              shopItems.map((item) => {
-                const canAfford = item.cost_gold > 0 
-                  ? (profile?.gold_balance ?? 0) >= item.cost_gold
-                  : (profile?.gem_balance ?? 0) >= item.cost_gems;
-
-                return (
-                  <motion.div 
-                    key={item.id}
-                    whileHover={{ y: -4 }}
-                    className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] flex flex-col gap-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-black uppercase text-[var(--text)]">{item.name}</h3>
-                      <div className="px-2 py-1 bg-slate-100 border-2 border-slate-200 rounded-lg text-[10px] font-black uppercase text-slate-500">
-                        {item.item_type}
-                      </div>
-                    </div>
-                    
-                    <div className="w-full aspect-square rounded-xl overflow-hidden border-2 border-[var(--border)] bg-slate-100 mb-3 flex items-center justify-center">
-                      <img 
-                        src={item.image_url} 
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/placeholder.png';
-                        }}
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between mt-auto">
-                      <div className="flex items-center gap-1 font-black text-lg">
-                        {item.cost_gems > 0 ? (
-                          <Gem className="w-5 h-5 text-emerald-500" />
-                        ) : (
-                          <Coins className="w-5 h-5 text-yellow-500" />
-                        )}
-                        {item.cost_gold > 0 ? item.cost_gold : item.cost_gems}
-                      </div>
-                      <button
-                        onClick={() => handleBuyShopItem(item)}
-                        disabled={!canAfford}
-                        className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 active:shadow-none uppercase text-xs"
-                      >
-                        Buy Now
-                      </button>
-                    </div>
-                  </motion.div>
-                );
-              })
-            )}
-          </div>
-        </div>
+        <ShopSection
+          shopItems={shopItems}
+          profile={profile}
+          onBuyItem={handleBuyShopItem}
+        />
       )}
       {activeTab === 'inventory' && (
         <div className="space-y-8">
@@ -874,54 +808,11 @@ export function Store() {
               fetchPacks();
               fetchInventory();
             }}
-            className="absolute top-4 right-4 text-white/60 hover:text-white font-black text-2xl"
+            className="absolute top-4 right-4 text-white/60 hover:text-white font-black text-2xl z-[110]"
           >
             ✕
           </button>
           
-          {/* Foil Splash Overlay */}
-          <AnimatePresence>
-            {showFoilSplash && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[999] pointer-events-none flex items-center justify-center"
-                style={{ background: 'radial-gradient(circle, rgba(255,215,0,0.4), transparent 70%)' }}
-              >
-                <motion.p
-                  initial={{ scale: 0.5, rotate: -10 }}
-                  animate={{ scale: 1.2, rotate: 3 }}
-                  exit={{ scale: 2, opacity: 0 }}
-                  className="text-6xl font-black text-yellow-400 uppercase tracking-widest drop-shadow-lg"
-                  style={{ textShadow: '0 0 30px gold' }}
-                >
-                  ✨ FOIL!
-                </motion.p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Particle burst — always visible */}
-          {packOpeningStep !== 'idle' && (
-            <div className="absolute inset-0 pointer-events-none">
-              {[...Array(20)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-2 h-2 rounded-full bg-yellow-400"
-                  style={{ left: '50%', top: '50%' }}
-                  animate={{
-                    x: (Math.random() - 0.5) * 600,
-                    y: (Math.random() - 0.5) * 600,
-                    opacity: [1, 0],
-                    scale: [1, 0],
-                  }}
-                  transition={{ duration: 1.2, delay: Math.random() * 0.5, ease: 'easeOut' }}
-                />
-              ))}
-            </div>
-          )}
-
           {packOpeningStep === 'shaking' && (
             <div 
               className="flex flex-col items-center gap-6 cursor-pointer group"
@@ -965,141 +856,20 @@ export function Store() {
           )}
 
           {packOpeningStep === 'revealing' && openedCards && (
-            <div className="flex flex-col items-center gap-8 w-full max-w-6xl h-full overflow-y-auto py-12 scrollbar-hide">
-              
-              {revealedCards.length < openedCards.length ? (
-                <div className="relative w-full flex flex-col items-center">
-                  <button
-                    onClick={() => {
-                      audioService.play('click');
-                      setRevealedCards([...openedCards]);
-                      setFlippedIndexes(new Set(openedCards.map((_, i) => i)));
-                    }}
-                    className="absolute top-0 right-0 px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-black rounded-xl border-2 border-white/40 transition-colors z-50"
-                  >
-                    Skip All
-                  </button>
-                  
-                  <p className="text-white/60 font-black text-sm uppercase tracking-widest mb-8">
-                    Revealed {revealedCards.length} of {openedCards.length}
-                  </p>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 w-full px-4">
-                    {openedCards.slice(0, revealedCards.length + 1).map((card, i) => (
-                      <div 
-                        key={i} 
-                        className="aspect-[3/4] w-full max-w-[200px] mx-auto"
-                        onClick={() => {
-                          if (!flippedIndexes.has(i)) {
-                            setFlippedIndexes(prev => new Set([...prev, i]));
-                            
-                            // Foil splash
-                            if (card.is_foil) {
-                              setShowFoilSplash(true);
-                              setTimeout(() => setShowFoilSplash(false), 1200);
-                            }
-
-                            // Delay adding to revealedCards to allow FlipCard animation
-                            setTimeout(() => {
-                              setRevealedCards(prev => {
-                                if (prev.some(c => c === card)) return prev;
-                                return [...prev, card];
-                              });
-                            }, 400);
-                          }
-                        }}
-                      >
-                        <FlipCard
-                          card={card}
-                          isFlipped={flippedIndexes.has(i)}
-                          cardBackUrl={profile?.card_back_url || null}
-                          onReveal={() => {}} // Handled by onClick above
-                          onSelect={() => setSelectedCard(card)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                // All revealed — show grid + summary
-                <div className="flex flex-col items-center gap-6 w-full">
-                  <p className="text-white font-black text-3xl uppercase tracking-widest mb-4">🎉 Pack Complete!</p>
-                  
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 w-full">
-                    {revealedCards.map((card, i) => (
-                      <CollectionCard
-                        key={i}
-                        card={card}
-                        className="aspect-[4/3]"
-                        onSelect={() => setSelectedCard(card)}
-                        hideActions={true}
-                      />
-                    ))}
-                  </div>
-
-                  {selectedCard && (
-                    <Card3DModal
-                      card={selectedCard}
-                      cardBackUrl={profile?.card_back_url || null}
-                      onClose={() => setSelectedCard(null)}
-                      isWishlisted={wishlistCardIds.has(selectedCard.id)}
-                      onToggleWishlist={() => handleToggleWishlist(selectedCard.id)}
-                    />
-                  )}
-
-                  {openingSummary && (
-                    <div className="flex gap-6 bg-white/10 px-6 py-3 rounded-xl border-2 border-white/20">
-                      <div className="text-center">
-                        <p className="text-[10px] font-black uppercase text-blue-300">XP Gained</p>
-                        <p className="text-xl font-black text-white">+{openingSummary.xp_gained}</p>
-                      </div>
-                      <div className="w-px bg-white/20" />
-                      <div className="text-center">
-                        <p className="text-[10px] font-black uppercase text-yellow-300">New Cards</p>
-                        <p className="text-xl font-black text-white">{openingSummary.new_card_count}</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => { 
-                        setPackOpeningStep('idle'); 
-                        setOpening(false); 
-                        setOpenedCards(null); 
-                        setOpeningSummary(null); 
-                        setCurrentCardIndex(0); 
-                        setRevealedCards([]); 
-                        useProfileStore.getState().refreshProfile();
-                        fetchPacks();
-                        fetchInventory();
-                      }}
-                      className="px-8 py-4 bg-white text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1"
-                    >
-                      Done
-                    </button>
-                    <button
-                      onClick={() => { 
-                        navigate('/collection?sort=newest'); 
-                        setPackOpeningStep('idle'); 
-                        setOpening(false); 
-                        setOpenedCards(null); 
-                        setOpeningSummary(null); 
-                        setCurrentCardIndex(0); 
-                        setRevealedCards([]); 
-                        useProfileStore.getState().refreshProfile();
-                        fetchPacks();
-                        fetchInventory();
-                      }}
-                      className="px-8 py-4 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 flex items-center gap-2"
-                    >
-                      <LayoutGrid className="w-5 h-5" />
-                      View in Collection
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <PackOpeningFan
+              isOpen={true}
+              cards={openedCards}
+              summary={openingSummary}
+              onClose={() => {
+                setPackOpeningStep('idle');
+                setOpening(false);
+                setOpenedCards(null);
+                setOpeningSummary(null);
+                useProfileStore.getState().refreshProfile();
+                fetchPacks();
+                fetchInventory();
+              }}
+            />
           )}
         </div>
       )}

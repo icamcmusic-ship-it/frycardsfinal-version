@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
@@ -59,6 +59,7 @@ export function Collection() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
+  const offsetRef = useRef(0);
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
   const PAGE_SIZE = 20;
 
@@ -99,6 +100,7 @@ export function Collection() {
 
   useEffect(() => {
     if (profile) {
+      offsetRef.current = 0;
       setOffset(0);
       if (activeTab === 'collection') {
         fetchCollection(false, 0);
@@ -131,7 +133,7 @@ export function Collection() {
 
   const fetchCollection = async (isLoadMore = false, currentOffset?: number) => {
     try {
-      const targetOffset = currentOffset !== undefined ? currentOffset : offset;
+      const targetOffset = currentOffset !== undefined ? currentOffset : offsetRef.current;
       
       if (!isLoadMore) {
         setLoading(true);
@@ -166,8 +168,10 @@ export function Collection() {
         setCards(fetchedCards);
       }
 
+      const newOffset = targetOffset + fetchedCards.length;
+      offsetRef.current = newOffset;
       setHasMore(fetchedCards.length === PAGE_SIZE);
-      setOffset(targetOffset + fetchedCards.length);
+      setOffset(newOffset);
 
       // Mark unseen cards as seen after 5 seconds
       // NOTE: We use c.id (card definition ID) here because the mark_cards_seen RPC 
@@ -201,7 +205,7 @@ export function Collection() {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, activeTab, offset]);
+  }, [hasMore, loadingMore, activeTab]);
 
   const fetchWishlist = async () => {
     try {
@@ -367,27 +371,40 @@ export function Collection() {
   };
 
   const handleBulkMill = async () => {
-    setConfirmConfig({
-      isOpen: true,
-      title: 'Bulk Mill Duplicates',
-      message: 'Are you sure you want to mill ALL duplicate cards? This cannot be undone.',
-      variant: 'danger',
-      onConfirm: async () => {
-        try {
-          const { data, error } = await supabase.rpc('mill_bulk_duplicates', { p_card_ids: null });
-          if (error) throw error;
-          
-          setOffset(0);
-          fetchCollection(false, 0); // Refresh from start
-          fetchStats();
-          useProfileStore.getState().refreshProfile();
-          
-          toast.success(`Successfully milled ${data.cards_milled} cards for ${data.gold_earned} Gold!`, { icon: '🪙' });
-        } catch (err: any) {
-          toast.error(err.message || 'Failed to bulk mill');
-        }
+    try {
+      // Calculate preview locally based on stats if available, or just show a general warning
+      // Since we don't have a dedicated preview RPC, we'll use the stats we already have
+      const duplicateCount = stats ? stats.total_cards - stats.unique_cards : 0;
+      
+      if (duplicateCount <= 0) {
+        toast.error('No duplicates found to mill!');
+        return;
       }
-    });
+
+      setConfirmConfig({
+        isOpen: true,
+        title: 'Bulk Mill Duplicates',
+        message: `Are you sure you want to mill ${duplicateCount} duplicate cards? This will earn you a significant amount of Gold. This cannot be undone.`,
+        variant: 'danger',
+        onConfirm: async () => {
+          try {
+            const { data, error } = await supabase.rpc('mill_bulk_duplicates', { p_card_ids: null });
+            if (error) throw error;
+            
+            setOffset(0);
+            fetchCollection(false, 0); // Refresh from start
+            fetchStats();
+            useProfileStore.getState().refreshProfile();
+            
+            toast.success(`Successfully milled ${data.cards_milled} cards for ${data.gold_earned} Gold!`, { icon: '🪙' });
+          } catch (err: any) {
+            toast.error(err.message || 'Failed to bulk mill');
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Error in bulk mill preview:', err);
+    }
   };
 
   const filteredCards = activeTab === 'collection' ? cards : wishlist;
@@ -662,6 +679,7 @@ export function Collection() {
             isBatchMode={isBatchMode}
             isSelected={selectedCardIds.includes(selectionId)}
             activeTab={activeTab}
+            showQuantity={true}
             onSelect={() => {
               if (isBatchMode) {
                 setSelectedCardIds(prev => prev.includes(selectionId) ? prev.filter(id => id !== selectionId) : [...prev, selectionId]);

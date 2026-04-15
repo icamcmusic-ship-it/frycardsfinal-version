@@ -313,7 +313,7 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
         <div className="text-right">
           <p className="text-[10px] font-black uppercase text-slate-500">Reward</p>
           <div className="flex items-center gap-1 font-black">
-            {(mission.reward_type || mission.quest_type || 'gold') === 'gold' ? <Coins className="w-4 h-4 text-yellow-500" /> : <Gem className="w-4 h-4 text-emerald-500" />}
+            {(mission.reward_type || mission.mission_type || 'gold') === 'gold' ? <Coins className="w-4 h-4 text-yellow-500" /> : <Gem className="w-4 h-4 text-emerald-500" />}
             <span>{mission.reward_amount || mission.reward_gold || mission.reward_gems || 0}</span>
           </div>
         </div>

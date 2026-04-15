@@ -306,7 +306,14 @@ export function Admin() {
                     <div className="sticky top-0">
                       <label className="block text-xs font-black uppercase text-slate-500 mb-2">Live Preview</label>
                       <div className="w-full max-w-[300px] mx-auto">
-                        <CardDisplay card={formData} showQuantity={false} showNewBadge={false} />
+                        {!formData.image_url ? (
+                          <div className="aspect-[3/4] bg-slate-100 border-4 border-dashed border-slate-300 rounded-3xl flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+                            <Plus className="w-12 h-12 mb-2 opacity-20" />
+                            <p className="text-xs font-black uppercase">Enter an image URL to see preview</p>
+                          </div>
+                        ) : (
+                          <CardDisplay card={formData} showQuantity={false} showNewBadge={false} />
+                        )}
                       </div>
                     </div>
                   </div>

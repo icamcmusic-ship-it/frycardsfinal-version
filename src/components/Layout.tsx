@@ -297,7 +297,7 @@ export function Layout() {
         </aside>
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 md:p-8 pb-28 md:pb-8 overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-8 pb-nav-safe md:pb-8 overflow-x-hidden">
           <Outlet />
         </main>
 

@@ -46,6 +46,10 @@ export function Settings() {
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loadingBlocked, setLoadingBlocked] = useState(false);
 
+  const saveToLocalStorage = (newSettings: any) => {
+    localStorage.setItem('frycards_settings', JSON.stringify(newSettings));
+  };
+
   const GAME_STYLES = [
     { id: 'retro',   label: 'Retro',   emoji: '🎮', desc: 'Bold borders, chunky pop art feel' },
     { id: 'neon',    label: 'Neon',    emoji: '⚡', desc: 'Dark base with glowing electric accents' },
@@ -85,21 +89,21 @@ export function Settings() {
 
   const fetchSettings = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_user_settings');
-      if (error) throw error;
-      if (data) {
+      const saved = localStorage.getItem('frycards_settings');
+      if (saved) {
+        const data = JSON.parse(saved);
         setSettings({
-          low_perf_mode: data.low_perf_mode,
-          notifications_enabled: data.notifications_enabled,
-          trade_notifications: data.trade_notifications,
-          auction_notifications: data.auction_notifications,
-          friend_notifications: data.friend_notifications,
-          show_online_status: data.show_online_status,
+          low_perf_mode: data.low_perf_mode ?? false,
+          notifications_enabled: data.notifications_enabled ?? true,
+          trade_notifications: data.trade_notifications ?? true,
+          auction_notifications: data.auction_notifications ?? true,
+          friend_notifications: data.friend_notifications ?? true,
+          show_online_status: data.show_online_status ?? true,
           is_public: data.is_public ?? true,
         });
         if (data.game_style) setGameStyle(data.game_style as any);
         
-        // Sync audio settings if they exist in DB
+        // Sync audio settings
         if (data.master_volume !== undefined) setMasterVolume(data.master_volume);
         if (data.music_volume !== undefined) setMusicVolume(data.music_volume);
         if (data.sfx_volume !== undefined) setSfxVolume(data.sfx_volume);
@@ -133,27 +137,19 @@ export function Settings() {
     else if (key === 'sfx_enabled') setSfxEnabled(value);
     else setSettings(prev => ({ ...prev, [key]: value }));
 
-    try {
-      const { error } = await supabase.rpc('upsert_user_settings', {
-        p_master_volume: newSettings.master_volume,
-        p_music_volume: newSettings.music_volume,
-        p_sfx_volume: newSettings.sfx_volume,
-        p_audio_enabled: newSettings.audio_enabled,
-        p_music_enabled: newSettings.music_enabled,
-        p_sfx_enabled: newSettings.sfx_enabled,
-        p_game_style: newSettings.game_style,
-        p_low_perf_mode: newSettings.low_perf_mode,
-        p_notifications_enabled: newSettings.notifications_enabled,
-        p_trade_notifications: newSettings.trade_notifications,
-        p_auction_notifications: newSettings.auction_notifications,
-        p_friend_notifications: newSettings.friend_notifications,
-        p_show_online_status: newSettings.show_online_status,
-        p_is_public: newSettings.is_public
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      console.error('Error updating settings:', err);
-      toast.error(err.message || 'Failed to save settings');
+    saveToLocalStorage(newSettings);
+
+    if (key === 'is_public') {
+      try {
+        const { error } = await supabase.rpc('update_user_profile', {
+          p_user_id: profile?.id,
+          p_is_public: value
+        });
+        if (error) throw error;
+      } catch (err: any) {
+        console.error('Error updating public status:', err);
+        toast.error('Failed to update profile visibility');
+      }
     }
   };
 

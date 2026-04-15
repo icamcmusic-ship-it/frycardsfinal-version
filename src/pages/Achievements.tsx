@@ -131,7 +131,7 @@ export function Achievements() {
                   )}
                 </div>
                 <div>
-                  <h3 className="font-black text-lg uppercase text-[var(--text)] leading-tight">{achievement.name}</h3>
+                  <h3 className="font-black text-lg uppercase text-[var(--text)] leading-tight">{achievement.title || achievement.name}</h3>
                   <p className="text-xs font-bold text-slate-500 mt-1">{achievement.description}</p>
                 </div>
               </div>

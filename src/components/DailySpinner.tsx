@@ -77,7 +77,8 @@ export function DailySpinner({ isOpen, onClose }: DailySpinnerProps) {
       // We want the middle of the segment to be at the top
       const segmentCenter = targetSegment.startAngle + (targetSegment.angle / 2);
       const extraSpins = 5 + Math.floor(Math.random() * 5);
-      const newRotation = rotation + (extraSpins * 360) + (360 - segmentCenter) - (rotation % 360);
+      const currentRotationMod = ((rotation % 360) + 360) % 360;
+      const newRotation = rotation + (extraSpins * 360) + (360 - segmentCenter) - currentRotationMod;
       
       setRotation(newRotation);
 
@@ -175,10 +176,10 @@ export function DailySpinner({ isOpen, onClose }: DailySpinnerProps) {
                       <g transform={`rotate(${segment.startAngle + segment.angle / 2}, 100, 100)`}>
                         <text
                           x="100"
-                          y="45"
+                          y="35"
                           textAnchor="middle"
-                          className="text-[8px] font-black uppercase fill-black"
-                          style={{ transform: 'rotate(0deg)' }}
+                          className="text-[10px] font-black uppercase fill-black"
+                          transform={`rotate(90, 100, 35)`}
                         >
                           {segment.label}
                         </text>

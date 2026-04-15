@@ -253,12 +253,12 @@ export function Profile() {
                         <div className="flex-1 max-w-xs">
                           <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
                             <span>XP Progress</span>
-                            <span>{profile.xp || 0} / {((profile.level || 1) * 1000)}</span>
+                            <span>{profile.xp % 1000} / 1000</span>
                           </div>
                           <div className="h-3 bg-slate-200 rounded-full border-2 border-slate-300 overflow-hidden">
                             <motion.div 
                               initial={{ width: 0 }}
-                              animate={{ width: `${Math.min(100, (((profile.xp || 0) % ((profile.level || 1) * 1000)) / ((profile.level || 1) * 1000)) * 100)}%` }}
+                              animate={{ width: `${(profile.xp % 1000) / 10}%` }}
                               className="h-full bg-blue-500"
                             />
                           </div>
@@ -508,7 +508,7 @@ export function Profile() {
                   <Trophy className={cn("w-6 h-6", ach.unlocked_at ? "text-white" : "text-slate-400")} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-black text-[var(--text)] uppercase truncate">{ach.title}</h3>
+                  <h3 className="font-black text-[var(--text)] uppercase truncate">{ach.title || ach.name}</h3>
                   <p className="text-sm text-slate-600 font-bold line-clamp-1">{ach.description}</p>
                   {ach.unlocked_at && (
                     <p className="text-[10px] font-black text-yellow-600 uppercase mt-1">

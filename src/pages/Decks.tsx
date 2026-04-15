@@ -201,17 +201,18 @@ export function Decks() {
   if (editingDeck !== null) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between sticky top-0 z-40 bg-[var(--bg)] py-4 border-b-2 border-[var(--border)]">
           <h1 className="text-3xl font-black uppercase text-[var(--text)]">{editingDeck.id ? 'Edit Deck' : 'New Deck'}</h1>
           <div className="flex gap-2 items-center">
-            <div className={cn("text-sm font-black px-3 py-1 rounded-full border-2",
+            <div className={cn("text-sm font-black px-4 py-2 rounded-xl border-4 flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
               selectedCards.length >= 5 && selectedCards.length <= 20
-                ? "bg-green-400 border-green-600 text-black"
+                ? "bg-green-400 border-black text-black"
                 : selectedCards.length > 20
-                ? "bg-red-500 border-red-700 text-white"
-                : "bg-yellow-400 border-yellow-600 text-black"
+                ? "bg-red-500 border-black text-white"
+                : "bg-yellow-400 border-black text-black"
             )}>
-              {selectedCards.length}/20
+              <Shield className="w-4 h-4" />
+              {selectedCards.length}/20 Cards
               {selectedCards.length < 5 && <span className="ml-1 text-[10px]">(min 5)</span>}
             </div>
             <button 
@@ -219,14 +220,14 @@ export function Decks() {
                 setEditingDeck(null);
                 setHasUnsavedChanges(false);
               }} 
-              className="px-4 py-2 bg-[var(--bg)] text-[var(--text)] font-black rounded-xl border-2 border-[var(--border)] flex items-center gap-2"
+              className="px-4 py-2 bg-white text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 hover:translate-y-1 hover:shadow-none transition-all"
             >
               <X className="w-4 h-4" /> Cancel
             </button>
             <button 
               onClick={editingDeck.id ? handleUpdateDeck : handleCreateDeck} 
               disabled={selectedCards.length < 5 || selectedCards.length > 20}
-              className="px-4 py-2 bg-blue-500 disabled:opacity-50 text-white font-black rounded-xl border-2 border-[var(--border)] flex items-center gap-2"
+              className="px-4 py-2 bg-blue-500 disabled:opacity-50 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 hover:translate-y-1 hover:shadow-none transition-all"
             >
               <Save className="w-4 h-4" /> Save Deck
             </button>

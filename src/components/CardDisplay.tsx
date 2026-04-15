@@ -112,10 +112,15 @@ export function CardDisplay({
         <div className="absolute bottom-[4cqw] left-[4cqw] right-[4cqw] flex flex-col gap-[2cqw] items-center">
           {/* Title Sticker */}
           <div className={cn(
-            "sticker !relative bg-white-trans px-[4cqw] py-[3cqw] rounded-[4cqw] brut-border -rotate-2 w-full",
+            "sticker !relative bg-white-trans px-[4cqw] py-[3cqw] rounded-[4cqw] brut-border -rotate-2 w-full flex items-center justify-center min-h-[14cqw]",
             `shadow-${rarityKey}`
           )}>
-            <h2 className="text-[8cqw] font-black uppercase text-center leading-none truncate">
+            <h2 className={cn(
+              "font-black uppercase text-center leading-none",
+              card.name.length > 20 ? "text-[5cqw]" : 
+              card.name.length > 15 ? "text-[6cqw]" : 
+              "text-[8cqw]"
+            )}>
               {card.name}
             </h2>
           </div>
