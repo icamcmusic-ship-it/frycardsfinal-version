@@ -61,7 +61,15 @@ export const NeoCard: React.FC<NeoCardProps> = ({ card, onQuickSell, onClick }) 
           ? "bg-gradient-to-br from-black/88 via-blue-950/75 to-black/88"
           : card.rarity === 'Uncommon'
           ? "bg-gradient-to-br from-black/85 via-green-950/70 to-black/85"
-          : "bg-black/80"
+          : "bg-black/80",
+        // Element-specific tint
+        (card.element || card.element_type) === 'fire' ? "ring-inset ring-1 ring-red-500/30" :
+        (card.element || card.element_type) === 'ice' ? "ring-inset ring-1 ring-blue-400/30" :
+        (card.element || card.element_type) === 'nature' ? "ring-inset ring-1 ring-green-500/30" :
+        (card.element || card.element_type) === 'tech' ? "ring-inset ring-1 ring-cyan-400/30" :
+        (card.element || card.element_type) === 'magical' ? "ring-inset ring-1 ring-violet-500/30" :
+        (card.element || card.element_type) === 'shadow' ? "ring-inset ring-1 ring-purple-900/30" :
+        (card.element || card.element_type) === 'void' ? "ring-inset ring-1 ring-slate-900/40" : ""
       )}>
         {/* Top: Name + type line */}
         <div>
@@ -99,7 +107,7 @@ export const NeoCard: React.FC<NeoCardProps> = ({ card, onQuickSell, onClick }) 
               : "text-gray-400"
           )}>
             {card.is_foil ? '✨ Foil' : card.rarity} · {card.card_type}
-            {card.element ? ` · ${card.element}` : ''}
+            {(card.element || card.element_type) ? ` · ${(card.element || card.element_type).charAt(0).toUpperCase() + (card.element || card.element_type).slice(1)}` : ''}
           </p>
 
           {/* Flavor text — rarity-specific container */}

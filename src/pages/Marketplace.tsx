@@ -701,13 +701,20 @@ export function Marketplace() {
             <option value="ending_soon">Ending Soon</option>
           </select>
           
-          <input 
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search marketplace..."
-            className="shrink-0 w-48 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold placeholder-slate-400 focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
-          />
+          <div className="relative shrink-0 w-48">
+            <input 
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search marketplace..."
+              className="w-full px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold placeholder-slate-400 focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+            />
+            {search !== debouncedSearch && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+              </div>
+            )}
+          </div>
           <select 
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -736,12 +743,14 @@ export function Marketplace() {
             className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
           >
             <option value="all">All Elements</option>
-            <option value="Fire">Fire</option>
-            <option value="Water">Water</option>
-            <option value="Earth">Earth</option>
-            <option value="Wind">Wind</option>
-            <option value="Light">Light</option>
-            <option value="Dark">Dark</option>
+            <option value="fire">Fire</option>
+            <option value="neutral">Neutral</option>
+            <option value="tech">Tech</option>
+            <option value="magical">Magical</option>
+            <option value="nature">Nature</option>
+            <option value="shadow">Shadow</option>
+            <option value="ice">Ice</option>
+            <option value="void">Void</option>
           </select>
         </div>
       </div>
@@ -808,6 +817,14 @@ export function Marketplace() {
                       )}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
+                      <div className="w-4 h-4 rounded-full overflow-hidden border border-black/20 bg-slate-100">
+                        <img 
+                          src={listing.seller_avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${listing.seller_id}`} 
+                          alt={listing.seller_name}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
                       <p className="text-[10px] text-slate-500 font-bold">Seller: {listing.seller_name}</p>
                       {profile?.id !== listing.seller_id && (
                         <div className="flex items-center gap-2">

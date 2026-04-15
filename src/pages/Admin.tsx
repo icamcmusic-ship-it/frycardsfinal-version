@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
+import { CardDisplay } from '../components/CardDisplay';
 import { Loader2, Shield, Users, Package, Target, Settings, Plus, Edit2, Trash2, Search, AlertCircle, X, LayoutGrid, Gift, Zap, ShoppingCart, Star } from 'lucide-react';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
@@ -273,54 +274,109 @@ export function Admin() {
             <div className="p-6 space-y-4">
               {activeTab === 'cards' && (
                 <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Name</label>
-                      <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">Name</label>
+                          <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">Rarity</label>
+                          <select value={formData.rarity || ''} onChange={e => setFormData({...formData, rarity: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
+                            <option value="Common">Common</option>
+                            <option value="Uncommon">Uncommon</option>
+                            <option value="Rare">Rare</option>
+                            <option value="Super-Rare">Super-Rare</option>
+                            <option value="Mythic">Mythic</option>
+                            <option value="Divine">Divine</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">Element</label>
+                          <select value={formData.element_type || ''} onChange={e => setFormData({...formData, element_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
+                            <option value="">None</option>
+                            <option value="fire">Fire</option>
+                            <option value="neutral">Neutral</option>
+                            <option value="tech">Tech</option>
+                            <option value="magical">Magical</option>
+                            <option value="nature">Nature</option>
+                            <option value="shadow">Shadow</option>
+                            <option value="ice">Ice</option>
+                            <option value="void">Void</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">Type</label>
+                          <select value={formData.card_type || 'Unit'} onChange={e => setFormData({...formData, card_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
+                            <option value="Unit">Unit</option>
+                            <option value="Event">Event</option>
+                            <option value="Location">Location</option>
+                            <option value="Artifact">Artifact</option>
+                            <option value="Leader">Leader</option>
+                            <option value="Sacred">Sacred</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">Sub Type</label>
+                          <input type="text" value={formData.sub_type || ''} onChange={e => setFormData({...formData, sub_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" placeholder="e.g. Dragon, Warrior" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">Dice Cost</label>
+                          <input type="number" value={formData.dice_cost || 0} onChange={e => setFormData({...formData, dice_cost: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">HP</label>
+                          <input type="number" value={formData.hp || 0} onChange={e => setFormData({...formData, hp: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">ATK</label>
+                          <input type="number" value={formData.attack || 0} onChange={e => setFormData({...formData, attack: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">DEF</label>
+                          <input type="number" value={formData.defense || 0} onChange={e => setFormData({...formData, defense: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black uppercase text-slate-500 mb-1">Ability Type</label>
+                        <input type="text" value={formData.ability_type || ''} onChange={e => setFormData({...formData, ability_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" placeholder="e.g. Passive, On Play" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black uppercase text-slate-500 mb-1">Ability Text</label>
+                        <textarea value={formData.ability_text || ''} onChange={e => setFormData({...formData, ability_text: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold h-20" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">Secondary Ability Value</label>
+                          <input type="number" value={formData.secondary_ability_value || 0} onChange={e => setFormData({...formData, secondary_ability_value: Number(e.target.value)})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-black uppercase text-slate-500 mb-1">Secondary Ability Text</label>
+                          <input type="text" value={formData.secondary_ability_text || ''} onChange={e => setFormData({...formData, secondary_ability_text: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black uppercase text-slate-500 mb-1">Image URL</label>
+                        <input type="text" value={formData.image_url || ''} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black uppercase text-slate-500 mb-1">Flavor Text</label>
+                        <textarea value={formData.flavor_text || ''} onChange={e => setFormData({...formData, flavor_text: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold h-20" />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Rarity</label>
-                      <select value={formData.rarity || ''} onChange={e => setFormData({...formData, rarity: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
-                        <option value="Common">Common</option>
-                        <option value="Uncommon">Uncommon</option>
-                        <option value="Rare">Rare</option>
-                        <option value="Super-Rare">Super-Rare</option>
-                        <option value="Mythic">Mythic</option>
-                        <option value="Divine">Divine</option>
-                      </select>
+                    <div className="sticky top-0">
+                      <label className="block text-xs font-black uppercase text-slate-500 mb-2">Live Preview</label>
+                      <div className="w-full max-w-[300px] mx-auto">
+                        <CardDisplay card={{...formData, element: formData.element_type}} showQuantity={false} showNewBadge={false} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Element</label>
-                      <select value={formData.element_type || ''} onChange={e => setFormData({...formData, element_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
-                        <option value="Fire">Fire</option>
-                        <option value="Water">Water</option>
-                        <option value="Earth">Earth</option>
-                        <option value="Wind">Wind</option>
-                        <option value="Light">Light</option>
-                        <option value="Dark">Dark</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-black uppercase text-slate-500 mb-1">Type</label>
-                      <select value={formData.card_type || 'Unit'} onChange={e => setFormData({...formData, card_type: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold">
-                        <option value="Unit">Unit</option>
-                        <option value="Event">Event</option>
-                        <option value="Location">Location</option>
-                        <option value="Artifact">Artifact</option>
-                        <option value="Leader">Leader</option>
-                        <option value="Sacred">Sacred</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Image URL</label>
-                    <input type="text" value={formData.image_url || ''} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black uppercase text-slate-500 mb-1">Flavor Text</label>
-                    <textarea value={formData.flavor_text || ''} onChange={e => setFormData({...formData, flavor_text: e.target.value})} className="w-full p-3 border-4 border-black rounded-xl font-bold h-24" />
                   </div>
                 </>
               )}

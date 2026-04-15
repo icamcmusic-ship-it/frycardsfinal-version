@@ -64,6 +64,19 @@ export function CardDisplay({
     'Common':     'border-slate-400',
   };
 
+  const elementBorderAccent: Record<string, string> = {
+    'fire':    'shadow-[inset_0_0_0_1px_rgba(239,68,68,0.6)]',
+    'neutral': 'shadow-[inset_0_0_0_1px_rgba(148,163,184,0.4)]',
+    'tech':    'shadow-[inset_0_0_0_1px_rgba(6,182,212,0.6)]',
+    'magical': 'shadow-[inset_0_0_0_1px_rgba(139,92,246,0.7)]',
+    'nature':  'shadow-[inset_0_0_0_1px_rgba(22,163,74,0.6)]',
+    'shadow':  'shadow-[inset_0_0_0_1px_rgba(88,28,135,0.7)]',
+    'ice':     'shadow-[inset_0_0_0_1px_rgba(125,211,252,0.7)]',
+    'void':    'shadow-[inset_0_0_0_1px_rgba(15,23,42,0.9)]',
+  };
+
+  const elementAccent = elementBorderAccent[((card as any).element || (card as any).element_type || '').toLowerCase()] ?? '';
+
   const RARITY_GRADIENTS: Record<string, string> = {
     Divine: 'from-red-900 to-red-600',
     Mythic: 'from-yellow-900 to-yellow-600',
@@ -82,6 +95,7 @@ export function CardDisplay({
       className={cn(
         'relative w-full aspect-[3/4] rounded-xl border-4 group cursor-pointer transition-all duration-300 overflow-hidden bg-slate-950',
         border,
+        elementAccent,
         className
       )}
     >
@@ -157,43 +171,69 @@ export function CardDisplay({
         </div>
 
         {/* Stats Bar */}
-        <div className="grid grid-cols-3 gap-0.5 bg-black/20 p-0.5 border-t border-white/10 backdrop-blur-sm">
-          <div className="bg-orange-500/30 rounded border border-white/10 flex items-center justify-center gap-0.5 py-0.5 shadow-inner">
-            <Sword className="w-2.5 h-2.5 text-white" />
-            <span className="text-white font-black text-[9px]">{(card as any).attack || 0}</span>
+        {!['Event', 'Sacred'].includes(card.card_type || '') && (
+          <div className="grid grid-cols-3 gap-0.5 bg-black/20 p-0.5 border-t border-white/10 backdrop-blur-sm">
+            <div className="bg-orange-500/30 rounded border border-white/10 flex items-center justify-center gap-0.5 py-0.5 shadow-inner">
+              <Sword className="w-2.5 h-2.5 text-white" />
+              <span className="text-white font-black text-[9px]">{(card as any).attack || 0}</span>
+            </div>
+            <div className="bg-blue-500/30 rounded border border-white/10 flex items-center justify-center gap-0.5 py-0.5 shadow-inner">
+              <Shield className="w-2.5 h-2.5 text-white" />
+              <span className="text-white font-black text-[9px]">{(card as any).defense || 0}</span>
+            </div>
+            <div className="bg-purple-500/30 rounded border border-white/10 flex items-center justify-center gap-0.5 py-0.5 shadow-inner">
+              <Dice5 className="w-2.5 h-2.5 text-white" />
+              <span className="text-white font-black text-[9px]">{(card as any).dice_cost ?? 0}</span>
+            </div>
           </div>
-          <div className="bg-blue-500/30 rounded border border-white/10 flex items-center justify-center gap-0.5 py-0.5 shadow-inner">
-            <Shield className="w-2.5 h-2.5 text-white" />
-            <span className="text-white font-black text-[9px]">{(card as any).defense || 0}</span>
-          </div>
-          <div className="bg-purple-500/30 rounded border border-white/10 flex items-center justify-center gap-0.5 py-0.5 shadow-inner">
-            <Dice5 className="w-2.5 h-2.5 text-white" />
-            <span className="text-white font-black text-[9px]">{(card as any).dice || 0}</span>
-          </div>
-        </div>
+        )}
 
         {/* Text Area */}
         <div className="bg-white/5 p-1.5 flex flex-col border-x border-white/10 border-b border-white/10 overflow-hidden backdrop-blur-md">
           <div className="flex-1 overflow-y-auto scrollbar-hide">
-            <p className="text-white/80 font-black text-[8px] uppercase mb-0.5 tracking-tight truncate">
-              {card.card_type} {(card as any).sub_type && `• ${(card as any).sub_type}`}
+            <p className="text-white/90 font-black text-[9px] uppercase mb-0.5 tracking-wide truncate drop-shadow-md">
+              {card.card_type}{(card as any).sub_type ? ` • ${(card as any).sub_type}` : ''}
             </p>
             <div className="h-px bg-white/10 mb-1" />
             <p className="text-white text-[9px] font-bold leading-tight mb-1 line-clamp-2 drop-shadow-sm">
               {card.ability_text || (card as any).description || "No ability text."}
             </p>
             {card.flavor_text && (
-              <p className="text-white/50 text-[8px] italic leading-tight border-t border-white/5 pt-1 line-clamp-1">
+              <p className="text-white/75 text-[10px] italic leading-snug mt-0.5 line-clamp-2">
                 "{card.flavor_text}"
               </p>
             )}
           </div>
         </div>
 
+        {/* Element badge - bottom of card */}
+        {(card as any).element && (
+          <div className="flex items-center justify-between px-1.5 pb-1 pt-0.5 bg-black/20 backdrop-blur-sm">
+            <span className={cn(
+              "text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded border border-white/20",
+              (() => {
+                const elementBadgeColors: Record<string, string> = {
+                  'fire':    'bg-red-900/60 text-red-200',
+                  'neutral': 'bg-slate-700/60 text-slate-200',
+                  'tech':    'bg-cyan-900/60 text-cyan-200',
+                  'magical': 'bg-violet-900/60 text-violet-200',
+                  'nature':  'bg-green-900/60 text-green-200',
+                  'shadow':  'bg-purple-950/60 text-purple-200',
+                  'ice':     'bg-sky-900/60 text-sky-200',
+                  'void':    'bg-slate-950/60 text-slate-300',
+                };
+                return elementBadgeColors[(card as any).element] ?? 'bg-slate-700 text-slate-200';
+              })()
+            )}>
+              {(card as any).element}
+            </span>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between px-1.5 py-0.5 bg-black/30 rounded-b-lg backdrop-blur-md border-t border-white/10">
           <span className="text-[7px] font-black text-white/40 uppercase tracking-widest">
-            {card.element || 'Neutral'}
+            {((card as any).element || (card as any).element_type) ? ((card as any).element || (card as any).element_type).charAt(0).toUpperCase() + ((card as any).element || (card as any).element_type).slice(1) : 'Neutral'}
           </span>
           <div className="flex gap-1">
             {onToggleLock && (

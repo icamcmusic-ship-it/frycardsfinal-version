@@ -545,21 +545,42 @@ export function Collection() {
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2 mb-4">
-        {['all', 'common', 'uncommon', 'rare', 'super-rare', 'mythic', 'divine'].map((r) => (
-          <button
-            key={r}
-            onClick={() => setFilter(r)}
-            className={cn(
-              "px-4 py-1.5 rounded-full font-black text-xs uppercase border-2 transition-all",
-              filter === r
-                ? "bg-[var(--text)] text-[var(--surface)] border-[var(--text)]" 
-                : "bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400"
-            )}
+          <div className="flex flex-wrap gap-4 mb-4 items-center">
+        <div className="flex flex-wrap gap-2">
+          {['all', 'common', 'uncommon', 'rare', 'super-rare', 'mythic', 'divine'].map((r) => (
+            <button
+              key={r}
+              onClick={() => setFilter(r)}
+              className={cn(
+                "px-4 py-1.5 rounded-full font-black text-xs uppercase border-2 transition-all",
+                filter === r
+                  ? "bg-[var(--text)] text-[var(--surface)] border-[var(--text)]" 
+                  : "bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400"
+              )}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative">
+          <select 
+            value={elementType} 
+            onChange={e => setElementType(e.target.value)} 
+            className="appearance-none pl-4 pr-10 py-1.5 rounded-full font-black text-xs uppercase border-2 bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400 focus:outline-none focus:border-[var(--text)] transition-all"
           >
-            {r}
-          </button>
-        ))}
+            <option value="all">All Elements</option>
+            <option value="fire">Fire</option>
+            <option value="neutral">Neutral</option>
+            <option value="tech">Tech</option>
+            <option value="magical">Magical</option>
+            <option value="nature">Nature</option>
+            <option value="shadow">Shadow</option>
+            <option value="ice">Ice</option>
+            <option value="void">Void</option>
+          </select>
+          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -579,32 +600,6 @@ export function Collection() {
             )}
           >
             {f.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-        {['all', 'fire', 'water', 'earth', 'wind', 'light', 'dark'].map((e) => (
-          <button
-            key={e}
-            onClick={() => setElementType(e)}
-            className={cn(
-              "shrink-0 px-4 py-1.5 rounded-full font-black text-xs uppercase border-2 transition-all flex items-center gap-2",
-              elementType === e
-                ? "bg-[var(--text)] text-[var(--surface)] border-[var(--text)]"
-                : "bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400"
-            )}
-          >
-            <div className={cn(
-              "w-2 h-2 rounded-full",
-              e === 'fire' ? "bg-red-500" :
-              e === 'water' ? "bg-blue-500" :
-              e === 'earth' ? "bg-amber-700" :
-              e === 'wind' ? "bg-slate-300" :
-              e === 'light' ? "bg-yellow-300" :
-              e === 'dark' ? "bg-purple-900" : "bg-slate-400"
-            )} />
-            {e}
           </button>
         ))}
       </div>
@@ -630,13 +625,21 @@ export function Collection() {
             <option value="price">Sort by Value</option>
           </select>
           
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="shrink-0 w-48 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold placeholder-slate-400 focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
-          />
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold placeholder-slate-400 focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+            />
+            {search !== debouncedSearch && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+              </div>
+            )}
+          </div>
 
           <button
             onClick={() => setViewSize(prev => prev === 'normal' ? 'large' : 'normal')}

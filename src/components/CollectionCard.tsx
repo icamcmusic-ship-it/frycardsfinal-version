@@ -14,13 +14,14 @@ const rarityColors: Record<string, string> = {
 };
 
 const elementColors: Record<string, string> = {
-  'Fire': 'bg-red-500 text-white',
-  'Water': 'bg-blue-500 text-white',
-  'Earth': 'bg-yellow-700 text-white',
-  'Wind': 'bg-teal-400 text-black',
-  'Air': 'bg-teal-400 text-black',
-  'Dark': 'bg-purple-900 text-white',
-  'Light': 'bg-yellow-300 text-black',
+  'fire':    'bg-red-500 text-white',
+  'neutral': 'bg-slate-400 text-black',
+  'tech':    'bg-cyan-500 text-black',
+  'magical': 'bg-violet-500 text-white',
+  'nature':  'bg-green-600 text-white',
+  'shadow':  'bg-purple-900 text-white',
+  'ice':     'bg-sky-300 text-black',
+  'void':    'bg-slate-950 text-white',
 };
 
 export function CollectionCard({ card, className, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist, isWishlisted, hideActions = false }: any) {
@@ -86,17 +87,17 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, activ
       )}
 
       {/* Element Badge */}
-      {card.element && (
+      {(card.element || card.element_type) && (
         <div className="absolute top-1 left-1/2 -translate-x-1/2 z-40">
           <span className={cn("text-[7px] font-black px-1.5 py-0.5 rounded uppercase border border-black/20 shadow-sm",
-            elementColors[card.element] ?? 'bg-slate-200 text-slate-700')}>
-            {card.element}
+            elementColors[card.element || card.element_type] ?? 'bg-slate-200 text-slate-700')}>
+            {(card.element || card.element_type).charAt(0).toUpperCase() + (card.element || card.element_type).slice(1)}
           </span>
         </div>
       )}
       
       <div className={cn(
-        "relative border-4 border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface)]",
+        "relative rounded-xl overflow-hidden bg-[var(--surface)]",
         "border-l-[6px]", rarityColors[card.rarity] ?? 'border-l-slate-400',
         card.is_foil && "ring-2 ring-yellow-400 ring-offset-1",
         card.is_foil && "foil-shimmer"

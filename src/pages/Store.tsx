@@ -732,7 +732,7 @@ export function Store() {
 
       {activeTab === 'shop' && (
         <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {shopItems.length === 0 ? (
               <div className="col-span-full text-center py-12 bg-[var(--bg)] rounded-xl border-2 border-dashed border-[var(--border)]">
                 <p className="text-slate-500 font-bold">The shop is currently empty.</p>
@@ -757,11 +757,11 @@ export function Store() {
                       </div>
                     </div>
                     
-                    <div className="flex-1 flex items-center justify-center py-4">
+                    <div className="w-full aspect-square rounded-xl overflow-hidden border-2 border-[var(--border)] bg-slate-100 mb-3 flex items-center justify-center">
                       <img 
                         src={item.image_url} 
                         alt={item.name}
-                        className="w-24 h-24 object-contain"
+                        className="w-full h-full object-cover"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = '/placeholder.png';
                         }}
