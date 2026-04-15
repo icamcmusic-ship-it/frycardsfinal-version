@@ -35,7 +35,7 @@ export function CardDisplay({
   onToggleWishlist,
   isWishlisted
 }: CardDisplayProps) {
-  const rarityKey = card.rarity.toLowerCase().replace(' ', '-');
+  const rarityKey = (card.rarity || 'common').toLowerCase().replace(' ', '-');
   const isFoil = card.is_foil || (card.foil_quantity ?? 0) > 0;
 
   return (
