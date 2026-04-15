@@ -75,11 +75,11 @@ export function CardDisplay({
         <div className="flex justify-between items-start">
           {/* Type Sticker */}
           <div className={cn(
-            "sticker !relative flex items-center justify-center w-[22cqw] h-[22cqw] rounded-full brut-border -rotate-12",
+            "sticker !relative flex items-center justify-center w-[22cqw] h-[22cqw] rounded-full brut-border -rotate-12 overflow-hidden",
             `color-${rarityKey}`,
             `shadow-${rarityKey}`
           )}>
-            <span className="text-[4cqw] font-black uppercase tracking-widest text-center leading-tight">
+            <span className="text-[3cqw] font-black uppercase tracking-tighter text-center leading-none px-[1cqw] truncate w-full">
               {card.card_type || 'Unit'}
             </span>
           </div>
