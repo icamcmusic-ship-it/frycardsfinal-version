@@ -356,17 +356,17 @@ export function Home() {
                     <Zap className="w-6 h-6 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-bold text-[var(--text)] text-lg">{quest.quest_type.replace(/_/g, ' ').toUpperCase()}</p>
+                    <p className="font-bold text-[var(--text)] text-lg">{(quest.mission_type || quest.quest_type || '').replace(/_/g, ' ').toUpperCase()}</p>
                     <div className="w-full sm:w-48 h-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-full mt-2 overflow-hidden">
                       <div 
                         className="h-full bg-green-400 border-r-2 border-[var(--border)] transition-all" 
-                        style={{ width: `${Math.min(100, (quest.progress / quest.target_value) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (quest.progress / (quest.target || quest.target_value || 1)) * 100)}%` }}
                       />
                     </div>
                   </div>
                 </div>
                 <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
-                  <p className="text-lg font-black text-[var(--text)]">{quest.progress} / {quest.target_value}</p>
+                  <p className="text-lg font-black text-[var(--text)]">{quest.progress} / {quest.target || quest.target_value}</p>
                   {quest.is_completed && !quest.is_claimed ? (
                     <button 
                       onClick={() => { console.log('Claim clicked'); handleClaimQuest(quest.id); }}
@@ -379,7 +379,7 @@ export function Home() {
                     <span className="text-sm text-slate-500 font-bold uppercase">Claimed</span>
                   ) : (
                     <p className="text-sm text-yellow-600 font-bold bg-yellow-100 px-2 py-0.5 rounded border border-yellow-400 inline-block">
-                      +{quest.reward_amount} {quest.reward_type === 'gold' ? 'Gold' : 'Gems'}
+                      +{quest.reward_amount || quest.reward_gold || quest.reward_gems || 0} {(quest.reward_type || quest.quest_type || 'gold') === 'gold' ? 'Gold' : 'Gems'}
                     </p>
                   )}
                 </div>

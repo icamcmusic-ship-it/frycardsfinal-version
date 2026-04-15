@@ -269,7 +269,8 @@ export function Quests() {
 function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mission: any, onClaim: () => void | Promise<void>, claiming: boolean }) {
   const isCompleted = mission.is_completed;
   const isClaimed = mission.is_claimed;
-  const progressPercent = Math.min(100, (mission.progress / mission.target_value) * 100);
+  const target = mission.target || mission.target_value || 1;
+  const progressPercent = Math.min(100, (mission.progress / target) * 100);
 
   return (
     <motion.div 
@@ -289,19 +290,19 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
           )}>
             <Zap className={cn("w-4 h-4", isClaimed ? "text-slate-400" : "text-blue-600")} />
           </div>
-          <h3 className="font-black uppercase text-[var(--text)]">{mission.quest_type.replace(/_/g, ' ')}</h3>
+          <h3 className="font-black uppercase text-[var(--text)]">{(mission.mission_type || mission.quest_type || '').replace(/_/g, ' ')}</h3>
         </div>
         
         {!isClaimed && (
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] font-black uppercase">
               <span className="text-slate-500">Progress</span>
-              <span className="text-blue-600">{mission.progress} / {mission.target_value}</span>
+              <span className="text-blue-600">{mission.progress} / {target}</span>
             </div>
             <div className="h-2 bg-slate-200 rounded-full border border-[var(--border)] overflow-hidden">
               <div 
                 className={cn("h-full transition-all duration-500", isCompleted ? "bg-yellow-400" : "bg-blue-400")}
-                style={{ width: `${Math.min(100, (mission.progress / mission.target_value) * 100)}%` }}
+                style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
@@ -312,8 +313,8 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
         <div className="text-right">
           <p className="text-[10px] font-black uppercase text-slate-500">Reward</p>
           <div className="flex items-center gap-1 font-black">
-            {mission.reward_type === 'gold' ? <Coins className="w-4 h-4 text-yellow-500" /> : <Gem className="w-4 h-4 text-emerald-500" />}
-            <span>{mission.reward_amount}</span>
+            {(mission.reward_type || mission.quest_type || 'gold') === 'gold' ? <Coins className="w-4 h-4 text-yellow-500" /> : <Gem className="w-4 h-4 text-emerald-500" />}
+            <span>{mission.reward_amount || mission.reward_gold || mission.reward_gems || 0}</span>
           </div>
         </div>
 
