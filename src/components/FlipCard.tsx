@@ -99,7 +99,7 @@ export const FlipCard: React.FC<FlipCardProps> = ({
         >
           {/* BACK FACE */}
           <div
-            className="absolute inset-0 rounded-xl border-4 border-black overflow-hidden shadow-2xl"
+            className="absolute inset-0 rounded-3xl border-4 border-black overflow-hidden shadow-2xl"
             style={{ backfaceVisibility: 'hidden' }}
           >
             <img src={getCardBackUrl(cardBackUrl)} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -119,7 +119,7 @@ export const FlipCard: React.FC<FlipCardProps> = ({
           {/* FRONT FACE - CollectionCard */}
           <div
             className={cn(
-              'absolute inset-0 rounded-xl overflow-hidden',
+              'absolute inset-0 rounded-3xl overflow-hidden',
               glowClass
             )}
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}

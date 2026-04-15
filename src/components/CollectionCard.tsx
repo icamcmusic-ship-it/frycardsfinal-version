@@ -52,65 +52,27 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, activ
       onClick={onSelect}
       style={{ perspective: 1000 }}
       className={cn(
-        "relative overflow-hidden group cursor-pointer transition-all duration-300",
-        isSelected ? "ring-4 ring-blue-500/50 rounded-xl" : "",
+        "relative group cursor-pointer transition-all duration-300",
+        isSelected ? "ring-4 ring-blue-500/50 rounded-3xl" : "",
         className
       )}
     >
       {isBatchMode && (
         <div className={cn(
-          "absolute top-2 right-2 z-40 w-6 h-6 rounded-full border-2 border-[var(--border)] flex items-center justify-center",
-          isSelected ? "bg-blue-500 text-white" : "bg-[var(--surface)]"
+          "absolute top-2 right-2 z-50 w-6 h-6 rounded-full border-2 border-black flex items-center justify-center",
+          isSelected ? "bg-blue-500 text-white" : "bg-white"
         )}>
           {isSelected && <Check className="w-4 h-4" />}
         </div>
       )}
 
-      {/* NEW badge with animation */}
-      <AnimatePresence>
-        {card.is_new && (
-          <motion.div
-            initial={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            className="absolute top-1 left-1 bg-blue-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full z-40 shadow-sm"
-          >
-            NEW
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Foil Badge */}
-      {(card.foil_quantity > 0 || card.is_foil) && (
-        <div className="absolute top-1 right-1 bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border border-black shadow-sm z-40">
-          ✨ FOIL
-        </div>
-      )}
-
-      {/* Element Badge */}
-      {(card.element || card.element_type) && (
-        <div className="absolute top-1 left-1/2 -translate-x-1/2 z-40">
-          <span className={cn("text-[7px] font-black px-1.5 py-0.5 rounded uppercase border border-black/20 shadow-sm",
-            elementColors[card.element || card.element_type] ?? 'bg-slate-200 text-slate-700')}>
-            {(card.element || card.element_type).charAt(0).toUpperCase() + (card.element || card.element_type).slice(1)}
-          </span>
-        </div>
-      )}
-      
-      <div className={cn(
-        "relative rounded-xl overflow-hidden bg-[var(--surface)]",
-        "border-l-[6px]", rarityColors[card.rarity] ?? 'border-l-slate-400',
-        card.is_foil && "ring-2 ring-yellow-400 ring-offset-1",
-        card.is_foil && "foil-shimmer"
-      )}>
-        <CardDisplay 
-          card={card} 
-          showNewBadge={false} 
-          onToggleLock={() => onToggleLock && onToggleLock()}
-          onToggleWishlist={() => onToggleWishlist && onToggleWishlist()}
-          isWishlisted={isWishlisted}
-          activeTab={activeTab}
-        />
-      </div>
+      <CardDisplay 
+        card={card} 
+        showNewBadge={true} 
+        onToggleLock={() => onToggleLock && onToggleLock()}
+        onToggleWishlist={() => onToggleWishlist && onToggleWishlist()}
+        isWishlisted={isWishlisted}
+      />
     </motion.div>
   );
 }
