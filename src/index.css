@@ -193,15 +193,15 @@ body { background-color: var(--bg); color: var(--text); }
 }
 
 /* Highly Transparent Rarity Colors with Backdrop Blur */
-.color-common { background-color: rgba(209, 213, 221, 0.5); backdrop-filter: blur(8px); }
-.color-uncommon { background-color: rgba(165, 201, 156, 0.5); backdrop-filter: blur(8px); }
-.color-rare { background-color: rgba(75, 163, 227, 0.5); backdrop-filter: blur(8px); }
-.color-super-rare { background-color: rgba(226, 168, 255, 0.5); backdrop-filter: blur(8px); }
-.color-mythic { background-color: rgba(255, 223, 108, 0.5); backdrop-filter: blur(8px); }
-.color-divine { background-color: rgba(254, 52, 72, 0.5); backdrop-filter: blur(8px); }
+.color-common { background-color: rgba(100, 116, 139, 0.75); backdrop-filter: blur(8px); }
+.color-uncommon { background-color: rgba(165, 201, 156, 0.75); backdrop-filter: blur(8px); }
+.color-rare { background-color: rgba(75, 163, 227, 0.75); backdrop-filter: blur(8px); }
+.color-super-rare { background-color: rgba(226, 168, 255, 0.75); backdrop-filter: blur(8px); }
+.color-mythic { background-color: rgba(255, 223, 108, 0.75); backdrop-filter: blur(8px); }
+.color-divine { background-color: rgba(254, 52, 72, 0.75); backdrop-filter: blur(8px); }
 
 /* Transparent White for Flavor Text/Names */
-.bg-white-trans { background-color: rgba(255, 255, 255, 0.5); backdrop-filter: blur(8px); }
+.bg-white-trans { background-color: rgba(255, 255, 255, 0.75); backdrop-filter: blur(8px); }
 
 /* Sticker Shadows */
 .shadow-common { box-shadow: 4px 4px 0px 0px #9ca3af; }

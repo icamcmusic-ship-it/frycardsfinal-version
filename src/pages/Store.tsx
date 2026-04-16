@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
 import { PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon, LayoutGrid } from 'lucide-react';
@@ -506,13 +507,27 @@ export function Store() {
           )}
 
           {packs.length === 0 ? (
-          <EmptyState 
-            icon={PackageOpen}
-            title="No packs available"
-            description="Check back later for new pack releases!"
-            ctaText="Back to Home"
-            ctaPath="/"
-          />
+          <div className="col-span-full">
+            <EmptyState 
+              icon={PackageOpen}
+              title="No packs available"
+              description="Check back later for new pack releases!"
+              ctaText="Back to Home"
+              ctaPath="/"
+            />
+            {profile?.is_admin && (
+              <div className="mt-8 text-center bg-blue-50 border-4 border-blue-200 rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(59,130,246,0.2)]">
+                <p className="text-lg font-black text-blue-900 mb-2 uppercase">Admin: Game is Empty?</p>
+                <p className="text-sm text-blue-700 font-bold mb-4">If you see no cards or packs, you need to seed the initial data in the Admin panel.</p>
+                <Link 
+                  to="/admin" 
+                  className="inline-block px-6 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  Go to Admin Panel
+                </Link>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {packs.map((pack) => {
@@ -553,13 +568,11 @@ export function Store() {
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="text-2xl font-black text-[var(--text)] uppercase">{pack.name}</h3>
                       <div className="flex flex-col items-end gap-1">
-                        {pack.next_pity_in <= 3 && (
-                          <div className="bg-blue-100 text-blue-600 px-2 py-1 rounded-lg border-2 border-blue-200 text-[10px] font-black uppercase animate-pulse">
-                            ⚡ Pity in {pack.next_pity_in}
-                          </div>
-                        )}
+                        <div className="bg-blue-500 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                          {pack.next_pity_in === 1 ? '🔥 Rare Guaranteed!' : `Rare in ${pack.next_pity_in} packs`}
+                        </div>
                         <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                          Pity: {10 - pack.next_pity_in}/10
+                          Pity Progress: {10 - pack.next_pity_in}/10
                         </div>
                       </div>
                     </div>

@@ -14,6 +14,8 @@ export function Layout() {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [newCardCount, setNewCardCount] = useState(0);
+  const [pendingTradeCount, setPendingTradeCount] = useState(0);
+  const [pendingSocialCount, setPendingSocialCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -46,11 +48,37 @@ export function Layout() {
     }
   };
 
+  const fetchPendingCounts = async () => {
+    if (!user) return;
+    try {
+      // Fetch pending trades
+      const { count: tradeCount, error: tradeError } = await supabase
+        .from('trades')
+        .select('id', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('status', 'pending');
+      
+      if (!tradeError) setPendingTradeCount(tradeCount ?? 0);
+
+      // Fetch pending social requests
+      const { count: socialCount, error: socialError } = await supabase
+        .from('friend_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('status', 'pending');
+      
+      if (!socialError) setPendingSocialCount(socialCount ?? 0);
+    } catch (err) {
+      console.error('Error fetching pending counts:', err);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchProfile();
       fetchUnreadCount();
       fetchNewCardCount();
+      fetchPendingCounts();
 
       const profileChannel = supabase
         .channel('profile-updates')
@@ -88,10 +116,36 @@ export function Layout() {
         })
         .subscribe();
 
+      const tradesChannel = supabase
+        .channel('trades-updates')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'trades',
+          filter: `receiver_id=eq.${user.id}`
+        }, () => {
+          fetchPendingCounts();
+        })
+        .subscribe();
+
+      const socialChannel = supabase
+        .channel('social-updates')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'friend_requests',
+          filter: `receiver_id=eq.${user.id}`
+        }, () => {
+          fetchPendingCounts();
+        })
+        .subscribe();
+
       return () => {
         profileChannel.unsubscribe();
         notifChannel.unsubscribe();
         cardsChannel.unsubscribe();
+        tradesChannel.unsubscribe();
+        socialChannel.unsubscribe();
       };
     }
   }, [user, fetchProfile, setProfile]);
@@ -286,6 +340,16 @@ export function Layout() {
                       {item.path === '/collection' && newCardCount > 0 && (
                         <span className="absolute top-2 right-2 bg-blue-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[var(--border)] animate-pulse">
                           {newCardCount > 99 ? '99+' : newCardCount}
+                        </span>
+                      )}
+                      {item.path === '/trades' && pendingTradeCount > 0 && (
+                        <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[var(--border)] animate-pulse">
+                          {pendingTradeCount > 99 ? '99+' : pendingTradeCount}
+                        </span>
+                      )}
+                      {item.path === '/social' && pendingSocialCount > 0 && (
+                        <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-[var(--border)] animate-pulse">
+                          {pendingSocialCount > 99 ? '99+' : pendingSocialCount}
                         </span>
                       )}
                     </Link>

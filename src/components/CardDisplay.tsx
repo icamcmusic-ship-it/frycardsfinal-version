@@ -109,13 +109,23 @@ export function CardDisplay({
 
         {/* Bottom Section: Title & Flavor Text */}
         <div className="absolute bottom-[4cqw] left-[4cqw] right-[4cqw] flex flex-col gap-[2cqw] items-center">
+          {/* Set Indicator - Subtle hover reveal */}
+          {card.set_name && (
+            <div 
+              className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-[2cqw] py-[0.5cqw] rounded-full border-[0.5cqw] border-black text-[2.5cqw] font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-[-1cqw] z-20"
+              style={{ backgroundColor: card.set_theme_color || '#fff', color: '#000' }}
+            >
+              {card.set_name}
+            </div>
+          )}
+
           {/* Title Sticker */}
           <div className={cn(
             "sticker !relative bg-white-trans px-[4cqw] py-[3cqw] rounded-[4cqw] brut-border -rotate-2 w-full flex items-center justify-center min-h-[14cqw]",
             `shadow-${rarityKey}`
           )}>
             <h2 className={cn(
-              "font-black uppercase text-center leading-none",
+              "font-black uppercase text-center leading-none text-black",
               card.name.length > 20 ? "text-[5cqw]" : 
               card.name.length > 15 ? "text-[6cqw]" : 
               "text-[8cqw]"
@@ -131,7 +141,7 @@ export function CardDisplay({
               `color-${rarityKey}`,
               `shadow-${rarityKey}`
             )}>
-              <p className="text-[3.5cqw] font-bold leading-tight italic">
+              <p className="text-[3.5cqw] font-bold leading-tight italic text-black">
                 "{card.flavor_text}"
               </p>
             </div>

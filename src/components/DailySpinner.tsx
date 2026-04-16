@@ -138,7 +138,21 @@ export function DailySpinner({ isOpen, onClose }: DailySpinnerProps) {
             <Star className="w-8 h-8 text-yellow-400 fill-yellow-400" />
             Daily Spinner
           </h2>
-          <p className="text-slate-500 font-bold">Spin the wheel to claim your daily reward!</p>
+          <p className="text-slate-500 font-bold mb-4">Spin the wheel to claim your daily reward!</p>
+          
+          {profile && (
+            <div className="inline-flex items-center gap-3 bg-blue-50 border-2 border-blue-200 px-4 py-2 rounded-2xl shadow-[4px_4px_0px_0px_rgba(59,130,246,0.2)]">
+              <div className="flex flex-col items-start leading-tight">
+                <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">Daily Streak</span>
+                <span className="text-lg font-black text-blue-900">{profile.daily_streak || 0} Days</span>
+              </div>
+              <div className="w-px h-8 bg-blue-200" />
+              <div className="flex flex-col items-start leading-tight">
+                <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">Bonus Multiplier</span>
+                <span className="text-lg font-black text-blue-900">x{Math.min(5, 1 + Math.floor((profile.daily_streak || 0) / 7))}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {loading ? (

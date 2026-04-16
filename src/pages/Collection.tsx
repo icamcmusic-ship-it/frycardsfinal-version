@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Search, Filter, Lock, Unlock, Zap, LayoutGrid, Coins, Star, PackageOpen, Check, Trophy } from 'lucide-react';
+import { Loader2, Search, Filter, Lock, Unlock, Zap, LayoutGrid, Coins, Star, PackageOpen, Check, Trophy, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
@@ -370,7 +370,7 @@ export function Collection() {
           return; 
         }
         
-        toast.success(`Sold for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
+        toast.success(`Sold ${card.name} for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
         setOffset(0);
         fetchCollection(false, 0); // Refresh from start
         fetchStats(); // Update stats in background
@@ -671,6 +671,16 @@ export function Collection() {
           >
             {isBatchMode ? 'Cancel Selection' : 'Select Multiple'}
           </button>
+
+          {isBatchMode && selectedCardIds.length > 0 && (
+            <button
+              onClick={handleBulkMill}
+              className="shrink-0 px-4 py-2 bg-emerald-500 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Mill Selected ({selectedCardIds.length})
+            </button>
+          )}
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
@@ -710,33 +720,57 @@ export function Collection() {
       </div>
 
       <div className={cn("grid gap-8", viewSize === 'normal' ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4")}>
-        {filteredCards.map((card) => {
-          const selectionId = card.user_card_id;
-          return (
-          <CollectionCard 
-            key={card.user_card_id || card.id}
-            card={card}
-            isBatchMode={isBatchMode}
-            isSelected={selectedCardIds.includes(selectionId)}
-            activeTab={activeTab}
-            showQuantity={true}
-            onSelect={() => {
-              if (isBatchMode) {
-                setSelectedCardIds(prev => prev.includes(selectionId) ? prev.filter(id => id !== selectionId) : [...prev, selectionId]);
-              } else {
-                setSelectedCard(card);
-              }
-            }}
-            onToggleLock={() => handleToggleLock(card.user_card_id || card.id)}
-            onQuicksell={() => handleQuicksell(card)}
-            onList={() => { 
-              setCardToList(card);
-              setIsListingModalOpen(true);
-            }}
-            onToggleWishlist={() => handleToggleWishlist(card.id)}
-            isWishlisted={wishlistCardIds.has(card.id)}
-          />
-        )})}
+        {filteredCards.length === 0 && !loading ? (
+          <div className="col-span-full">
+            <EmptyState 
+              icon={LayoutGrid}
+              title={activeTab === 'wishlist' ? "Wishlist is Empty" : "No Cards Found"}
+              description={activeTab === 'wishlist' ? "You haven't added any cards to your wishlist yet." : "You don't have any cards in your collection yet. Open some packs to get started!"}
+              ctaText={activeTab === 'wishlist' ? "Go to Store" : "Visit Store"}
+              ctaPath="/store"
+            />
+            {profile?.is_admin && filteredCards.length === 0 && (
+              <div className="mt-8 text-center bg-blue-50 border-4 border-blue-200 rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(59,130,246,0.2)]">
+                <p className="text-lg font-black text-blue-900 mb-2 uppercase">Admin: Game is Empty?</p>
+                <p className="text-sm text-blue-700 font-bold mb-4">If you see no cards or packs, you need to seed the initial data in the Admin panel.</p>
+                <Link 
+                  to="/admin" 
+                  className="inline-block px-6 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                >
+                  Go to Admin Panel
+                </Link>
+              </div>
+            )}
+          </div>
+        ) : (
+          filteredCards.map((card) => {
+            const selectionId = card.user_card_id;
+            return (
+            <CollectionCard 
+              key={card.user_card_id || card.id}
+              card={card}
+              isBatchMode={isBatchMode}
+              isSelected={selectedCardIds.includes(selectionId)}
+              activeTab={activeTab}
+              showQuantity={true}
+              onSelect={() => {
+                if (isBatchMode) {
+                  setSelectedCardIds(prev => prev.includes(selectionId) ? prev.filter(id => id !== selectionId) : [...prev, selectionId]);
+                } else {
+                  setSelectedCard(card);
+                }
+              }}
+              onToggleLock={() => handleToggleLock(card.user_card_id || card.id)}
+              onQuicksell={() => handleQuicksell(card)}
+              onList={() => { 
+                setCardToList(card);
+                setIsListingModalOpen(true);
+              }}
+              onToggleWishlist={() => handleToggleWishlist(card.id)}
+              isWishlisted={wishlistCardIds.has(card.id)}
+            />
+          )})
+        )}
       </div>
       
       {loadingMore && (
