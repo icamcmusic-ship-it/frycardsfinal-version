@@ -314,26 +314,14 @@ export function Store() {
       let totalXp = 0;
       let totalNew = 0;
       
-      const tasks: (() => Promise<any>)[] = [];
+      // Open all packs sequentially to avoid race conditions on inventory quantity
       for (const inv of inventory) {
         for (let i = 0; i < inv.quantity; i++) {
-          tasks.push(async () => {
-            const { data, error } = await supabase.rpc('open_pack_from_inventory_by_type', {
-              p_pack_type_id: inv.pack_type_id
-            });
-            if (error) throw error;
-            return data;
+          const { data, error } = await supabase.rpc('open_pack_from_inventory_by_type', {
+            p_pack_type_id: inv.pack_type_id
           });
-        }
-      }
-
-      // Open in batches of 3
-      const limit = 3;
-      for (let i = 0; i < tasks.length; i += limit) {
-        const chunk = tasks.slice(i, i + limit);
-        const results = await Promise.all(chunk.map(t => t()));
-        
-        for (const data of results) {
+          if (error) throw error;
+          
           allCards = [...allCards, ...data.cards];
           totalXp += data.xp_gained;
           totalNew += data.new_card_count;
@@ -358,6 +346,7 @@ export function Store() {
       setPackOpeningStep('idle');
     } finally {
       setOpening(false);
+      useProfileStore.getState().refreshProfile();
     }
   };
 
@@ -801,9 +790,6 @@ export function Store() {
               setOpening(false);
               setOpenedCards(null);
               setOpeningSummary(null);
-              setCurrentCardIndex(0);
-              setRevealedCards([]);
-              setFlippedIndexes(new Set());
               useProfileStore.getState().refreshProfile();
               fetchPacks();
               fetchInventory();

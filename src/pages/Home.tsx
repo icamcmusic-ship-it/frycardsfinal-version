@@ -18,6 +18,8 @@ export function Home() {
   const [nextRegen, setNextRegen] = useState<number | null>(null);
 
   const [stats, setStats] = useState<{ unique_cards: number; total_possible: number; total_cards: number } | null>(null);
+  const [passData, setPassData] = useState<any>(null);
+  const [passTiers, setPassTiers] = useState<any[]>([]);
   const [claimingQuest, setClaimingQuest] = useState<string | null>(null);
   const [claimingDaily, setClaimingDaily] = useState(false);
   const [showSpinner, setShowSpinner] = useState(false);
@@ -54,6 +56,14 @@ export function Home() {
       
       supabase.rpc('get_my_collection_stats').then(({ data }) => {
         if (data) setStats(data);
+      });
+
+      supabase.rpc('get_or_create_season_pass').then(({ data }) => {
+        if (data) setPassData(data);
+      });
+
+      supabase.from('season_pass_tiers').select('*').order('tier').then(({ data }) => {
+        if (data) setPassTiers(data);
       });
       
       if (isDailyClaimable()) {
@@ -151,9 +161,17 @@ export function Home() {
           <h1 className="text-4xl md:text-5xl font-black text-black mb-4 tracking-tight uppercase">
             Welcome back, <br/><span className="text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">{profile.username || 'Duelist'}</span>
           </h1>
-          <p className="text-xl text-black font-bold mb-8 bg-white/50 inline-block px-3 py-1 border-2 border-black rounded-lg transform -rotate-1">
-            Level {profile.level} • {profile.xp} XP
-          </p>
+          <div className="flex flex-wrap gap-3 mb-8">
+            <p className="text-xl text-black font-bold bg-white/50 inline-block px-3 py-1 border-2 border-black rounded-lg transform -rotate-1">
+              Level {profile.level} • {profile.xp} XP
+            </p>
+            {passData && (
+              <Link to="/season-pass" className="text-xl text-black font-bold bg-yellow-300 hover:bg-yellow-400 transition-colors inline-block px-3 py-1 border-2 border-black rounded-lg transform rotate-1 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Pass Tier {passTiers.filter(t => t.xp_required <= (passData?.xp_earned ?? 0)).length}
+              </Link>
+            )}
+          </div>
           
           {profile.daily_streak > 0 && (
             <div className="flex flex-col gap-2 mb-8">
@@ -182,12 +200,10 @@ export function Home() {
             {isDailyClaimable() && (
               <div className="flex flex-col items-start gap-3">
                 <div className="flex flex-col gap-1">
-                  {profile.daily_streak >= 3 && (
-                    <div className="flex items-center gap-1 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase animate-bounce">
-                      <Sparkles className="w-3 h-3" />
-                      Streak Bonus Active
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase animate-bounce">
+                    <Sparkles className="w-3 h-3" />
+                    {profile.daily_streak >= 3 ? 'Streak Bonus Active' : `Streak Day ${profile.daily_streak}`}
+                  </div>
                   <p className="text-xs font-black text-black/60 uppercase tracking-wider">
                     {profile.daily_streak >= 30 ? '🔥 Tier 5 Rewards Available' :
                      profile.daily_streak >= 14 ? '💎 Tier 4 Rewards Available' :
@@ -249,6 +265,55 @@ export function Home() {
           </div>
         </div>
       </div>
+
+      {/* Season Pass Progress Widget */}
+      {passData && passTiers.length > 0 && (
+        <Link to="/season-pass" className="block group">
+          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] group-hover:translate-y-[-4px] transition-all">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-yellow-400 border-4 border-black flex items-center justify-center shadow-[2px_2px_0px_0px_black]">
+                  <Sparkles className="w-6 h-6 text-black" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-[var(--text)] uppercase leading-none">Season Pass</h3>
+                  <p className="text-xs font-bold text-slate-500 uppercase mt-1">Season {passData.season || 1} • {passData.is_premium ? 'Premium' : 'Free'}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-black text-blue-500">Tier {passTiers.filter(t => t.xp_required <= (passData?.xp_earned ?? 0)).length}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase">
+                  {(() => {
+                    const userLevel = passTiers.filter(t => t.xp_required <= (passData?.xp_earned ?? 0)).length;
+                    const nextTier = passTiers.find(t => t.tier > userLevel);
+                    if (!nextTier) return 'MAX TIER';
+                    const userXP = passData.xp_earned || 0;
+                    const currentTier = passTiers.find(t => t.tier === userLevel);
+                    const prevXP = currentTier ? currentTier.xp_required : 0;
+                    return `${(userXP - prevXP).toLocaleString()} / ${(nextTier.xp_required - prevXP).toLocaleString()} XP`;
+                  })()}
+                </p>
+              </div>
+            </div>
+            <div className="h-4 bg-[var(--bg)] rounded-full border-4 border-[var(--border)] overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-1000"
+                style={{ 
+                  width: `${(() => {
+                    const userLevel = passTiers.filter(t => t.xp_required <= (passData?.xp_earned ?? 0)).length;
+                    const nextTier = passTiers.find(t => t.tier > userLevel);
+                    if (!nextTier) return 100;
+                    const userXP = passData.xp_earned || 0;
+                    const currentTier = passTiers.find(t => t.tier === userLevel);
+                    const prevXP = currentTier ? currentTier.xp_required : 0;
+                    return Math.min(100, ((userXP - prevXP) / (nextTier.xp_required - prevXP)) * 100);
+                  })()}%` 
+                }}
+              />
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -49,6 +49,7 @@ export function Collection() {
     (sessionStorage.getItem('col_sort') as any) || 'rarity'
   );
   const [elementType, setElementType] = useState<string>(() => sessionStorage.getItem('col_element') || 'all');
+  const [cardType, setCardType] = useState<string>(() => sessionStorage.getItem('col_card_type') || 'all');
   const [foilFilter, setFoilFilter] = useState<'all' | 'foil' | 'non-foil'>(() => 
     (sessionStorage.getItem('col_foil_filter') as any) || 'all'
   );
@@ -95,6 +96,7 @@ export function Collection() {
   useEffect(() => { sessionStorage.setItem('col_filter', filter); }, [filter]);
   useEffect(() => { sessionStorage.setItem('col_sort', sortBy); }, [sortBy]);
   useEffect(() => { sessionStorage.setItem('col_element', elementType); }, [elementType]);
+  useEffect(() => { sessionStorage.setItem('col_card_type', cardType); }, [cardType]);
   useEffect(() => { sessionStorage.setItem('col_foil_filter', foilFilter); }, [foilFilter]);
   useEffect(() => { localStorage.setItem('col_view_size', viewSize); }, [viewSize]);
 
@@ -110,7 +112,7 @@ export function Collection() {
       fetchStats();
       fetchWishlistCardIds();
     }
-  }, [profile, activeTab, sortBy, filter, elementType, debouncedSearch, foilFilter]);
+  }, [profile, activeTab, sortBy, filter, elementType, cardType, debouncedSearch, foilFilter]);
 
   const fetchWishlistCardIds = async () => {
     try {
@@ -148,11 +150,15 @@ export function Collection() {
       const capitalizedElement = elementType === 'all' ? null : 
         elementType.charAt(0).toUpperCase() + elementType.slice(1);
 
+      const capitalizedCardType = cardType === 'all' ? null : 
+        cardType.charAt(0).toUpperCase() + cardType.slice(1);
+
       const { data, error } = await supabase.rpc('get_user_collection', {
         p_user_id: profile?.id,
         p_rarity: rarityForApi,
         p_sort_by: sortBy,
         p_element_type: capitalizedElement,
+        p_card_type_filter: capitalizedCardType,
         p_is_foil: foilFilter === 'all' ? null : foilFilter === 'foil',
         p_limit: PAGE_SIZE,
         p_offset: targetOffset,
@@ -598,6 +604,23 @@ export function Collection() {
           </select>
           <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
         </div>
+
+        <div className="relative">
+          <select 
+            value={cardType} 
+            onChange={e => setCardType(e.target.value)} 
+            className="appearance-none pl-4 pr-10 py-1.5 rounded-full font-black text-xs uppercase border-2 bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400 focus:outline-none focus:border-[var(--text)] transition-all"
+          >
+            <option value="all">All Types</option>
+            <option value="unit">Unit</option>
+            <option value="event">Event</option>
+            <option value="location">Location</option>
+            <option value="artifact">Artifact</option>
+            <option value="leader">Leader</option>
+            <option value="sacred">Sacred</option>
+          </select>
+          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -638,6 +661,7 @@ export function Collection() {
             className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
           >
             <option value="rarity">Sort by Rarity</option>
+            <option value="name">Sort by Name</option>
             <option value="newest">Sort by Newest</option>
             <option value="price">Sort by Value</option>
           </select>
@@ -740,6 +764,7 @@ export function Collection() {
                   setFilter('all');
                   setFoilFilter('all');
                   setElementType('all');
+                  setCardType('all');
                   setSearch('');
                 }}
                 className="px-6 py-2 bg-[var(--text)] text-[var(--surface)] font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-transform active:translate-y-1"
@@ -776,26 +801,50 @@ export function Collection() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[var(--surface)] border-4 border-[var(--border)] p-4 rounded-2xl shadow-[8px_8px_0px_0px_var(--border)] z-50 flex items-center gap-4">
           <div className="flex flex-col">
             <p className="font-black text-[var(--text)]">Selected {selectedCardIds.length} cards</p>
-            <p className="text-[10px] font-bold text-slate-500 uppercase">
-              {(() => {
-                const selectedList = selectedCardIds.map(id => cards.find(c => c.user_card_id === id)).filter(Boolean);
-                const foils = selectedList.filter(c => c.is_foil).length;
-                const normal = selectedList.length - foils;
-                return `${normal} Normal • ${foils} Foil`;
-              })()}
-            </p>
+            <div className="flex flex-col text-[10px] font-bold uppercase">
+              <p className="text-slate-500">
+                {(() => {
+                  const selectedList = selectedCardIds.map(id => cards.find(c => c.user_card_id === id)).filter(Boolean);
+                  const foils = selectedList.filter(c => c.is_foil).length;
+                  const normal = selectedList.length - foils;
+                  return `${normal} Normal • ${foils} Foil`;
+                })()}
+              </p>
+              <p className="text-yellow-600 flex items-center gap-1">
+                <Coins className="w-3 h-3" />
+                Est. {(() => {
+                  const selectedList = selectedCardIds.map(id => cards.find(c => c.user_card_id === id)).filter(Boolean);
+                  const total = selectedList.reduce((acc, card) => {
+                    const baseValue = { 
+                      'Common': 10, 
+                      'Uncommon': 25, 
+                      'Rare': 100, 
+                      'Super-Rare': 250, 
+                      'Mythic': 500, 
+                      'Divine': 1000 
+                    }[card.rarity] ?? 10;
+                    return acc + (card.is_foil ? baseValue * 3 : baseValue);
+                  }, 0);
+                  return total.toLocaleString();
+                })()} Gold
+              </p>
+            </div>
           </div>
           <button 
             onClick={() => {
+              const selectedList = selectedCardIds.map(id => cards.find(c => c.user_card_id === id)).filter(Boolean);
+              const totalEst = selectedList.reduce((acc, card) => {
+                const baseValue = { 'Common': 10, 'Uncommon': 25, 'Rare': 100, 'Super-Rare': 250, 'Mythic': 500, 'Divine': 1000 }[card.rarity] ?? 10;
+                return acc + (card.is_foil ? baseValue * 3 : baseValue);
+              }, 0);
+
               setConfirmConfig({
                 isOpen: true,
                 title: 'Quicksell Selected',
-                message: `Are you sure you want to quicksell ${selectedCardIds.length} cards?`,
+                message: `Are you sure you want to quicksell ${selectedCardIds.length} cards for approximately ${totalEst.toLocaleString()} Gold?`,
                 variant: 'danger',
                 onConfirm: async () => {
                   try {
-                    const selectedList = selectedCardIds.map(id => cards.find(c => c.user_card_id === id)).filter(Boolean);
-                    
                     const results = await Promise.all(selectedList.map(async (card) => {
                       try {
                         const { data, error } = await supabase.rpc('quicksell_card', {
@@ -833,7 +882,7 @@ export function Collection() {
                 }
               });
             }}
-            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]"
+            className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-transform active:translate-y-1"
           >
             Quick Sell Selected
           </button>

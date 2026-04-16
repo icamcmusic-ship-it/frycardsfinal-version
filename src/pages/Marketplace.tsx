@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
 import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star, Sparkles, Bookmark, X, History } from 'lucide-react';
@@ -242,6 +242,21 @@ export function Marketplace() {
   }, [activeTab, profile?.id]);
 
   useEffect(() => {
+    const ch = supabase.channel('auction-bids')
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'market_listings'
+      }, () => {
+        // Only refresh if we're on the "All" tab or "Watchlist"
+        if (activeTab === 'all') fetchListings();
+        else if (activeTab === 'watchlist') fetchWatchlist();
+      })
+      .subscribe();
+    return () => {
+      ch.unsubscribe();
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
     }, 350);
@@ -324,8 +339,20 @@ export function Marketplace() {
   };
 
   const [totalCount, setTotalCount] = useState(0);
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchListings = async (isLoadMore = false) => {
+    if (!isLoadMore) {
+      if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+      fetchTimeoutRef.current = setTimeout(() => {
+        performFetch(false);
+      }, 100);
+      return;
+    }
+    performFetch(true);
+  };
+
+  const performFetch = async (isLoadMore: boolean) => {
     try {
       const nextOffset = isLoadMore ? listings.length : 0;
       if (!isLoadMore) {
@@ -336,23 +363,7 @@ export function Marketplace() {
         setLoadingMore(true);
       }
 
-      // Fetch total count for pagination indicator
-      if (!isLoadMore) {
-        let countQuery = supabase
-          .from('market_listings_view')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'active');
-        
-        if (rarityFilter !== 'all') countQuery = countQuery.eq('card_rarity', rarityFilter);
-        if (elementFilter !== 'all') countQuery = countQuery.eq('card_element', elementFilter);
-        if (filter !== 'all') countQuery = countQuery.eq('listing_type', filter);
-        if (debouncedSearch) countQuery = countQuery.ilike('card_name', `%${debouncedSearch}%`);
-
-        const { count } = await countQuery;
-        setTotalCount(count || 0);
-      }
-
-      const { data, error } = await supabase.rpc('get_active_listings', {
+      const { data, error } = await supabase.rpc('get_market_listings', {
         p_limit: 20,
         p_offset: nextOffset,
         p_rarity: rarityFilter === 'all' ? null : rarityFilter,
@@ -363,29 +374,30 @@ export function Marketplace() {
       });
       if (error) throw error;
       
-      // Normalize flat data into nested card object
-      const fetchedListings = (data || []).map((item: any) => ({
+      const fetchedListings = (data?.listings || []).map((item: any) => ({
         ...item,
         card: {
           ...(item.card || {}),
           is_foil: item.is_foil,
         }
       }));
+
+      const currentListingsCount = isLoadMore ? listings.length : 0;
+      const newTotalCount = data?.total_count || 0;
+      setTotalCount(newTotalCount);
+
       if (isLoadMore) {
         setListings(prev => {
           // Avoid duplicates
           const existingIds = new Set(prev.map(l => l.id));
           const newUniqueListings = fetchedListings.filter((l: any) => !existingIds.has(l.id));
-          return [...prev, ...newUniqueListings];
+          const updatedListings = [...prev, ...newUniqueListings];
+          setHasMore(updatedListings.length < newTotalCount);
+          return updatedListings;
         });
       } else {
         setListings(fetchedListings);
-      }
-
-      if (fetchedListings.length < 20) {
-        setHasMore(false);
-      } else {
-        setHasMore(true);
+        setHasMore(fetchedListings.length < newTotalCount);
       }
     } catch (err) {
       console.error('Error fetching listings:', err);
@@ -864,6 +876,7 @@ export function Marketplace() {
                                     const { error } = await supabase.from('reports').insert({
                                       reporter_id: profile?.id,
                                       target_id: listing.id,
+                                      target_listing_id: listing.id,
                                       target_type: 'market_listing',
                                       reason: 'Reported from marketplace UI'
                                     });
@@ -1037,6 +1050,17 @@ export function Marketplace() {
       {loadingMore && (
         <div className="flex justify-center py-8">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        </div>
+      )}
+
+      {totalCount > 0 && (
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">
+            Showing {activeTab === 'all' ? listings.length : activeTab === 'watchlist' ? watchlist.length : myListings.length} of {totalCount} listings
+          </p>
+          {!hasMore && (
+            <p className="text-[10px] font-bold text-slate-300 uppercase">All listings loaded</p>
+          )}
         </div>
       )}
 

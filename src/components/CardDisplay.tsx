@@ -35,17 +35,16 @@ export function CardDisplay({
   onToggleWishlist,
   isWishlisted
 }: CardDisplayProps) {
-  const rarityKey = (card.rarity || 'common').toLowerCase().replace(' ', '-');
+  const rarityKey = (card.rarity || 'common').toLowerCase().replace(/\s+/g, '-');
   const isFoil = card.is_foil || (card.foil_quantity ?? 0) > 0;
 
   return (
     <div 
       className={cn(
         'card-base brut-border brut-shadow transition-all duration-300 group',
-        `color-${rarityKey}`,
-        card.rarity === 'Super-Rare' && 'effect-sr',
-        card.rarity === 'Mythic' && 'effect-mythic',
-        card.rarity === 'Divine' && 'effect-divine',
+        rarityKey === 'super-rare' && 'effect-sr',
+        rarityKey === 'mythic' && 'effect-mythic',
+        rarityKey === 'divine' && 'effect-divine',
         isFoil && 'foil-shine',
         className
       )}
