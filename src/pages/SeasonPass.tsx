@@ -42,7 +42,7 @@ export function SeasonPass() {
   const fetchData = async () => {
     setLoading(true);
     const [passRes, tiersRes] = await Promise.all([
-      supabase.rpc('get_or_create_season_pass'),
+      supabase.rpc('get_or_create_season_pass', { p_season: 1 }),
       // ORDER BY tier (not tier_level — that column doesn't exist)
       supabase.from('season_pass_tiers').select('*').order('tier'),
     ]);

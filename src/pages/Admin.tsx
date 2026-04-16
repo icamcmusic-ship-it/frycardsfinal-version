@@ -18,6 +18,7 @@ export function Admin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
+  const [isSeeding, setIsSeeding] = useState(false);
 
   useEffect(() => {
     if (profile?.is_admin) {
@@ -129,6 +130,59 @@ export function Admin() {
     }
   };
 
+  const handleSeedData = async () => {
+    if (isSeeding) return;
+    if (!confirm('This will seed the database with initial sets, cards, and packs. Continue?')) return;
+    
+    setIsSeeding(true);
+    const toastId = toast.loading('Seeding database...');
+    
+    try {
+      // 1. Create Sets
+      const { data: set1, error: setError1 } = await supabase.from('sets').insert([
+        { name: 'Genesis', description: 'The first set of cards.', release_date: new Date().toISOString() }
+      ]).select().single();
+      if (setError1) throw setError1;
+
+      // 2. Create Cards
+      const cards = [
+        { name: 'Fire Dragon', rarity: 'Rare', card_type: 'Unit', element_type: 'Fire', image_url: 'https://picsum.photos/seed/dragon/400/600', flavor_text: 'Breathes fire and destruction.', set_id: set1.id },
+        { name: 'Water Spirit', rarity: 'Uncommon', card_type: 'Unit', element_type: 'Ice', image_url: 'https://picsum.photos/seed/water/400/600', flavor_text: 'Calm as a lake, fierce as a storm.', set_id: set1.id },
+        { name: 'Earth Golem', rarity: 'Common', card_type: 'Unit', element_type: 'Nature', image_url: 'https://picsum.photos/seed/golem/400/600', flavor_text: 'Solid as a rock.', set_id: set1.id },
+        { name: 'Shadow Assassin', rarity: 'Super-Rare', card_type: 'Unit', element_type: 'Shadow', image_url: 'https://picsum.photos/seed/assassin/400/600', flavor_text: 'Strikes from the dark.', set_id: set1.id },
+        { name: 'Phoenix', rarity: 'Mythic', card_type: 'Unit', element_type: 'Fire', image_url: 'https://picsum.photos/seed/phoenix/400/600', flavor_text: 'Rises from the ashes.', set_id: set1.id },
+        { name: 'Void Lord', rarity: 'Divine', card_type: 'Unit', element_type: 'Void', image_url: 'https://picsum.photos/seed/void/400/600', flavor_text: 'The end of all things.', set_id: set1.id }
+      ];
+      const { error: cardsError } = await supabase.from('cards').insert(cards);
+      if (cardsError) throw cardsError;
+
+      // 3. Create Pack Types
+      const packs = [
+        { name: 'Standard Pack', description: 'Contains 5 random cards.', cost_gold: 100, cost_gems: 0, image_url: 'https://picsum.photos/seed/pack1/400/300', cards_per_pack: 5 },
+        { name: 'Premium Pack', description: 'Contains 5 cards with higher rarity chances.', cost_gold: 0, cost_gems: 50, image_url: 'https://picsum.photos/seed/pack2/400/300', cards_per_pack: 5 }
+      ];
+      const { error: packsError } = await supabase.from('pack_types').insert(packs);
+      if (packsError) throw packsError;
+
+      // 4. Create Season Pass Tiers
+      const tiers = [
+        { tier: 1, xp_required: 0, reward_type: 'gold', reward_amount: 100, reward_label: '100 Gold', is_premium: false },
+        { tier: 2, xp_required: 1000, reward_type: 'pack', reward_amount: 1, reward_label: 'Standard Pack', is_premium: false },
+        { tier: 3, xp_required: 2500, reward_type: 'gems', reward_amount: 50, reward_label: '50 Gems', is_premium: true }
+      ];
+      const { error: tiersError } = await supabase.from('season_pass_tiers').insert(tiers);
+      if (tiersError) throw tiersError;
+
+      toast.success('Database seeded successfully!', { id: toastId });
+      fetchData();
+    } catch (err: any) {
+      console.error('Seeding error:', err);
+      toast.error(err.message || 'Failed to seed database', { id: toastId });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -136,15 +190,25 @@ export function Admin() {
           <Shield className="w-10 h-10 text-red-500" />
           Admin Control
         </h1>
-        {activeTab !== 'users' && (
+        <div className="flex gap-4">
           <button
-            onClick={handleCreate}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 flex items-center gap-2"
+            onClick={handleSeedData}
+            disabled={isSeeding}
+            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 flex items-center gap-2"
           >
-            <Plus className="w-5 h-5" />
-            Create New {activeTab.slice(0, -1)}
+            {isSeeding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+            Seed Initial Data
           </button>
-        )}
+          {activeTab !== 'users' && (
+            <button
+              onClick={handleCreate}
+              className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Create New {activeTab.slice(0, -1)}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

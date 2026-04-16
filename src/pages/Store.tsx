@@ -272,15 +272,15 @@ export function Store() {
     });
   };
 
-  const handleOpenFromInventory = async (packTypeId: string, packImageUrl: string) => {
+  const handleOpenFromInventory = async (inventoryId: string, packImageUrl: string) => {
     if (opening || !profile) return;
     setOpening(true);
     setOpeningPackImageUrl(packImageUrl);
     setPackOpeningStep('shaking');
 
     try {
-      const { data, error } = await supabase.rpc('open_pack_from_inventory_by_type', {
-        p_pack_type_id: packTypeId
+      const { data, error } = await supabase.rpc('open_pack_from_inventory', {
+        p_inventory_id: inventoryId
       });
 
       if (error) throw error;
@@ -767,7 +767,7 @@ export function Store() {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleOpenFromInventory(inv.pack_type_id, inv.image_url)}
+                        onClick={() => handleOpenFromInventory(inv.id, inv.image_url)}
                         disabled={opening}
                         className="w-full py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 active:shadow-none uppercase text-xs"
                       >

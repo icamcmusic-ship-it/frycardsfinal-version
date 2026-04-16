@@ -106,10 +106,8 @@ export function Collection() {
     if (profile) {
       offsetRef.current = 0;
       setOffset(0);
-      if (activeTab === 'collection') {
+      if (activeTab === 'collection' || activeTab === 'wishlist') {
         fetchCollection(false, 0);
-      } else {
-        fetchWishlist();
       }
       fetchStats();
       fetchWishlistCardIds();
@@ -165,7 +163,8 @@ export function Collection() {
         p_is_foil: foilFilter === 'all' ? null : foilFilter === 'foil',
         p_limit: PAGE_SIZE,
         p_offset: targetOffset,
-        p_search: debouncedSearch || null
+        p_search: debouncedSearch || null,
+        p_wishlist_only: activeTab === 'wishlist'
       });
       
       if (error) throw error;

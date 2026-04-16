@@ -58,7 +58,7 @@ export function Home() {
         if (data) setStats(data);
       });
 
-      supabase.rpc('get_or_create_season_pass').then(({ data }) => {
+      supabase.rpc('get_or_create_season_pass', { p_season: 1 }).then(({ data }) => {
         if (data) setPassData(data);
       });
 

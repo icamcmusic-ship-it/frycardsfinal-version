@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader2, Bell, Check, Trash2, ExternalLink } from 'lucide-react';
+import { Loader2, Bell, Check, X, Trash2, ExternalLink } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -15,6 +15,8 @@ const NOTIFICATION_TYPES: Record<string, { icon: any, color: string, bg: string 
   auction_won: { icon: Trophy, color: 'text-yellow-500', bg: 'bg-yellow-100' },
   auction_sold: { icon: Coins, color: 'text-amber-500', bg: 'bg-amber-100' },
   achievement: { icon: Trophy, color: 'text-orange-500', bg: 'bg-orange-100' },
+  trade_accepted: { icon: Check, color: 'text-green-500', bg: 'bg-green-100' },
+  trade_declined: { icon: X, color: 'text-red-500', bg: 'bg-red-100' },
   default: { icon: Bell, color: 'text-blue-500', bg: 'bg-blue-100' },
 };
 
