@@ -123,7 +123,6 @@ export function Marketplace() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [rarityFilter, setRarityFilter] = useState('all');
-  const [elementFilter, setElementFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc' | 'ending_soon'>('newest');
   const [hoveredListing, setHoveredListing] = useState<string | null>(null);
   const [showBidHistoryModal, setShowBidHistoryModal] = useState(false);
@@ -273,7 +272,7 @@ export function Marketplace() {
     } else if (activeTab === 'my_listings') {
       fetchMyListings();
     }
-  }, [activeTab, rarityFilter, elementFilter, filter, sortBy, debouncedSearch]);
+  }, [activeTab, rarityFilter, filter, sortBy, debouncedSearch]);
 
   const fetchWishlistCardIds = async () => {
     try {
@@ -367,7 +366,6 @@ export function Marketplace() {
         p_limit: 20,
         p_offset: nextOffset,
         p_rarity: rarityFilter === 'all' ? null : rarityFilter,
-        p_element: elementFilter === 'all' ? null : elementFilter,
         p_listing_type: filter === 'all' ? null : filter,
         p_search: debouncedSearch || null,
         p_sort_by: sortBy
@@ -749,29 +747,13 @@ export function Marketplace() {
             <option value="Mythic">Mythic</option>
             <option value="Divine">Divine</option>
           </select>
-          <select 
-            value={elementFilter}
-            onChange={(e) => setElementFilter(e.target.value)}
-            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
-          >
-            <option value="all">All Elements</option>
-            <option value="fire">Fire</option>
-            <option value="neutral">Neutral</option>
-            <option value="tech">Tech</option>
-            <option value="magical">Magical</option>
-            <option value="nature">Nature</option>
-            <option value="shadow">Shadow</option>
-            <option value="ice">Ice</option>
-            <option value="void">Void</option>
-          </select>
 
-          {(search || filter !== 'all' || rarityFilter !== 'all' || elementFilter !== 'all' || sortBy !== 'newest') && (
+          {(search || filter !== 'all' || rarityFilter !== 'all' || sortBy !== 'newest') && (
             <button
               onClick={() => {
                 setSearch('');
                 setFilter('all');
                 setRarityFilter('all');
-                setElementFilter('all');
                 setSortBy('newest');
               }}
               className="shrink-0 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 font-black rounded-xl border-4 border-red-200 shadow-[4px_4px_0px_0px_#fecaca] flex items-center gap-2 transition-all active:translate-y-1 active:shadow-none uppercase text-xs"

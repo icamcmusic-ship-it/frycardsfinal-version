@@ -25,7 +25,6 @@ import { Decks } from './pages/Decks';
 import { Quests } from './pages/Quests';
 import { Battle } from './pages/Battle';
 import { Achievements } from './pages/Achievements';
-import { Admin } from './pages/Admin';
 import { Loader2 } from 'lucide-react';
 import { FloatingChat } from './components/FloatingChat';
 
@@ -104,16 +103,6 @@ export default function App() {
             <Route path="/quests" element={<Quests />} />
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/battle" element={<Battle />} />
-            <Route 
-              path="/admin" 
-              element={
-                profile?.is_admin ? (
-                  <Admin />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              } 
-            />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/season-pass" element={<SeasonPass />} />
             <Route path="/settings" element={<Settings />} />

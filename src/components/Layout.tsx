@@ -179,10 +179,6 @@ export function Layout() {
     { name: 'Settings', path: '/settings', icon: SettingsIcon, category: 'System' },
   ];
 
-  if (profile?.is_admin) {
-    navItems.push({ name: 'Admin', path: '/admin', icon: ShieldAlert, category: 'System' });
-  }
-
   const primaryNav = navItems.slice(0, 5);
   const secondaryNav = navItems.slice(5);
 

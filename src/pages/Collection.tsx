@@ -48,7 +48,6 @@ export function Collection() {
   const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>(() =>
     (sessionStorage.getItem('col_sort') as any) || 'rarity'
   );
-  const [elementType, setElementType] = useState<string>(() => sessionStorage.getItem('col_element') || 'all');
   const [cardType, setCardType] = useState<string>(() => sessionStorage.getItem('col_card_type') || 'all');
   const [selectedSetId, setSelectedSetId] = useState<string>(() => sessionStorage.getItem('col_set_id') || 'all');
   const [foilFilter, setFoilFilter] = useState<'all' | 'foil' | 'non-foil'>(() => 
@@ -96,7 +95,6 @@ export function Collection() {
 
   useEffect(() => { sessionStorage.setItem('col_filter', filter); }, [filter]);
   useEffect(() => { sessionStorage.setItem('col_sort', sortBy); }, [sortBy]);
-  useEffect(() => { sessionStorage.setItem('col_element', elementType); }, [elementType]);
   useEffect(() => { sessionStorage.setItem('col_card_type', cardType); }, [cardType]);
   useEffect(() => { sessionStorage.setItem('col_set_id', selectedSetId); }, [selectedSetId]);
   useEffect(() => { sessionStorage.setItem('col_foil_filter', foilFilter); }, [foilFilter]);
@@ -112,7 +110,7 @@ export function Collection() {
       fetchStats();
       fetchWishlistCardIds();
     }
-  }, [profile, activeTab, sortBy, filter, elementType, cardType, selectedSetId, debouncedSearch, foilFilter]);
+  }, [profile, activeTab, sortBy, filter, cardType, selectedSetId, debouncedSearch, foilFilter]);
 
   const fetchWishlistCardIds = async () => {
     try {
@@ -147,9 +145,6 @@ export function Collection() {
       const rarityForApi = filter === 'all' ? null : 
         filter.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('-');
         
-      const capitalizedElement = elementType === 'all' ? null : 
-        elementType.charAt(0).toUpperCase() + elementType.slice(1);
-
       const capitalizedCardType = cardType === 'all' ? null : 
         cardType.charAt(0).toUpperCase() + cardType.slice(1);
 
@@ -157,7 +152,6 @@ export function Collection() {
         p_user_id: profile?.id,
         p_rarity: rarityForApi,
         p_sort_by: sortBy,
-        p_element_type: capitalizedElement,
         p_card_type_filter: capitalizedCardType,
         p_set_id: selectedSetId === 'all' ? null : selectedSetId,
         p_is_foil: foilFilter === 'all' ? null : foilFilter === 'foil',
@@ -590,25 +584,6 @@ export function Collection() {
 
         <div className="relative">
           <select 
-            value={elementType} 
-            onChange={e => setElementType(e.target.value)} 
-            className="appearance-none pl-4 pr-10 py-1.5 rounded-full font-black text-xs uppercase border-2 bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400 focus:outline-none focus:border-[var(--text)] transition-all"
-          >
-            <option value="all">All Elements</option>
-            <option value="fire">Fire</option>
-            <option value="neutral">Neutral</option>
-            <option value="tech">Tech</option>
-            <option value="magical">Magical</option>
-            <option value="nature">Nature</option>
-            <option value="shadow">Shadow</option>
-            <option value="ice">Ice</option>
-            <option value="void">Void</option>
-          </select>
-          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-        </div>
-
-        <div className="relative">
-          <select 
             value={cardType} 
             onChange={e => setCardType(e.target.value)} 
             className="appearance-none pl-4 pr-10 py-1.5 rounded-full font-black text-xs uppercase border-2 bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400 focus:outline-none focus:border-[var(--text)] transition-all"
@@ -729,18 +704,6 @@ export function Collection() {
               ctaText={activeTab === 'wishlist' ? "Go to Store" : "Visit Store"}
               ctaPath="/store"
             />
-            {profile?.is_admin && filteredCards.length === 0 && (
-              <div className="mt-8 text-center bg-blue-50 border-4 border-blue-200 rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(59,130,246,0.2)]">
-                <p className="text-lg font-black text-blue-900 mb-2 uppercase">Admin: Game is Empty?</p>
-                <p className="text-sm text-blue-700 font-bold mb-4">If you see no cards or packs, you need to seed the initial data in the Admin panel.</p>
-                <Link 
-                  to="/admin" 
-                  className="inline-block px-6 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  Go to Admin Panel
-                </Link>
-              </div>
-            )}
           </div>
         ) : (
           filteredCards.map((card) => {
@@ -813,7 +776,6 @@ export function Collection() {
                 onClick={() => {
                   setFilter('all');
                   setFoilFilter('all');
-                  setElementType('all');
                   setCardType('all');
                   setSearch('');
                 }}

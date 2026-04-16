@@ -115,7 +115,11 @@ export function Store() {
 
   const fetchShopItems = async () => {
     try {
-      const { data, error } = await supabase.from('shop_items').select('*').order('cost_gold', { ascending: true });
+      const { data, error } = await supabase
+        .from('shop_items')
+        .select('*')
+        .order('item_type', { ascending: true })
+        .order('cost_gold', { ascending: true, nullsFirst: false });
       if (error) throw error;
       setShopItems(data || []);
     } catch (err) {
@@ -726,6 +730,7 @@ export function Store() {
         <ShopSection
           shopItems={shopItems}
           profile={profile}
+          userCosmetics={userCosmetics}
           onBuyItem={handleBuyShopItem}
         />
       )}
