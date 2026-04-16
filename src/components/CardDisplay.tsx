@@ -72,7 +72,7 @@ export function CardDisplay({
       <div className="absolute inset-0 z-10 p-[4cqw] pointer-events-none">
         {/* Top Section: Type & Rarity Stickers */}
         <div className="flex justify-between items-start">
-          {/* Type & Element Sticker */}
+          {/* Type Sticker */}
           <div className="flex flex-col gap-[1cqw] items-center -rotate-12">
             <div className={cn(
               "sticker !relative flex items-center justify-center w-[22cqw] h-[22cqw] rounded-full brut-border overflow-hidden",
@@ -83,11 +83,6 @@ export function CardDisplay({
                 {card.card_type || 'Unit'}
               </span>
             </div>
-            {card.element_type && (
-              <div className="sticker !relative px-[2cqw] py-[0.5cqw] rounded-full border-[0.5cqw] border-black text-[2cqw] font-black uppercase tracking-widest shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] bg-white text-black">
-                {card.element_type}
-              </div>
-            )}
           </div>
 
           {/* Rarity Sticker */}
@@ -173,7 +168,7 @@ export function CardDisplay({
         )}
 
         {/* Action Buttons */}
-        <div className="absolute top-[2cqw] right-[20cqw] flex gap-[2cqw] pointer-events-auto">
+        <div className="absolute top-[28cqw] right-[4cqw] flex flex-col gap-[2cqw] pointer-events-auto">
           {onToggleLock && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLock(); }}

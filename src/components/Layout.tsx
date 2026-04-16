@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
 import { ENERGY_REGEN_INTERVAL } from '../constants';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Layers, Target, MessageSquare, Sword, Award, ShieldAlert } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 
@@ -164,9 +164,6 @@ export function Layout() {
     { name: 'Market', path: '/marketplace', icon: ShoppingBag, category: 'Main' },
     { name: 'Notifications', path: '/notifications', icon: Bell, category: 'Main' },
     { name: 'Profile', path: '/profile', icon: UserIcon, category: 'Main' },
-    
-    { name: 'Battle', path: '/battle', icon: Sword, category: 'Gameplay' },
-    { name: 'Decks', path: '/decks', icon: Layers, category: 'Gameplay' },
     
     { name: 'Social', path: '/social', icon: Users, category: 'Social' },
     { name: 'Trades', path: '/trades', icon: ArrowRightLeft, category: 'Social' },

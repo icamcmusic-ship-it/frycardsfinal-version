@@ -82,10 +82,6 @@ export function Social() {
       const { error } = await supabase.from('messages_history').insert(messageData);
       if (error) throw error;
 
-      // Increment mission progress for sending a chat message
-      supabase.rpc('increment_mission_progress', { p_mission_type: 'chat_message', p_amount: 1 })
-        .then(({ error }) => { if (error) console.error('Error incrementing mission progress:', error); });
-
       await supabase.channel('global').send({
         type: 'broadcast',
         event: 'new_message',

@@ -48,7 +48,6 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
         p_limit: 10,
         p_offset: 0,
         p_rarity: null,
-        p_element: null,
         p_listing_type: 'fixed_price',
         p_search: selectedCard.name,
         p_sort_by: 'price'
@@ -99,7 +98,6 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
         p_user_id: null,
         p_rarity: null,
         p_sort_by: 'name',
-        p_element_type: null,
         p_is_foil: null,
         p_search: null,
         p_limit: 1000,
@@ -166,7 +164,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
                 <div className="px-1 text-center">
                   <p className="text-sm font-black uppercase truncate text-[var(--text)]">{card.name}</p>
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    {card.rarity} • {card.element || 'Neutral'}
+                    {card.rarity}
                   </p>
                 </div>
               </button>

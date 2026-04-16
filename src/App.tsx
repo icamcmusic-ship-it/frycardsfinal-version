@@ -21,9 +21,7 @@ import { Settings } from './pages/Settings';
 import { Profile } from './pages/Profile';
 import { PublicProfile } from './pages/PublicProfile';
 import { Notifications } from './pages/Notifications';
-import { Decks } from './pages/Decks';
 import { Quests } from './pages/Quests';
-import { Battle } from './pages/Battle';
 import { Achievements } from './pages/Achievements';
 import { Loader2 } from 'lucide-react';
 import { FloatingChat } from './components/FloatingChat';
@@ -99,10 +97,8 @@ export default function App() {
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/social" element={<Social />} />
             <Route path="/trades" element={<Trades />} />
-            <Route path="/decks" element={<Decks />} />
             <Route path="/quests" element={<Quests />} />
             <Route path="/achievements" element={<Achievements />} />
-            <Route path="/battle" element={<Battle />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/season-pass" element={<SeasonPass />} />
             <Route path="/settings" element={<Settings />} />

@@ -59,9 +59,7 @@ export function Store() {
 
   useEffect(() => {
     if (profile) {
-      // Increment mission progress for visiting shop
-      supabase.rpc('increment_mission_progress', { p_mission_type: 'visit_shop', p_amount: 1 })
-        .then(({ error }) => { if (error) console.error('Error incrementing mission progress:', error); });
+      // No mission tracking for visit_shop
     }
   }, [profile]);
 
@@ -291,6 +289,19 @@ export function Store() {
       if (error) throw error;
       
       setOpenedCards(data.cards);
+      
+      // Mission Tracking
+      supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
+      supabase.rpc('increment_mission_progress', { p_mission_type: 'collect_cards', p_amount: data.cards.length });
+      
+      data.cards.forEach((c: any) => {
+        if (c.is_foil) {
+          supabase.rpc('increment_mission_progress', { p_mission_type: 'collect_foil', p_amount: 1 });
+        }
+        if (['Rare', 'Super-Rare', 'Mythic', 'Divine'].includes(c.rarity)) {
+          supabase.rpc('increment_mission_progress', { p_mission_type: 'collect_rarity', p_amount: 1 });
+        }
+      });
       setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
       
       // Auto-transition after 1.5s if user hasn't clicked

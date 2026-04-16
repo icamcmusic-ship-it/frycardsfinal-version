@@ -12,12 +12,11 @@ interface Card3DModalProps {
   onClose: () => void;
   onSell?: (card: any) => void;
   onList?: (card: any) => void;
-  onAddToDeck?: (card: any) => void;
   onToggleWishlist?: (cardId: string) => void;
   isWishlisted?: boolean;
 }
 
-export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddToDeck, onToggleWishlist, isWishlisted }: Card3DModalProps) {
+export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onToggleWishlist, isWishlisted }: Card3DModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
@@ -187,17 +186,8 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onAddT
             </div>
 
             {/* Actions */}
-            {(onSell || onList || onAddToDeck) && (
+            {(onSell || onList) && (
               <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
-                {onAddToDeck && (
-                  <button 
-                    onClick={() => onAddToDeck(card)}
-                    className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
-                  >
-                    <LayoutGrid className="w-5 h-5" />
-                    Add to Deck
-                  </button>
-                )}
                 {onList && (
                   <button 
                     onClick={() => onList(card)}

@@ -4,26 +4,6 @@ import { cn } from '../lib/utils';
 import { CardDisplay } from './CardDisplay';
 import { Check, Lock, Unlock, ShoppingCart, Plus, Star, Heart } from 'lucide-react';
 
-const rarityColors: Record<string, string> = {
-  'Common':     'border-l-slate-400',
-  'Uncommon':   'border-l-green-500',
-  'Rare':       'border-l-blue-500',
-  'Super-Rare': 'border-l-purple-500',
-  'Mythic':     'border-l-yellow-500',
-  'Divine':     'border-l-red-500',
-};
-
-const elementColors: Record<string, string> = {
-  'fire':    'bg-red-500 text-white',
-  'neutral': 'bg-slate-400 text-black',
-  'tech':    'bg-cyan-500 text-black',
-  'magical': 'bg-violet-500 text-white',
-  'nature':  'bg-green-600 text-white',
-  'shadow':  'bg-purple-900 text-white',
-  'ice':     'bg-sky-300 text-black',
-  'void':    'bg-slate-950 text-white',
-};
-
 export function CollectionCard({ card, className, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist, isWishlisted, hideActions = false, showQuantity = false }: any) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 

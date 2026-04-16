@@ -30,9 +30,10 @@ export function ShopSection({ shopItems, profile, userCosmetics, onBuyItem }: Sh
 
   const renderItem = (item: ShopItem, aspectClass: string) => {
     const isOwned = ownedItemIds.has(item.id);
-    const canAfford = item.cost_gold
+    const isFree = (item.cost_gold === 0 || item.cost_gold === null) && (item.cost_gems === 0 || item.cost_gems === null);
+    const canAfford = isFree || (item.cost_gold
       ? (profile?.gold_balance ?? 0) >= item.cost_gold
-      : (profile?.gem_balance ?? 0) >= (item.cost_gems ?? 0);
+      : (profile?.gem_balance ?? 0) >= (item.cost_gems ?? 0));
 
     return (
       <motion.div
@@ -75,12 +76,20 @@ export function ShopSection({ shopItems, profile, userCosmetics, onBuyItem }: Sh
         </div>
 
         <div className="flex flex-col gap-1">
-          <h4 className="font-black text-xs uppercase truncate text-[var(--text)]">{item.name}</h4>
+          <h4 className="font-black text-xs uppercase text-[var(--text)]">{item.name}</h4>
+          {item.description && (
+            <p className="text-[10px] text-slate-500 font-medium leading-snug mt-0.5 break-words whitespace-normal line-clamp-none">
+              {item.description}
+              {item.author && <span className="block font-black text-slate-400 mt-0.5">By {item.author}</span>}
+            </p>
+          )}
           
           {!isOwned ? (
             <div className="flex items-center justify-between mt-1">
               <div className="flex items-center gap-1 font-black text-sm">
-                {item.cost_gems && item.cost_gems > 0 ? (
+                {isFree ? (
+                  <span className="text-emerald-600">Free</span>
+                ) : item.cost_gems && item.cost_gems > 0 ? (
                   <>
                     <Gem className="w-3 h-3 text-emerald-500" />
                     <span className={cn(!canAfford && "text-red-500")}>{item.cost_gems.toLocaleString()}</span>
@@ -103,7 +112,7 @@ export function ShopSection({ shopItems, profile, userCosmetics, onBuyItem }: Sh
                     : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none translate-y-0.5"
                 )}
               >
-                Buy
+                {isFree ? "Get Free" : !canAfford ? "Locked" : "Buy"}
               </button>
             </div>
           ) : (
@@ -125,7 +134,7 @@ export function ShopSection({ shopItems, profile, userCosmetics, onBuyItem }: Sh
           <h2 className="text-2xl font-black uppercase tracking-tight text-[var(--text)]">Profile Banners</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {banners.map(item => renderItem(item, "aspect-[16/5]"))}
+          {banners.map(item => renderItem(item, "aspect-[3/1]"))}
           {banners.length === 0 && <p className="col-span-full text-center py-8 text-slate-400 font-bold uppercase italic">No banners available</p>}
         </div>
       </section>

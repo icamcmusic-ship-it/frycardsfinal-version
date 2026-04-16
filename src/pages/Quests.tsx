@@ -269,7 +269,7 @@ export function Quests() {
 function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mission: any, onClaim: () => void | Promise<void>, claiming: boolean }) {
   const isCompleted = mission.is_completed;
   const isClaimed = mission.is_claimed;
-  const target = mission.target || mission.target_value || 1;
+  const target = mission.target_value ?? mission.target ?? 1;
   const progressPercent = Math.min(100, (mission.progress / target) * 100);
 
   return (
@@ -290,7 +290,9 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
           )}>
             <Zap className={cn("w-4 h-4", isClaimed ? "text-slate-400" : "text-blue-600")} />
           </div>
-          <h3 className="font-black uppercase text-[var(--text)]">{(mission.mission_type || mission.quest_type || '').replace(/_/g, ' ')}</h3>
+          <h3 className="font-black uppercase text-[var(--text)] text-sm">
+            {mission.description || (mission.mission_type || '').replace(/_/g, ' ')}
+          </h3>
         </div>
         
         {!isClaimed && (
@@ -311,10 +313,26 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
 
       <div className="flex items-center gap-4 shrink-0">
         <div className="text-right">
-          <p className="text-[10px] font-black uppercase text-slate-500">Reward</p>
-          <div className="flex items-center gap-1 font-black">
-            {(mission.reward_type || mission.mission_type || 'gold') === 'gold' ? <Coins className="w-4 h-4 text-yellow-500" /> : <Gem className="w-4 h-4 text-emerald-500" />}
-            <span>{mission.reward_amount || mission.reward_gold || mission.reward_gems || 0}</span>
+          <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Rewards</p>
+          <div className="flex flex-col items-end gap-1 font-black">
+            {(mission.reward_gold > 0 || (!mission.reward_gold && !mission.reward_gems && !mission.reward_xp)) && (
+              <div className="flex items-center gap-1 text-yellow-600">
+                <Coins className="w-3 h-3" />
+                <span>{mission.reward_gold || mission.reward_amount || 0}</span>
+              </div>
+            )}
+            {mission.reward_gems > 0 && (
+              <div className="flex items-center gap-1 text-emerald-600">
+                <Gem className="w-3 h-3" />
+                <span>{mission.reward_gems}</span>
+              </div>
+            )}
+            {mission.reward_xp > 0 && (
+              <div className="flex items-center gap-1 text-blue-600">
+                <Zap className="w-3 h-3" />
+                <span>{mission.reward_xp} XP</span>
+              </div>
+            )}
           </div>
         </div>
 
