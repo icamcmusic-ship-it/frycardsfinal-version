@@ -78,7 +78,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
       document.body.style.overflow = 'hidden';
       if (initialCard) {
         setSelectedCard(initialCard);
-        setIsFoil(initialCard.is_foil || false);
+        setIsFoil(initialCard.is_foil || (initialCard.foil_quantity ?? 0) > 0);
       } else {
         fetchCollection();
       }

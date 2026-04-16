@@ -50,6 +50,7 @@ export function Collection() {
   );
   const [elementType, setElementType] = useState<string>(() => sessionStorage.getItem('col_element') || 'all');
   const [cardType, setCardType] = useState<string>(() => sessionStorage.getItem('col_card_type') || 'all');
+  const [selectedSetId, setSelectedSetId] = useState<string>(() => sessionStorage.getItem('col_set_id') || 'all');
   const [foilFilter, setFoilFilter] = useState<'all' | 'foil' | 'non-foil'>(() => 
     (sessionStorage.getItem('col_foil_filter') as any) || 'all'
   );
@@ -97,6 +98,7 @@ export function Collection() {
   useEffect(() => { sessionStorage.setItem('col_sort', sortBy); }, [sortBy]);
   useEffect(() => { sessionStorage.setItem('col_element', elementType); }, [elementType]);
   useEffect(() => { sessionStorage.setItem('col_card_type', cardType); }, [cardType]);
+  useEffect(() => { sessionStorage.setItem('col_set_id', selectedSetId); }, [selectedSetId]);
   useEffect(() => { sessionStorage.setItem('col_foil_filter', foilFilter); }, [foilFilter]);
   useEffect(() => { localStorage.setItem('col_view_size', viewSize); }, [viewSize]);
 
@@ -112,7 +114,7 @@ export function Collection() {
       fetchStats();
       fetchWishlistCardIds();
     }
-  }, [profile, activeTab, sortBy, filter, elementType, cardType, debouncedSearch, foilFilter]);
+  }, [profile, activeTab, sortBy, filter, elementType, cardType, selectedSetId, debouncedSearch, foilFilter]);
 
   const fetchWishlistCardIds = async () => {
     try {
@@ -159,6 +161,7 @@ export function Collection() {
         p_sort_by: sortBy,
         p_element_type: capitalizedElement,
         p_card_type_filter: capitalizedCardType,
+        p_set_id: selectedSetId === 'all' ? null : selectedSetId,
         p_is_foil: foilFilter === 'all' ? null : foilFilter === 'foil',
         p_limit: PAGE_SIZE,
         p_offset: targetOffset,
@@ -296,7 +299,7 @@ export function Collection() {
 
   const calculateMillValue = (card: any) => {
     const base = getBaseValue(card.rarity);
-    return card.is_foil ? base * 3 : base;
+    return (card.is_foil || (card.foil_quantity ?? 0) > 0) ? base * 3 : base;
   };
 
   const handleMill = async (card: any) => {
@@ -329,7 +332,7 @@ export function Collection() {
 
   const handleQuicksell = async (card: any) => {
     const baseValue = { Common: 10, Uncommon: 25, Rare: 100, 'Super-Rare': 250, Mythic: 500, Divine: 1000 }[card.rarity] ?? 10;
-    const value = card.is_foil ? baseValue * 3 : baseValue;
+    const value = (card.is_foil || (card.foil_quantity ?? 0) > 0) ? baseValue * 3 : baseValue;
     
     setConfirmConfig({
       isOpen: true,
@@ -354,7 +357,7 @@ export function Collection() {
 
         const { data, error } = await supabase.rpc('quicksell_card', {
           p_card_id: card.id,
-          p_is_foil: card.is_foil || false,
+          p_is_foil: (card.is_foil || (card.foil_quantity ?? 0) > 0) || false,
           p_quantity: 1,
         });
         
@@ -621,6 +624,20 @@ export function Collection() {
           </select>
           <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
         </div>
+
+        <div className="relative">
+          <select 
+            value={selectedSetId} 
+            onChange={e => setSelectedSetId(e.target.value)} 
+            className="appearance-none pl-4 pr-10 py-1.5 rounded-full font-black text-xs uppercase border-2 bg-[var(--surface)] text-slate-500 border-[var(--border)] hover:border-slate-400 focus:outline-none focus:border-[var(--text)] transition-all"
+          >
+            <option value="all">All Sets</option>
+            {sets.map(set => (
+              <option key={set.id} value={set.id}>{set.name}</option>
+            ))}
+          </select>
+          <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -805,7 +822,7 @@ export function Collection() {
               <p className="text-slate-500">
                 {(() => {
                   const selectedList = selectedCardIds.map(id => cards.find(c => c.user_card_id === id)).filter(Boolean);
-                  const foils = selectedList.filter(c => c.is_foil).length;
+                  const foils = selectedList.filter(c => c.is_foil || (c.foil_quantity ?? 0) > 0).length;
                   const normal = selectedList.length - foils;
                   return `${normal} Normal • ${foils} Foil`;
                 })()}
@@ -823,7 +840,7 @@ export function Collection() {
                       'Mythic': 500, 
                       'Divine': 1000 
                     }[card.rarity] ?? 10;
-                    return acc + (card.is_foil ? baseValue * 3 : baseValue);
+                    return acc + ((card.is_foil || (card.foil_quantity ?? 0) > 0) ? baseValue * 3 : baseValue);
                   }, 0);
                   return total.toLocaleString();
                 })()} Gold
@@ -835,7 +852,7 @@ export function Collection() {
               const selectedList = selectedCardIds.map(id => cards.find(c => c.user_card_id === id)).filter(Boolean);
               const totalEst = selectedList.reduce((acc, card) => {
                 const baseValue = { 'Common': 10, 'Uncommon': 25, 'Rare': 100, 'Super-Rare': 250, 'Mythic': 500, 'Divine': 1000 }[card.rarity] ?? 10;
-                return acc + (card.is_foil ? baseValue * 3 : baseValue);
+                return acc + ((card.is_foil || (card.foil_quantity ?? 0) > 0) ? baseValue * 3 : baseValue);
               }, 0);
 
               setConfirmConfig({
@@ -849,7 +866,7 @@ export function Collection() {
                       try {
                         const { data, error } = await supabase.rpc('quicksell_card', {
                           p_card_id: card.id,
-                          p_is_foil: card.is_foil || false,
+                          p_is_foil: (card.is_foil || (card.foil_quantity ?? 0) > 0) || false,
                           p_quantity: 1
                         });
                         if (error) throw error;

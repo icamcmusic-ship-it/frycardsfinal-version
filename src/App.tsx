@@ -95,7 +95,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Home />} />
             <Route path="/store" element={<Store />} />
-            <Route path="/inventory" element={<Store />} />
+            <Route path="/inventory" element={<Navigate to="/store?tab=inventory" replace />} />
             <Route path="/collection" element={<Collection />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/social" element={<Social />} />

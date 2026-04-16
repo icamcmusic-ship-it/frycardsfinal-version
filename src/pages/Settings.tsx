@@ -139,16 +139,17 @@ export function Settings() {
 
     saveToLocalStorage(newSettings);
 
-    if (key === 'is_public') {
+    if (key === 'is_public' || key === 'show_online_status') {
       try {
         const { error } = await supabase.rpc('update_user_profile', {
           p_user_id: profile?.id,
-          p_is_public: value
+          p_is_public: key === 'is_public' ? value : settings.is_public,
+          p_show_online_status: key === 'show_online_status' ? value : settings.show_online_status
         });
         if (error) throw error;
       } catch (err: any) {
-        console.error('Error updating public status:', err);
-        toast.error('Failed to update profile visibility');
+        console.error(`Error updating ${key}:`, err);
+        toast.error('Failed to update privacy settings');
       }
     }
   };
