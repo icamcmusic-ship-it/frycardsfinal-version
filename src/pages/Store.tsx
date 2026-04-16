@@ -357,12 +357,12 @@ export function Store() {
     setConfirmModal({
       isOpen: true,
       title: 'Buy Item',
-      message: `Are you sure you want to buy ${item.name} for ${item.cost_gold > 0 ? `${item.cost_gold} Gold` : `${item.cost_gems} Gems`}?`,
+      message: `Are you sure you want to buy ${item.name} for ${(item.cost_gold ?? 0) > 0 ? `${item.cost_gold} Gold` : `${item.cost_gems ?? 0} Gems`}?`,
       onConfirm: async () => {
         try {
           const { data, error } = await supabase.rpc('buy_shop_item', {
             p_shop_item_id: item.id,
-            p_use_gems: item.cost_gems > 0 && item.cost_gold === 0
+            p_use_gems: (item.cost_gems ?? 0) > 0 && (item.cost_gold ?? 0) === 0
           });
 
           if (error || data?.success === false) {

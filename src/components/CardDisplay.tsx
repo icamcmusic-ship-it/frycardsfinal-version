@@ -72,15 +72,22 @@ export function CardDisplay({
       <div className="absolute inset-0 z-10 p-[4cqw] pointer-events-none">
         {/* Top Section: Type & Rarity Stickers */}
         <div className="flex justify-between items-start">
-          {/* Type Sticker */}
-          <div className={cn(
-            "sticker !relative flex items-center justify-center w-[22cqw] h-[22cqw] rounded-full brut-border -rotate-12 overflow-hidden",
-            `color-${rarityKey}`,
-            `shadow-${rarityKey}`
-          )}>
-            <span className="text-[3cqw] font-black uppercase tracking-tighter text-center leading-none px-[1cqw] truncate w-full">
-              {card.card_type || 'Unit'}
-            </span>
+          {/* Type & Element Sticker */}
+          <div className="flex flex-col gap-[1cqw] items-center -rotate-12">
+            <div className={cn(
+              "sticker !relative flex items-center justify-center w-[22cqw] h-[22cqw] rounded-full brut-border overflow-hidden",
+              `color-${rarityKey}`,
+              `shadow-${rarityKey}`
+            )}>
+              <span className="text-[3cqw] font-black uppercase tracking-tighter text-center leading-none px-[1cqw] truncate w-full">
+                {card.card_type || 'Unit'}
+              </span>
+            </div>
+            {card.element_type && (
+              <div className="sticker !relative px-[2cqw] py-[0.5cqw] rounded-full border-[0.5cqw] border-black text-[2cqw] font-black uppercase tracking-widest shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] bg-white text-black">
+                {card.element_type}
+              </div>
+            )}
           </div>
 
           {/* Rarity Sticker */}

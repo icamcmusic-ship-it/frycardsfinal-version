@@ -53,7 +53,7 @@ export function Layout() {
     try {
       // Fetch pending trades
       const { count: tradeCount, error: tradeError } = await supabase
-        .from('trades')
+        .from('trade_offers')
         .select('id', { count: 'exact', head: true })
         .eq('receiver_id', user.id)
         .eq('status', 'pending');
@@ -62,9 +62,9 @@ export function Layout() {
 
       // Fetch pending social requests
       const { count: socialCount, error: socialError } = await supabase
-        .from('friend_requests')
+        .from('friendships')
         .select('id', { count: 'exact', head: true })
-        .eq('receiver_id', user.id)
+        .eq('addressee_id', user.id)
         .eq('status', 'pending');
       
       if (!socialError) setPendingSocialCount(socialCount ?? 0);
@@ -121,7 +121,7 @@ export function Layout() {
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'trades',
+          table: 'trade_offers',
           filter: `receiver_id=eq.${user.id}`
         }, () => {
           fetchPendingCounts();
@@ -133,8 +133,8 @@ export function Layout() {
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'friend_requests',
-          filter: `receiver_id=eq.${user.id}`
+          table: 'friendships',
+          filter: `addressee_id=eq.${user.id}`
         }, () => {
           fetchPendingCounts();
         })

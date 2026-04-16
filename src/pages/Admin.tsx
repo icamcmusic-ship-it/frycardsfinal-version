@@ -140,7 +140,7 @@ export function Admin() {
     try {
       // 1. Create Sets
       const { data: set1, error: setError1 } = await supabase.from('sets').insert([
-        { name: 'Genesis', description: 'The first set of cards.', release_date: new Date().toISOString() }
+        { name: 'Genesis', description: 'The first set of cards.' }
       ]).select().single();
       if (setError1) throw setError1;
 
@@ -158,8 +158,8 @@ export function Admin() {
 
       // 3. Create Pack Types
       const packs = [
-        { name: 'Standard Pack', description: 'Contains 5 random cards.', cost_gold: 100, cost_gems: 0, image_url: 'https://picsum.photos/seed/pack1/400/300', cards_per_pack: 5 },
-        { name: 'Premium Pack', description: 'Contains 5 cards with higher rarity chances.', cost_gold: 0, cost_gems: 50, image_url: 'https://picsum.photos/seed/pack2/400/300', cards_per_pack: 5 }
+        { name: 'Standard Pack', description: 'Contains 5 random cards.', cost_gold: 100, cost_gems: 0, image_url: 'https://picsum.photos/seed/pack1/400/300', card_count: 5 },
+        { name: 'Premium Pack', description: 'Contains 5 cards with higher rarity chances.', cost_gold: 0, cost_gems: 50, image_url: 'https://picsum.photos/seed/pack2/400/300', card_count: 5 }
       ];
       const { error: packsError } = await supabase.from('pack_types').insert(packs);
       if (packsError) throw packsError;

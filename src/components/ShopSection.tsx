@@ -9,8 +9,8 @@ interface ShopItem {
   description?: string;
   item_type: string;
   image_url: string;
-  cost_gold: number;
-  cost_gems: number;
+  cost_gold: number | null;
+  cost_gems: number | null;
   [key: string]: any;
 }
 
@@ -76,11 +76,11 @@ export function ShopSection({ shopItems, profile, onBuyItem }: ShopSectionProps)
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         <AnimatePresence mode="popLayout">
           {filteredItems.map((item) => {
-            const canAfford = item.cost_gold > 0 
-              ? (profile?.gold_balance ?? 0) >= item.cost_gold
-              : (profile?.gem_balance ?? 0) >= item.cost_gems;
-            
-            const isCardBack = item.item_type === 'card_back';
+          const canAfford = item.cost_gold
+            ? (profile?.gold_balance ?? 0) >= item.cost_gold
+            : (profile?.gem_balance ?? 0) >= (item.cost_gems ?? 0);
+          
+          const isCardBack = item.item_type === 'card_back';
             const isBanner = item.item_type === 'banner';
             const isAvatar = item.item_type === 'avatar';
 
@@ -134,7 +134,7 @@ export function ShopSection({ shopItems, profile, onBuyItem }: ShopSectionProps)
 
                   <div className="mt-auto flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5 font-black text-lg">
-                      {item.cost_gems > 0 ? (
+                      {item.cost_gems && item.cost_gems > 0 ? (
                         <>
                           <Gem className="w-5 h-5 text-emerald-500" />
                           <span className={cn(!canAfford && "text-red-500")}>{item.cost_gems.toLocaleString()}</span>
@@ -142,7 +142,7 @@ export function ShopSection({ shopItems, profile, onBuyItem }: ShopSectionProps)
                       ) : (
                         <>
                           <Coins className="w-5 h-5 text-yellow-500" />
-                          <span className={cn(!canAfford && "text-red-500")}>{item.cost_gold.toLocaleString()}</span>
+                          <span className={cn(!canAfford && "text-red-500")}>{(item.cost_gold ?? 0).toLocaleString()}</span>
                         </>
                       )}
                     </div>
