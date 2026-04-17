@@ -711,15 +711,15 @@ export function Store() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative shadow-[8px_8px_0px_0px_var(--border)] flex flex-col h-[400px]">
-              <div className="aspect-[4/3] bg-slate-200 animate-pulse border-b-4 border-[var(--border)]"></div>
-              <div className="p-6 flex flex-col flex-1 gap-4">
-                <div className="h-8 w-3/4 bg-slate-200 animate-pulse rounded"></div>
-                <div className="h-4 w-full bg-slate-200 animate-pulse rounded"></div>
-                <div className="h-4 w-5/6 bg-slate-200 animate-pulse rounded"></div>
-                <div className="mt-auto flex gap-2">
-                  <div className="h-12 flex-[2] bg-slate-200 animate-pulse rounded-xl"></div>
-                  <div className="h-12 flex-1 bg-slate-200 animate-pulse rounded-xl"></div>
+            <div key={i} className="skeleton-card">
+              <div className="absolute inset-0 p-6 flex flex-col">
+                <div className="h-48 bg-slate-200/50 rounded-xl mb-6"></div>
+                <div className="h-8 w-3/4 bg-slate-300/50 rounded-lg mb-4"></div>
+                <div className="h-4 w-full bg-slate-300/50 rounded-md mb-2"></div>
+                <div className="h-4 w-5/6 bg-slate-300/50 rounded-md"></div>
+                <div className="mt-auto flex gap-4">
+                  <div className="h-12 flex-[2] bg-slate-300/50 rounded-xl"></div>
+                  <div className="h-12 flex-1 bg-slate-300/50 rounded-xl"></div>
                 </div>
               </div>
             </div>

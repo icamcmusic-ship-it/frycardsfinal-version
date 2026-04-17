@@ -16,6 +16,8 @@ interface CardDisplayProps {
     flavor_text?: string;
     is_locked?: boolean;
     slot_type?: string;
+    set_name?: string;
+    set_theme_color?: string;
     // Other fields are ignored as per user request
     [key: string]: any; 
   };
@@ -162,9 +164,16 @@ export function CardDisplay({
         )}
 
         {/* Quantity Badge */}
-        {showQuantity && card.quantity != null && card.quantity > 1 && (
-          <div className="sticker absolute bottom-[4cqw] left-[-2cqw] bg-black text-white px-[2cqw] py-[1cqw] rounded-[2cqw] border-[0.5cqw] border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-            <span className="text-[4cqw] font-black">×{card.quantity}</span>
+        {showQuantity && ((card.quantity != null && card.quantity > 1) || (card.foil_quantity != null && card.foil_quantity > 0)) && (
+          <div className="sticker absolute bottom-[4cqw] left-[-2cqw] bg-black text-white px-[3cqw] py-[1.5cqw] rounded-[2.5cqw] border-[0.6cqw] border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center gap-[1.5cqw] z-30">
+            {card.quantity != null && card.quantity > 0 && (
+              <span className="text-[4.5cqw] font-black leading-none">×{card.quantity}</span>
+            )}
+            {card.foil_quantity != null && card.foil_quantity > 0 && (
+              <span className="text-[4.5cqw] font-black leading-none text-yellow-400 flex items-center">
+                {card.quantity != null && card.quantity > 1 && <span className="mx-[0.5cqw]">+</span>} ✨×{card.foil_quantity}
+              </span>
+            )}
           </div>
         )}
 

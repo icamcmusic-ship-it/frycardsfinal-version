@@ -223,8 +223,13 @@ export function Collection() {
 
   if (loading && cards.length === 0) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+      <div className="space-y-8">
+        <div className="h-40 bg-slate-200 animate-pulse rounded-2xl border-4 border-black mb-8" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="skeleton-card" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -290,6 +295,42 @@ export function Collection() {
               >
                 <Coins className="w-5 h-5" />
                 Mill All Duplicates
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'collection' && isBatchMode && selectedCardIds.length > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setConfirmConfig({
+                    isOpen: true,
+                    title: 'Mill Selected Cards',
+                    message: `Are you sure you want to mill ${selectedCardIds.length} selected cards? This cannot be undone.`,
+                    variant: 'danger',
+                    onConfirm: async () => {
+                      try {
+                        const { data, error } = await supabase.rpc('mill_selected_cards', {
+                          p_user_card_ids: selectedCardIds
+                        });
+                        if (error) throw error;
+                        
+                        toast.success(`Milled ${selectedCardIds.length} cards for ${data.gold_earned} Gold!`, { icon: '🪙' });
+                        setSelectedCardIds([]);
+                        setIsBatchMode(false);
+                        fetchCollection();
+                        fetchStats();
+                        useProfileStore.getState().refreshProfile();
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to mill selected cards');
+                      }
+                    }
+                  });
+                }}
+                className="px-4 py-2 bg-red-400 hover:bg-red-500 text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+              >
+                <Trash2 className="w-5 h-5" />
+                Mill Selected ({selectedCardIds.length})
               </button>
             </div>
           )}

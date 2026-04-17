@@ -42,9 +42,10 @@ export function DailySpinner({ isOpen, onClose }: DailySpinnerProps) {
 
   const pieSegments = useMemo(() => {
     if (sectors.length === 0) return [];
+    const totalWeight = sectors.reduce((acc, s) => acc + (s.weight || 1), 0);
+    if (totalWeight === 0) return [];
     
     let currentAngle = 0;
-    const totalWeight = sectors.reduce((acc, s) => acc + (s.weight || 1), 0);
     
     return sectors.map((sector) => {
       const angle = ((sector.weight || 1) / totalWeight) * 360;

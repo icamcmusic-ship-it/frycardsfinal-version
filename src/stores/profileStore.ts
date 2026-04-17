@@ -41,17 +41,25 @@ export const useProfileStore = create<ProfileState>((set) => ({
   profile: null,
   setProfile: (profile) => set({ profile }),
   fetchProfile: async () => {
-    const { data, error } = await supabase.rpc('get_my_profile');
-    
-    if (data && !error) {
-      set({ profile: data as Profile });
+    try {
+      const { data, error } = await supabase.rpc('get_my_profile');
+      if (error) throw error;
+      if (data) {
+        set({ profile: data as Profile });
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
     }
   },
   refreshProfile: async () => {
-    const { data, error } = await supabase.rpc('get_my_profile');
-    
-    if (data && !error) {
-      set({ profile: data as Profile });
+    try {
+      const { data, error } = await supabase.rpc('get_my_profile');
+      if (error) throw error;
+      if (data) {
+        set({ profile: data as Profile });
+      }
+    } catch (err) {
+      console.error('Error refreshing profile:', err);
     }
   },
 }));

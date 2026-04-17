@@ -25,6 +25,9 @@ import { Quests } from './pages/Quests';
 import { Achievements } from './pages/Achievements';
 import { Changelog } from './pages/Changelog';
 import { HowToPlay } from './pages/HowToPlay';
+import { Decks } from './pages/Decks';
+import { Battle } from './pages/Battle';
+import { Admin } from './pages/Admin';
 import { Loader2 } from 'lucide-react';
 import { FloatingChat } from './components/FloatingChat';
 
@@ -109,6 +112,9 @@ export default function App() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/changelog" element={<Changelog />} />
             <Route path="/how-to-play" element={<HowToPlay />} />
+            <Route path="/decks" element={<Decks />} />
+            <Route path="/battle" element={<Battle />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         )}

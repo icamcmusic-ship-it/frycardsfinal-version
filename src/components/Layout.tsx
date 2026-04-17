@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
 import { ENERGY_REGEN_INTERVAL } from '../constants';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History, Sword, Layers } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 
@@ -160,6 +160,8 @@ export function Layout() {
   const navItems = [
     { name: 'Home', path: '/', icon: Home, category: 'Main' },
     { name: 'Collection', path: '/collection', icon: LayoutGrid, category: 'Main' },
+    { name: 'Decks', path: '/decks', icon: Layers, category: 'Main' },
+    { name: 'Battle', path: '/battle', icon: Sword, category: 'Main' },
     { name: 'Store', path: '/store', icon: Store, category: 'Main' },
     { name: 'Market', path: '/marketplace', icon: ShoppingBag, category: 'Main' },
     { name: 'Notifications', path: '/notifications', icon: Bell, category: 'Main' },
@@ -177,6 +179,7 @@ export function Layout() {
     { name: 'Changelog', path: '/changelog', icon: History, category: 'Help' },
     
     { name: 'Settings', path: '/settings', icon: SettingsIcon, category: 'System' },
+    ...(profile?.is_admin ? [{ name: 'Admin', path: '/admin', icon: ShieldAlert, category: 'System' }] : []),
   ];
 
   const primaryNav = navItems.slice(0, 5);
@@ -247,8 +250,33 @@ export function Layout() {
                 className="group relative flex items-center gap-1.5 bg-blue-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] cursor-help"
                 title={nextRegen ? `Next energy in ${formatRegenTime()}` : "Energy full"}
               >
-                <Zap className="w-4 h-4 text-blue-600" />
-                <div className="flex flex-col leading-none">
+                <div className="relative w-5 h-5 flex items-center justify-center">
+                  <svg className="progress-ring absolute -inset-1" width="28" height="28">
+                    <circle
+                      className="progress-ring__circle text-blue-200"
+                      strokeWidth="3"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="10"
+                      cx="14"
+                      cy="14"
+                    />
+                    <circle
+                      className="progress-ring__circle text-blue-600"
+                      strokeWidth="3"
+                      strokeDasharray={`${2 * Math.PI * 10}`}
+                      strokeDashoffset={`${2 * Math.PI * 10 * (timeRemaining / ENERGY_REGEN_INTERVAL)}`}
+                      strokeLinecap="round"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="10"
+                      cx="14"
+                      cy="14"
+                    />
+                  </svg>
+                  <Zap className="w-3 h-3 text-blue-600 relative z-10" />
+                </div>
+                <div className="flex flex-col leading-none ml-1">
                   <span className="text-sm font-bold font-mono text-black">
                     {profile.energy}/{profile.max_energy}
                   </span>
@@ -335,7 +363,7 @@ export function Layout() {
                       className={cn(
                         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2 relative",
                         isActive 
-                          ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold" 
+                          ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold border-l-8" 
                           : "text-[var(--text)] hover:text-black hover:bg-blue-50 border-transparent hover:border-[var(--border)] hover:shadow-[4px_4px_0px_0px_var(--border)] font-medium opacity-80 hover:opacity-100"
                       )}
                     >
@@ -435,7 +463,7 @@ export function Layout() {
                           className={cn(
                             "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2",
                             isActive 
-                              ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold" 
+                              ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold border-l-8" 
                               : "text-[var(--text)] hover:text-black hover:bg-blue-50 border-transparent hover:border-[var(--border)] font-medium"
                           )}
                         >

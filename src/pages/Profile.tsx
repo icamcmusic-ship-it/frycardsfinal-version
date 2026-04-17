@@ -27,18 +27,15 @@ export function Profile() {
 
   useEffect(() => {
     if (profile) {
-      supabase.rpc('get_my_profile').then(({ data }) => {
-        if (data) setOwnStats(data);
-      });
-    }
-  }, [profile]);
-
-  useEffect(() => {
-    if (profile) {
       setUsername(profile.username || '');
       setAvatarUrl(profile.avatar_url || '');
       setBannerUrl(profile.banner_url || '');
       setBio(profile.bio || '');
+
+      // Fetch dedicated collection stats
+      supabase.rpc('get_my_collection_stats').then(({ data }) => {
+        if (data) setOwnStats(data);
+      });
     }
   }, [profile]);
 
