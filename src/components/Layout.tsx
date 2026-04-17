@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
 import { ENERGY_REGEN_INTERVAL } from '../constants';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 
@@ -264,6 +264,14 @@ export function Layout() {
                 <Gem className="w-4 h-4 text-emerald-600" />
                 <span className="text-sm font-bold font-mono text-black">{profile.gem_balance?.toLocaleString() || 0}</span>
               </div>
+              <Link 
+                to="/store?tab=spark"
+                className="flex items-center gap-1.5 bg-indigo-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] hover:bg-indigo-200 transition-colors"
+                title="Pack Points / Spark"
+              >
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-bold font-mono text-black">{profile.pack_points?.toLocaleString() || 0}</span>
+              </Link>
               <Link 
                 to="/notifications"
                 className="relative p-2 hover:bg-blue-100 rounded-full transition-colors text-[var(--text)] border-2 border-transparent hover:border-[var(--border)] hover:shadow-[2px_2px_0px_0px_var(--border)]"

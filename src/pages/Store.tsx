@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon, LayoutGrid } from 'lucide-react';
+import { PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon, LayoutGrid, Star, Zap, Plus, Target, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import toast from 'react-hot-toast';
@@ -18,12 +18,12 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { audioService } from '../services/AudioService';
 
 const PACK_ODDS = [
-  { rarity: 'Common',     pct: '55%', color: 'text-slate-500' },
-  { rarity: 'Uncommon',   pct: '25%', color: 'text-green-600' },
-  { rarity: 'Rare',       pct: '12%', color: 'text-blue-600' },
-  { rarity: 'Super-Rare', pct: '5%',  color: 'text-purple-600' },
-  { rarity: 'Mythic',     pct: '2%',  color: 'text-yellow-600' },
-  { rarity: 'Divine',     pct: '1%',  color: 'text-red-600' },
+  { rarity: 'Common',     pct: '70.00%', color: 'text-slate-500' },
+  { rarity: 'Uncommon',   pct: '20.00%', color: 'text-green-600' },
+  { rarity: 'Rare',       pct: '8.00%',  color: 'text-blue-600' },
+  { rarity: 'Super-Rare', pct: '1.50%',  color: 'text-purple-600' },
+  { rarity: 'Mythic',     pct: '0.40%',  color: 'text-yellow-600' },
+  { rarity: 'Divine',     pct: '0.10%',  color: 'text-red-600' },
 ];
 
 export function Store() {
@@ -35,7 +35,7 @@ export function Store() {
   const openPackId = searchParams.get('open');
   const initialTab = searchParams.get('tab') === 'inventory' ? 'inventory' : 'packs';
   
-  const [activeTab, setActiveTab] = useState<'packs' | 'inventory' | 'shop'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'packs' | 'inventory' | 'shop' | 'spark'>(initialTab);
   const [packs, setPacks] = useState<any[]>([]);
   const [shopItems, setShopItems] = useState<any[]>([]);
   const [userCosmetics, setUserCosmetics] = useState<any[]>([]);
@@ -67,7 +67,7 @@ export function Store() {
     if (openPackId && inventory.length > 0 && !opening) {
       const packToOpen = inventory.find(p => p.pack_type_id === openPackId);
       if (packToOpen) {
-        handleOpenFromInventory(packToOpen.pack_type_id, packToOpen.image_url);
+        handleOpenFromInventory(packToOpen.id, packToOpen.image_url);
         // Clear the param after opening
         navigate('/store?tab=inventory', { replace: true });
       }
@@ -78,6 +78,7 @@ export function Store() {
     packs: 'Packs',
     inventory: 'Inventory',
     shop: 'Shop',
+    spark: 'Spark',
   };
 
   useEffect(() => {
@@ -224,6 +225,14 @@ export function Store() {
             allCards = [...allCards, ...data.cards];
             totalXp += data.xp_gained;
             totalNew += data.new_card_count;
+
+            if (data.is_god_pack) {
+              toast.success('⚡ GOD PACK! All cards are Super-Rare or better!', {
+                duration: 5000,
+                icon: '🌟',
+                style: { background: '#ffdf6c', fontWeight: 'bold' }
+              });
+            }
           }
           
           setOpenedCards(allCards);
@@ -244,6 +253,8 @@ export function Store() {
           audioService.play('error');
         } finally {
           setOpening(false);
+          useProfileStore.getState().refreshProfile();
+          fetchPacks();
         }
       }
     });
@@ -290,18 +301,14 @@ export function Store() {
       
       setOpenedCards(data.cards);
       
-      // Mission Tracking
-      supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
-      supabase.rpc('increment_mission_progress', { p_mission_type: 'collect_cards', p_amount: data.cards.length });
-      
-      data.cards.forEach((c: any) => {
-        if (c.is_foil) {
-          supabase.rpc('increment_mission_progress', { p_mission_type: 'collect_foil', p_amount: 1 });
-        }
-        if (['Rare', 'Super-Rare', 'Mythic', 'Divine'].includes(c.rarity)) {
-          supabase.rpc('increment_mission_progress', { p_mission_type: 'collect_rarity', p_amount: 1 });
-        }
-      });
+      if (data.is_god_pack) {
+        toast.success('⚡ GOD PACK! All cards are Super-Rare or better!', {
+          duration: 5000,
+          icon: '🌟',
+          style: { background: '#ffdf6c', fontWeight: 'bold' }
+        });
+      }
+
       setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
       
       // Auto-transition after 1.5s if user hasn't clicked
@@ -316,6 +323,9 @@ export function Store() {
       setPackOpeningStep('idle');
     } finally {
       setOpening(false);
+      useProfileStore.getState().refreshProfile();
+      fetchPacks();
+      fetchInventory();
     }
   };
 
@@ -369,15 +379,19 @@ export function Store() {
   const handleBuyShopItem = async (item: any) => {
     if (!profile) return;
     
+    const isFreeItem = (item.cost_gold === 0 || item.cost_gold === null) 
+                    && (item.cost_gems === 0 || item.cost_gems === null);
+    const useGems = !isFreeItem && (item.cost_gems ?? 0) > 0 && (item.cost_gold ?? 0) === 0;
+
     setConfirmModal({
       isOpen: true,
       title: 'Buy Item',
-      message: `Are you sure you want to buy ${item.name} for ${(item.cost_gold ?? 0) > 0 ? `${item.cost_gold} Gold` : `${item.cost_gems ?? 0} Gems`}?`,
+      message: `Are you sure you want to buy ${item.name} for ${isFreeItem ? 'Free' : (item.cost_gold ?? 0) > 0 ? `${item.cost_gold} Gold` : `${item.cost_gems ?? 0} Gems`}?`,
       onConfirm: async () => {
         try {
           const { data, error } = await supabase.rpc('buy_shop_item', {
             p_shop_item_id: item.id,
-            p_use_gems: (item.cost_gems ?? 0) > 0 && (item.cost_gold ?? 0) === 0
+            p_use_gems: useGems
           });
 
           if (error || data?.success === false) {
@@ -415,6 +429,48 @@ export function Store() {
     }
   };
 
+  const handleSparkCard = async (rarity: string, cost: number) => {
+    if (!profile || profile.pack_points < cost) {
+      toast.error('Not enough pack points!');
+      return;
+    }
+
+    setConfirmModal({
+      isOpen: true,
+      title: 'Spark Card',
+      message: `Spark a random ${rarity} card for ${cost} pts?`,
+      onConfirm: async () => {
+        setOpening(true);
+        setPackOpeningStep('shaking');
+        // Placeholder image for spark
+        setOpeningPackImageUrl('https://picsum.photos/seed/spark/400/300');
+
+        try {
+          const { data, error } = await supabase.rpc('spark_card', {
+            p_rarity: rarity
+          });
+
+          if (error) throw error;
+
+          setOpenedCards(data.cards);
+          setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
+          
+          setTimeout(() => {
+            setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
+            audioService.play('pack_open');
+          }, 1500);
+
+        } catch (err: any) {
+          toast.error(err.message || 'Failed to spark card');
+          setPackOpeningStep('idle');
+        } finally {
+          setOpening(false);
+          useProfileStore.getState().refreshProfile();
+        }
+      }
+    });
+  };
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -446,7 +502,29 @@ export function Store() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Store</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Store</h1>
+        
+        {profile && (
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <Sparkles className="w-5 h-5" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase opacity-70">Pack Points</span>
+                <span className="text-lg font-black leading-none">{profile.pack_points?.toLocaleString() || 0} pts</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-yellow-400 text-black px-4 py-2 rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <Coins className="w-5 h-5" />
+              <span className="text-lg font-black leading-none">{profile.gold_balance?.toLocaleString() || 0}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-emerald-400 text-black px-4 py-2 rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <Gem className="w-5 h-5" />
+              <span className="text-lg font-black leading-none">{profile.gem_balance?.toLocaleString() || 0}</span>
+            </div>
+          </div>
+        )}
+      </div>
       
       <div className="flex gap-4 border-b-4 border-[var(--border)] pb-4 overflow-x-auto scrollbar-hide">
         {Object.entries(tabLabels).map(([key, label]) => (
@@ -558,9 +636,27 @@ export function Store() {
                 <motion.div 
                   key={pack.id}
                   whileHover={{ y: -4, rotate: -1 }}
-                  className={cn("bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col", !canAfford && "opacity-60")}
+                  className={cn(
+                    "bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col",
+                    pack.pack_tier === 'booster_box' && "border-yellow-500 scale-[1.02] shadow-[12px_12px_0px_0px_rgba(234,179,8,0.2)]",
+                    pack.pack_tier === 'collector' && "border-red-500 shadow-[12px_12px_0px_0px_rgba(239,68,68,0.2)]",
+                    !canAfford && "opacity-60"
+                  )}
                 >
-                  <div className="aspect-[4/3] bg-blue-100 flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]">
+                  <div className={cn(
+                    "aspect-[4/3] flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]",
+                    pack.pack_tier === 'booster_box' ? "bg-yellow-50" : pack.pack_tier === 'collector' ? "bg-red-50" : "bg-blue-100"
+                  )}>
+                    {pack.pack_tier === 'booster_box' && (
+                      <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                        Bulk Value
+                      </div>
+                    )}
+                    {pack.pack_tier === 'collector' && (
+                      <div className="absolute top-4 left-4 z-20 bg-red-600 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                        Collector's Edition
+                      </div>
+                    )}
                     <div className="w-48 aspect-[4/3] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gradient-to-b from-slate-700 to-slate-900 relative transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)]">
                       <img
                         src={pack.image_url}
@@ -584,15 +680,56 @@ export function Store() {
                       <h3 className="text-2xl font-black text-[var(--text)] uppercase">{pack.name}</h3>
                       <div className="flex flex-col items-end gap-1">
                         <div className="bg-blue-500 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                          {pack.next_pity_in === 1 ? '🔥 Rare Guaranteed!' : `Rare in ${pack.next_pity_in} packs`}
+                          {pack.next_hard_pity_in === 1 ? '🔥 Rare Guaranteed!' : `Rare in ${pack.next_hard_pity_in}`}
                         </div>
-                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                          Pity Progress: {10 - pack.next_pity_in}/10
+                        <div className="bg-red-500 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                          {pack.next_soft_pity_in === 1 ? '✨ Divine Boosted!' : `Divine in ${pack.next_soft_pity_in}`}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      <div>
+                        <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
+                          <span>Hard Pity</span>
+                          <span>{100 - pack.next_hard_pity_in}/100</span>
+                        </div>
+                        <div className="h-2 bg-slate-200 rounded-full border-2 border-[var(--border)] overflow-hidden">
+                          <div 
+                            className="h-full bg-red-400 transition-all"
+                            style={{ width: `${((100 - pack.next_hard_pity_in) / 100) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
+                          <span>Soft Pity</span>
+                          <span>{50 - pack.next_soft_pity_in}/50</span>
+                        </div>
+                        <div className="h-2 bg-slate-200 rounded-full border-2 border-[var(--border)] overflow-hidden">
+                          <div 
+                            className="h-full bg-purple-400 transition-all"
+                            style={{ width: `${((50 - pack.next_soft_pity_in) / 50) * 100}%` }}
+                          />
                         </div>
                       </div>
                     </div>
                     
-                    <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 flex-1">{pack.description}</p>
+                    <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 mt-4">{pack.description}</p>
+                    
+                    {pack.pack_tier === 'booster_box' && (
+                      <p className="text-[10px] text-yellow-600 font-black uppercase mb-4 flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-current" />
+                        Guaranteed minimum rare ratio!
+                      </p>
+                    )}
+                    {pack.pack_tier === 'collector' && (
+                      <p className="text-[10px] text-red-600 font-black uppercase mb-4 flex items-center gap-1">
+                        <Zap className="w-3 h-3 fill-current" />
+                        Premium: No Commons inside!
+                      </p>
+                    )}
                     
                     <button onClick={() => setShowOdds(prev => ({...prev, [pack.id]: !prev[pack.id]}))}
                       className="text-xs text-slate-500 font-bold underline mt-1 mb-2">
@@ -606,7 +743,7 @@ export function Store() {
                             let displayPct = o.pct;
                             let isPityBoosted = false;
                             
-                            if (pack.next_pity_in === 1) {
+                            if (pack.next_hard_pity_in === 1) {
                               if (o.rarity === 'Common' || o.rarity === 'Uncommon') {
                                 displayPct = '0%';
                               } else if (o.rarity === 'Rare') {
@@ -615,6 +752,11 @@ export function Store() {
                               } else {
                                 isPityBoosted = true;
                               }
+                            }
+
+                            if (pack.next_soft_pity_in === 1 && o.rarity === 'Divine') {
+                              displayPct = '5%*';
+                              isPityBoosted = true;
                             }
 
                             return (
@@ -646,8 +788,11 @@ export function Store() {
                             );
                           })}
                         </div>
-                        {pack.next_pity_in === 1 && (
+                        {pack.next_hard_pity_in === 1 && (
                           <p className="text-[9px] text-blue-500 italic font-bold">* Pity active: Guaranteed Rare or better.</p>
+                        )}
+                        {pack.next_soft_pity_in === 1 && (
+                          <p className="text-[9px] text-red-500 italic font-bold">* Soft pity active: Increased Divine chance!</p>
                         )}
                         {pack.foil_chance && (
                           <div className="flex justify-between items-center text-[10px] font-black uppercase text-yellow-600 pt-1">
@@ -736,6 +881,97 @@ export function Store() {
       }
     </div>
   )}
+
+  {activeTab === 'spark' && (
+        <div className="space-y-8">
+          <div className="bg-indigo-900 border-4 border-black rounded-3xl p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden">
+             {/* Background glow */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/20 blur-[100px] -translate-y-1/2 translate-x-1/2 rounded-full" />
+            
+            <div className="relative z-10 max-w-2xl">
+              <h2 className="text-4xl font-black uppercase italic tracking-tighter mb-4 flex items-center gap-3">
+                <Sparkles className="w-10 h-10 text-yellow-400 animate-pulse" />
+                The Spark
+              </h2>
+              <p className="text-indigo-200 text-lg font-bold mb-8 leading-relaxed">
+                Use your Pack Points to spark specific rarities. Each spark guarantees a random card from the chosen rarity pool.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                  { rarity: 'Common', cost: 100, color: 'bg-slate-500' },
+                  { rarity: 'Uncommon', cost: 200, color: 'bg-green-500' },
+                  { rarity: 'Rare', cost: 1000, color: 'bg-blue-500' },
+                  { rarity: 'Super-Rare', cost: 3000, color: 'bg-purple-500' },
+                  { rarity: 'Mythic', cost: 10000, color: 'bg-yellow-500' },
+                  { rarity: 'Divine', cost: 50000, color: 'bg-red-500' },
+                ].map((item) => (
+                  <button
+                    key={item.rarity}
+                    onClick={() => handleSparkCard(item.rarity, item.cost)}
+                    disabled={profile?.pack_points < item.cost}
+                    className={cn(
+                      "group bg-indigo-800/50 border-4 border-black p-6 rounded-2xl text-left transition-all hover:translate-y-[-4px] active:translate-y-0 relative overflow-hidden",
+                      profile?.pack_points >= item.cost ? "hover:bg-indigo-700/50 cursor-pointer shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" : "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <div className={cn("w-12 h-1.5 rounded-full mb-4", item.color)} />
+                    <h4 className="text-xl font-black uppercase mb-1">{item.rarity}</h4>
+                    <p className="text-indigo-300 font-bold flex items-center gap-2">
+                       <Sparkles className="w-4 h-4" />
+                       {item.cost.toLocaleString()} pts
+                    </p>
+                    
+                    {profile?.pack_points >= item.cost && (
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Plus className="w-5 h-5 text-indigo-400" />
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+             <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
+                <h3 className="text-2xl font-black uppercase mb-4 flex items-center gap-2">
+                   <Target className="w-6 h-6 text-indigo-500" />
+                   How to earn points?
+                </h3>
+                <ul className="space-y-4 font-bold text-slate-600">
+                   <li className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-indigo-200 shrink-0 mt-0.5">1</div>
+                      <p>Open any pack in the store to earn base points.</p>
+                   </li>
+                   <li className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-indigo-200 shrink-0 mt-0.5">2</div>
+                      <p>Unlock higher rarity cards for bonus points.</p>
+                   </li>
+                   <li className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-indigo-200 shrink-0 mt-0.5">3</div>
+                      <p>Collector packs grant significantly more points per card.</p>
+                   </li>
+                </ul>
+             </div>
+             
+             <div className="bg-gradient-to-br from-indigo-500 to-purple-600 border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-white">
+                <h3 className="text-2xl font-black uppercase mb-4 flex items-center gap-2">
+                   <Award className="w-6 h-6" />
+                   Spark Pool
+                </h3>
+                <p className="font-bold opacity-90 leading-relaxed mb-6">
+                   Each rarity pool contains all released cards of that tier. Sparking is the best way to fill missing gaps in your collection once you've accumulated enough points.
+                </p>
+                <div className="p-4 bg-black/20 rounded-xl border-2 border-white/20">
+                   <p className="text-xs font-black uppercase tracking-widest leading-loose">
+                      Pools updated weekly with new card releases. Divine Sparking is only available for legacy divine cards.
+                   </p>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'shop' && (
         <ShopSection

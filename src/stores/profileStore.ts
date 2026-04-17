@@ -25,6 +25,9 @@ export interface Profile {
   is_public: boolean;
   is_admin: boolean;
   last_reward_type: string | null;
+  pack_points: number;
+  soft_pity_counter: number;
+  foil_cards?: number;
 }
 
 interface ProfileState {

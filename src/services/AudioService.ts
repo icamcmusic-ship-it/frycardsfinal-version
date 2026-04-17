@@ -11,6 +11,7 @@ const SOUNDS = {
   rare_reveal: 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3',
   mythic_reveal: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Placeholder
   divine_reveal: 'https://assets.mixkit.co/active_storage/sfx/2015/2015-preview.mp3', // Placeholder
+  god_pack: 'https://assets.mixkit.co/active_storage/sfx/2012/2012-preview.mp3', // High energy win sound
   gold_gain: 'https://assets.mixkit.co/active_storage/sfx/2015/2015-preview.mp3',
   gem_gain: 'https://assets.mixkit.co/active_storage/sfx/2016/2016-preview.mp3',
 };

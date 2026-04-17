@@ -989,21 +989,26 @@ export function Marketplace() {
                             return;
                           }
                           
+                          const taxAmount = Math.ceil(bidAmount * 0.10);
+                          const totalCost = bidAmount + taxAmount;
+                          const currencyName = listing.currency === 'gold' ? 'Gold' : 'Gems';
+                          
                           setConfirmModal({
                             isOpen: true,
                             title: 'Confirm Bid',
-                            message: `Place a bid of ${bidAmount} ${listing.currency} on ${listing.card_name}?`,
+                            message: `Place a bid on ${listing.card_name}? Bid: ${bidAmount} ${currencyName} + 10% tax (${taxAmount} ${currencyName}) = ${totalCost} ${currencyName} total`,
                             variant: 'info',
                             onConfirm: async () => {
                               setBuying(listing.id);
                               try {
-                                const { error } = await supabase.rpc('place_bid', {
+                                const { data, error } = await supabase.rpc('place_bid', {
                                   p_listing_id: listing.id,
                                   p_bid_gold: listing.currency === 'gold' ? bidAmount : 0,
                                   p_bid_gems: listing.currency === 'gems' ? bidAmount : 0
                                 });
                                 if (error) throw error;
-                                toast.success('Bid placed successfully!', { icon: '🔨' });
+                                const taxStr = data?.tax_paid ? ` (${data.tax_paid} ${currencyName} tax paid)` : '';
+                                toast.success(`Bid placed successfully!${taxStr}`, { icon: '🔨' });
                                 
                                 // Refresh profile to update gold/gems
                                 await useProfileStore.getState().refreshProfile();

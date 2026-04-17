@@ -24,9 +24,9 @@ interface ShopSectionProps {
 export function ShopSection({ shopItems, profile, userCosmetics, onBuyItem }: ShopSectionProps) {
   const ownedItemIds = useMemo(() => new Set(userCosmetics.map(c => c.item_id)), [userCosmetics]);
 
-  const banners = useMemo(() => shopItems.filter(i => i.item_type === 'banner'), [shopItems]);
+  const banners = useMemo(() => shopItems.filter(i => i.item_type === 'profile_banner'), [shopItems]);
   const cardBacks = useMemo(() => shopItems.filter(i => i.item_type === 'card_back'), [shopItems]);
-  const icons = useMemo(() => shopItems.filter(i => i.item_type === 'avatar'), [shopItems]);
+  const icons = useMemo(() => shopItems.filter(i => i.item_type === 'profile_avatar'), [shopItems]);
 
   const renderItem = (item: ShopItem, aspectClass: string) => {
     const isOwned = ownedItemIds.has(item.id);

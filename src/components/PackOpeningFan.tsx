@@ -113,11 +113,28 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
   const step = count > 1 ? arc / (count - 1) : 0;
   const startAngle = (arc / 2) * -1;
 
+  const isGodPack = cards.length > 0 && cards[0]?.is_god_pack;
+
+  useEffect(() => {
+    if (isOpen && isGodPack) {
+      audioService.play('god_pack');
+    }
+  }, [isOpen, isGodPack]);
+
   return (
     <div className={cn(
       "fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-end transition-opacity duration-500",
       isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
     )}>
+      {/* God Pack Flash */}
+      {isGodPack && isOpen && flippedCount === 0 && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 1, 0] }}
+          transition={{ duration: 1.5, times: [0, 0.2, 1] }}
+          className="absolute inset-0 bg-yellow-400 z-[110] pointer-events-none"
+        />
+      )}
       {/* Background patterns */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" 
            style={{ 
@@ -125,6 +142,12 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
              backgroundSize: '40px 40px' 
            }} 
       />
+
+      {cards.length > 0 && cards[0]?.is_god_pack && (
+        <div className="absolute top-0 inset-x-0 z-50 text-center py-3 bg-yellow-400 border-b-4 border-[var(--border)] font-black text-2xl uppercase tracking-widest animate-pulse">
+          ⚡ GOD PACK ⚡
+        </div>
+      )}
 
       {/* Header */}
       <div className="absolute top-12 left-0 right-0 text-center z-10 px-4">
