@@ -9,8 +9,8 @@ import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 
 export function Layout() {
-  const { user, setSession, setUser } = useAuthStore();
-  const { profile, fetchProfile, setProfile } = useProfileStore();
+  const { user, signOut } = useAuthStore();
+  const { profile, fetchProfile, setProfile, loading: profileLoading } = useProfileStore();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
   const [newCardCount, setNewCardCount] = useState(0);
@@ -151,10 +151,7 @@ export function Layout() {
   }, [user, fetchProfile, setProfile]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
-    setProfile(null);
+    await signOut();
   };
 
   const navItems = [
@@ -231,6 +228,27 @@ export function Layout() {
     if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
+
+  if (user && profileLoading && !profile) {
+    return (
+      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-8">
+        <div className="max-w-7xl w-full space-y-8">
+          <div className="h-16 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="h-[600px] bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse hidden md:block shadow-[4px_4px_0px_0px_var(--border)]"></div>
+            <div className="md:col-span-3 space-y-8">
+              <div className="h-64 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[8px_8px_0px_0px_var(--border)]"></div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
+                <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
+                <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-red-400/30">

@@ -32,6 +32,7 @@ export interface Profile {
 
 interface ProfileState {
   profile: Profile | null;
+  loading: boolean;
   setProfile: (profile: Profile | null) => void;
   fetchProfile: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -39,16 +40,21 @@ interface ProfileState {
 
 export const useProfileStore = create<ProfileState>((set) => ({
   profile: null,
-  setProfile: (profile) => set({ profile }),
+  loading: true,
+  setProfile: (profile) => set({ profile, loading: false }),
   fetchProfile: async () => {
+    set({ loading: true });
     try {
       const { data, error } = await supabase.rpc('get_my_profile');
       if (error) throw error;
       if (data) {
-        set({ profile: data as Profile });
+        set({ profile: data as Profile, loading: false });
+      } else {
+        set({ loading: false });
       }
     } catch (err) {
       console.error('Error fetching profile:', err);
+      set({ loading: false });
     }
   },
   refreshProfile: async () => {

@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 
 export function Profile() {
   const { profile, setProfile } = useProfileStore();
-  const { user, signOut } = useAuthStore();
+  const { user, signOut: authSignOut } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [username, setUsername] = useState(profile?.username || '');
@@ -198,7 +198,7 @@ export function Profile() {
       <div className="flex items-center justify-between">
         <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase">Profile</h1>
         <button 
-          onClick={signOut}
+          onClick={authSignOut}
           className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
         >
           <LogOut className="w-5 h-5" />

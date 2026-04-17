@@ -158,133 +158,30 @@ body { background-color: var(--bg); color: var(--text); }
 }
 
 /* === UNIVERSAL CARD STYLING === */
+.card-base { width: 100%; aspect-ratio: 3/4; position: relative; overflow: hidden; border-radius: 1.5rem; container-type: inline-size; }
+.full-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 1.25rem; }
+.sticker { position: absolute; color: #111; }
 .brut-border { border: 4px solid #111; }
-.brut-border-2 { border: 2px solid #111; }
 .brut-shadow { box-shadow: 8px 8px 0px 0px #111; }
-.brut-shadow-sm { box-shadow: 4px 4px 0px 0px #111; }
+.color-common, .color-gray  { background-color: rgba(209,213,221,0.5); backdrop-filter: blur(8px); }
+.color-uncommon, .color-green { background-color: rgba(165,201,156,0.5); backdrop-filter: blur(8px); }
+.color-rare, .color-blue    { background-color: rgba(75,163,227,0.5);  backdrop-filter: blur(8px); }
+.color-super-rare, .color-purple { background-color: rgba(226,168,255,0.5); backdrop-filter: blur(8px); }
+.color-mythic, .color-gold  { background-color: rgba(255,223,108,0.5); backdrop-filter: blur(8px); }
+.color-divine, .color-red   { background-color: rgba(254,52,72,0.5);   backdrop-filter: blur(8px); }
+.bg-white-trans { background-color: rgba(255,255,255,0.5); backdrop-filter: blur(8px); }
+.shadow-common, .shadow-gray    { box-shadow: 4px 4px 0px 0px #9ca3af; }
+.shadow-uncommon, .shadow-green { box-shadow: 4px 4px 0px 0px #a5c99c; }
+.shadow-rare, .shadow-blue      { box-shadow: 4px 4px 0px 0px #4ba3e3; }
+.shadow-super-rare, .shadow-purple { box-shadow: 4px 4px 0px 0px #e2a8ff; }
+.shadow-mythic, .shadow-gold    { box-shadow: 4px 4px 0px 0px #ffdf6c; }
+.shadow-divine, .shadow-red     { box-shadow: 4px 4px 0px 0px #fe3448; }
 
-.container-type-inline-size { container-type: inline-size; }
+.foil-shine { background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%); background-size: 200% 100%; animation: sweep-shine 2s linear infinite; }
+.badge-foil { background: linear-gradient(90deg,#e2a8ff,#ffdf6c,#4ba3e3,#e2a8ff); background-size: 300% 100%; animation: foil-badge-sweep 2s linear infinite; }
 
-.card-base {
-    width: 100%;
-    aspect-ratio: 3/4;
-    flex-shrink: 0;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    position: relative;
-    overflow: hidden; 
-    border-radius: 1.5rem; 
-    container-type: inline-size;
-}
-
-.full-art {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 0;
-    border-radius: 1.25rem;
-}
-
-.sticker {
-    position: absolute;
-    pointer-events: auto;
-    color: #111;
-}
-
-/* Highly Transparent Rarity Colors with Backdrop Blur */
-.color-common { background-color: rgba(100, 116, 139, 0.75); backdrop-filter: blur(8px); }
-.color-uncommon { background-color: rgba(165, 201, 156, 0.75); backdrop-filter: blur(8px); }
-.color-rare { background-color: rgba(75, 163, 227, 0.75); backdrop-filter: blur(8px); }
-.color-super-rare { background-color: rgba(226, 168, 255, 0.75); backdrop-filter: blur(8px); }
-.color-mythic { background-color: rgba(255, 223, 108, 0.75); backdrop-filter: blur(8px); }
-.color-divine { background-color: rgba(254, 52, 72, 0.75); backdrop-filter: blur(8px); }
-
-/* Transparent White for Flavor Text/Names */
-.bg-white-trans { background-color: rgba(255, 255, 255, 0.75); backdrop-filter: blur(8px); }
-
-/* Sticker Shadows */
-.shadow-common { box-shadow: 4px 4px 0px 0px #9ca3af; }
-.shadow-uncommon { box-shadow: 4px 4px 0px 0px #7b9c71; }
-.shadow-rare { box-shadow: 4px 4px 0px 0px #357db5; }
-.shadow-super-rare { box-shadow: 4px 4px 0px 0px #b07bd1; }
-.shadow-mythic { box-shadow: 4px 4px 0px 0px #cca738; }
-.shadow-divine { box-shadow: 4px 4px 0px 0px #c92030; }
-
-/* Super-Rare: Purple Pulse */
-.effect-sr {
-    animation: sr-pulse 2s infinite alternate ease-in-out;
-}
-
-/* Mythic: Golden Shine & Float */
-.effect-mythic {
-    animation: mythic-float 4s infinite ease-in-out;
-}
-.effect-mythic::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-    background: linear-gradient(115deg, transparent 20%, rgba(255, 223, 108, 0.8) 45%, rgba(255, 255, 255, 0.9) 50%, rgba(255, 223, 108, 0.8) 55%, transparent 80%);
-    background-size: 300% 300%;
-    animation: holo-shimmer 2.5s infinite ease-in-out;
-    pointer-events: none;
-    mix-blend-mode: color-dodge;
-}
-
-/* Divine: Red Pulse */
-.effect-divine {
-    animation: divine-pulse 1.5s infinite alternate ease-in-out;
-}
-
-.foil-shine::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: 20; 
-    background: linear-gradient(105deg, 
-        transparent 20%, 
-        rgba(255, 255, 255, 0) 35%, 
-        rgba(255, 255, 255, 0.8) 45%, 
-        rgba(255, 255, 255, 0) 55%, 
-        transparent 80%);
-    background-size: 200% 200%;
-    animation: sweep-shine 4s infinite ease-in-out;
-    mix-blend-mode: overlay;
-    pointer-events: none;
-}
-
-.badge-foil {
-    background: linear-gradient(90deg, #ffdf6c, #e2a8ff, #4ba3e3, #ffdf6c);
-    background-size: 300% 100%;
-    animation: foil-badge-sweep 3s linear infinite;
-    backdrop-filter: none;
-}
-
-@keyframes sr-pulse {
-    0% { box-shadow: 8px 8px 0px 0px #e2a8ff; }
-    100% { box-shadow: 12px 12px 0px 0px #111; transform: scale(1.01); }
-}
-@keyframes mythic-float {
-    0%, 100% { transform: translateY(0); box-shadow: 8px 8px 0px 0px #111; }
-    50% { transform: translateY(-10px); box-shadow: 12px 12px 0px 0px #ffdf6c; }
-}
-@keyframes divine-pulse {
-    0% { box-shadow: 8px 8px 0px 0px #fe3448; }
-    100% { box-shadow: 12px 12px 0px 0px #111; transform: scale(1.02); }
-}
-@keyframes sweep-shine {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-@keyframes foil-badge-sweep {
-    0% { background-position: 0% 0; }
-    100% { background-position: 300% 0; }
-}
-@keyframes holo-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
+@keyframes sweep-shine { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+@keyframes foil-badge-sweep { 0%{background-position:0% 0} 100%{background-position:300% 0} }
 
 .pb-nav-safe { 
   padding-bottom: calc(4rem + env(safe-area-inset-bottom)); 

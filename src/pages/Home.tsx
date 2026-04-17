@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
 import { ENERGY_REGEN_INTERVAL } from '../constants';
-import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift, Package } from 'lucide-react';
+import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift, Package, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -25,10 +25,13 @@ export function Home() {
   const [showSpinner, setShowSpinner] = useState(false);
   const [showDailyPreview, setShowDailyPreview] = useState(false);
   const [userPacks, setUserPacks] = useState<any[]>([]);
+  const [userQuests, setUserQuests] = useState<any[]>([]);
+  const [loadingQuestsNew, setLoadingQuestsNew] = useState(true);
 
   useEffect(() => {
     if (profile) {
       fetchUserPacks();
+      fetchUserQuests();
     }
   }, [profile]);
 
@@ -39,6 +42,18 @@ export function Home() {
       setUserPacks(data || []);
     } catch (err) {
       console.error('Error fetching user packs:', err);
+    }
+  };
+
+  const fetchUserQuests = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_user_quests');
+      if (error) throw error;
+      setUserQuests(data || []);
+    } catch (err) {
+      console.error('Error fetching user quests:', err);
+    } finally {
+      setLoadingQuestsNew(false);
     }
   };
 
@@ -337,39 +352,40 @@ export function Home() {
           </div>
         </div>
 
-        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform relative overflow-hidden">
           <div className="w-14 h-14 rounded-xl bg-purple-300 flex items-center justify-center border-4 border-[var(--border)] transform -rotate-3">
             <Zap className="w-7 h-7 text-black" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-sm text-slate-600 font-bold uppercase">Energy</p>
             <div className="flex items-baseline gap-2">
               <p className="text-3xl font-black text-[var(--text)] font-mono">{currentEnergy} / {profile?.max_energy ?? 20}</p>
-              {currentEnergy < (profile?.max_energy ?? 20) && nextRegen && (
-                <span className="text-xs font-bold text-slate-500">
-                  +1 in {(() => {
-                    const diff = Math.max(0, nextRegen - Date.now());
-                    const mins = Math.floor(diff / 60000);
-                    const secs = Math.floor((diff % 60000) / 1000);
-                    return `${mins}:${secs.toString().padStart(2, '0')}`;
-                  })()}
-                </span>
-              )}
             </div>
           </div>
+          {currentEnergy < (profile?.max_energy ?? 20) && nextRegen && (
+            <div className="absolute top-2 right-2 px-2 py-0.5 bg-purple-500 text-white text-[10px] font-black rounded-lg border-2 border-black rotate-3 animate-pulse">
+              {(() => {
+                const diff = Math.max(0, nextRegen - Date.now());
+                const mins = Math.floor(diff / 60000);
+                const secs = Math.floor((diff % 60000) / 1000);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+              })()}
+            </div>
+          )}
         </div>
       </div>
 
       {/* My Packs Section */}
-      {userPacks.length > 0 && (
-        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_var(--border)]">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">
-              <Package className="w-6 h-6 text-indigo-500" />
-              My Packs
-            </h2>
-            <Link to="/store?tab=inventory" className="text-indigo-500 font-black uppercase text-sm hover:underline">View All</Link>
-          </div>
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_var(--border)]">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">
+            <Package className="w-6 h-6 text-indigo-500" />
+            My Packs
+          </h2>
+          {userPacks.length > 0 && <Link to="/store?tab=inventory" className="text-indigo-500 font-black uppercase text-sm hover:underline">View All</Link>}
+        </div>
+        
+        {userPacks.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {userPacks.slice(0, 6).map((pack) => (
               <Link
@@ -394,63 +410,144 @@ export function Home() {
               </Link>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Daily Missions Preview */}
-      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_var(--border)]">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">
-            <Zap className="w-6 h-6 text-yellow-500 fill-yellow-500" />
-            Daily Missions
-          </h2>
-        </div>
-        
-        <div className="space-y-4">
-          {loadingQuests ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        ) : (
+          <div className="bg-indigo-50 border-4 border-dashed border-indigo-200 rounded-2xl p-8 text-center space-y-4">
+            <div className="w-16 h-16 bg-white rounded-2xl border-2 border-indigo-100 flex items-center justify-center mx-auto opacity-50">
+              <PackageOpen className="w-8 h-8 text-indigo-300" />
             </div>
-          ) : quests.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 font-bold">No active quests. Check back tomorrow!</div>
-          ) : (
-            quests.map((quest) => (
-              <div key={quest.id} className="bg-gray-50 border-2 border-[var(--border)] rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[2px_2px_0px_0px_var(--border)]">
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                  <div className="w-12 h-12 rounded-lg bg-blue-100 border-2 border-[var(--border)] flex items-center justify-center shrink-0">
-                    <Zap className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-[var(--text)] text-lg">{(quest.mission_type || quest.quest_type || '').replace(/_/g, ' ').toUpperCase()}</p>
-                    <div className="w-full sm:w-48 h-3 bg-[var(--bg)] border-2 border-[var(--border)] rounded-full mt-2 overflow-hidden">
-                      <div 
-                        className="h-full bg-green-400 border-r-2 border-[var(--border)] transition-all" 
-                        style={{ width: `${Math.min(100, (quest.progress / (quest.target || quest.target_value || 1)) * 100)}%` }}
-                      />
+            <div>
+              <p className="text-lg font-black text-indigo-900 uppercase">0 Packs Available</p>
+              <p className="text-sm font-bold text-indigo-600/70">Visit the store to get your first pack or complete missions!</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              <Link to="/store" className="px-6 py-2 bg-indigo-500 text-white font-black rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_black] hover:translate-y-[-2px] transition-all">
+                Go to Store
+              </Link>
+              {profile?.is_admin && (
+                <Link to="/admin" className="px-6 py-2 bg-white text-black font-black rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_black] hover:translate-y-[-2px] transition-all flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4" />
+                  Grant Packs
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Missions & Quests Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Daily Missions */}
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_var(--border)]">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">
+              <Zap className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+              Daily Missions
+            </h2>
+            <Link to="/quests" className="text-yellow-600 font-black uppercase text-sm hover:underline">Full List</Link>
+          </div>
+          
+          <div className="space-y-4">
+            {loadingQuests ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+              </div>
+            ) : quests.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 font-bold bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">No active missions.</div>
+            ) : (
+              quests.slice(0, 3).map((quest) => (
+                <div key={quest.id} className="bg-white border-2 border-[var(--border)] rounded-xl p-4 flex flex-col items-stretch gap-4 shadow-[2px_2px_0px_0px_var(--border)]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-blue-100 border-2 border-[var(--border)] flex items-center justify-center shrink-0">
+                      <Zap className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-[var(--text)] text-sm uppercase truncate">{(quest.mission_type || quest.quest_type || '').replace(/_/g, ' ')}</p>
+                      <div className="w-full h-2 bg-slate-100 border border-[var(--border)] rounded-full mt-1 overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-400 transition-all duration-500" 
+                          style={{ width: `${Math.min(100, (quest.progress / (quest.target || quest.target_value || 1)) * 100)}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
+                  <div className="flex items-center justify-between pl-11">
+                    <p className="text-xs font-black text-slate-500">{quest.progress} / {quest.target || quest.target_value}</p>
+                    {quest.is_completed && !quest.is_claimed ? (
+                      <button 
+                        onClick={() => handleClaimQuest(quest.id)}
+                        disabled={claimingQuest === quest.id}
+                        className="px-3 py-1 bg-green-400 hover:bg-green-500 disabled:opacity-50 text-black font-black text-[10px] rounded border-2 border-black shadow-[2px_2px_0px_0px_black] active:translate-y-0.5 active:shadow-none transition-all"
+                      >
+                        {claimingQuest === quest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'CLAIM'}
+                      </button>
+                    ) : quest.is_claimed ? (
+                       <span className="text-[10px] text-emerald-500 font-black uppercase">Completed</span>
+                    ) : (
+                      <div className="flex items-center gap-1 bg-yellow-100 px-1.5 py-0.5 rounded border border-yellow-300">
+                        <Coins className="w-3 h-3 text-yellow-600" />
+                        <span className="text-[10px] font-black text-yellow-700">{quest.reward_amount || quest.reward_gold || 0}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
-                  <p className="text-lg font-black text-[var(--text)]">{quest.progress} / {quest.target || quest.target_value}</p>
-                  {quest.is_completed && !quest.is_claimed ? (
-                    <button 
-                      onClick={() => { console.log('Claim clicked'); handleClaimQuest(quest.id); }}
-                      disabled={claimingQuest === quest.id}
-                      className="px-4 py-1 bg-green-400 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-sm rounded-lg border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2"
-                    >
-                      {claimingQuest === quest.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Claim Reward'}
-                    </button>
-                  ) : quest.is_claimed ? (
-                    <span className="text-sm text-slate-500 font-bold uppercase">Claimed</span>
-                  ) : (
-                    <p className="text-sm text-yellow-600 font-bold bg-yellow-100 px-2 py-0.5 rounded border border-yellow-400 inline-block">
-                      +{quest.reward_amount || quest.reward_gold || quest.reward_gems || 0} {(quest.reward_type || quest.quest_type || 'gold') === 'gold' ? 'Gold' : 'Gems'}
-                    </p>
-                  )}
-                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Epic Quests */}
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_var(--border)]">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">
+              <Trophy className="w-6 h-6 text-blue-500" />
+              Epic Quests
+            </h2>
+            <Link to="/quests" className="text-blue-600 font-black uppercase text-sm hover:underline">View All</Link>
+          </div>
+          
+          <div className="space-y-4">
+            {loadingQuestsNew ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
               </div>
-            ))
-          )}
+            ) : userQuests.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 font-bold bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">No active quests.</div>
+            ) : (
+              userQuests.slice(0, 3).map((quest) => (
+                <div key={quest.id} className="bg-white border-2 border-[var(--border)] rounded-xl p-4 flex flex-col items-stretch gap-4 shadow-[2px_2px_0px_0px_var(--border)]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-indigo-100 border-2 border-[var(--border)] flex items-center justify-center shrink-0">
+                      <Trophy className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-[var(--text)] text-sm uppercase truncate">{quest.title}</p>
+                      <div className="w-full h-2 bg-slate-100 border border-[var(--border)] rounded-full mt-1 overflow-hidden">
+                        <div 
+                          className="h-full bg-indigo-500 transition-all duration-500" 
+                          style={{ width: `${Math.min(100, (quest.current_value / quest.target_value) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pl-11">
+                    <p className="text-xs font-black text-slate-500">{quest.current_value} / {quest.target_value}</p>
+                    {quest.status === 'completed' ? (
+                       <Link to="/quests" className="px-3 py-1 bg-indigo-400 hover:bg-indigo-500 text-black font-black text-[10px] rounded border-2 border-black shadow-[2px_2px_0px_0px_black] active:translate-y-0.5 active:shadow-none transition-all">
+                         VIEW
+                       </Link>
+                    ) : quest.status === 'claimed' ? (
+                       <span className="text-[10px] text-indigo-500 font-black uppercase">Claimed</span>
+                    ) : (
+                      <div className="flex items-center gap-1 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                        <Gem className="w-3 h-3 text-emerald-600" />
+                        <span className="text-[10px] font-black text-emerald-700">{quest.reward_amount}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
