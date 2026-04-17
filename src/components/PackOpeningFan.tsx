@@ -95,12 +95,16 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
       }
     }
 
-    // Shuffle for organic feel
-    stack.sort(() => Math.random() - 0.5);
+    // Sort sequentially (left to right) for the crescendo effect
+    stack.sort((a, b) => a - b);
 
     for (let i = 0; i < stack.length; i++) {
       flipAndMove(stack[i], true);
-      await new Promise(r => setTimeout(r, 150));
+      // Crescendo effect: shorter delay at start, longer towards the end
+      // Start at 80ms, end at 300ms
+      const progress = i / stack.length;
+      const delay = 80 + (progress * 220);
+      await new Promise(r => setTimeout(r, delay));
     }
     
     setIsAutoRunning(false);
@@ -239,6 +243,27 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
                 {/* Back (Front of card) */}
                 <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white border-2 border-black rounded-xl overflow-hidden">
                    <CardDisplay card={card} showQuantity={false} showNewBadge={card.is_new} />
+                   
+                   {/* Slot Type Label */}
+                   {state === 'chase' && (
+                     <div className="absolute top-2 right-2 z-20">
+                        {card.slot_type === 'variance' && card.rarity !== 'Common' && (
+                          <div className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded border border-black uppercase animate-bounce shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                             🎲 Variance Hit!
+                          </div>
+                        )}
+                        {card.slot_type === 'foil_chase_sr_plus' && (
+                          <div className="bg-purple-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded border border-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                             ✨ Chase Slot
+                          </div>
+                        )}
+                        {card.is_god_pack && (
+                          <div className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded border border-black uppercase animate-pulse shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                             ⚡ God Pack
+                          </div>
+                        )}
+                     </div>
+                   )}
                 </div>
               </div>
             </div>

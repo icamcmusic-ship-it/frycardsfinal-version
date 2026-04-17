@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
 import { ENERGY_REGEN_INTERVAL } from '../constants';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 
@@ -172,6 +172,9 @@ export function Layout() {
     { name: 'Achievements', path: '/achievements', icon: Award, category: 'Progression' },
     { name: 'Leaderboard', path: '/leaderboard', icon: Trophy, category: 'Progression' },
     { name: 'Season Pass', path: '/season-pass', icon: Gift, category: 'Progression' },
+    
+    { name: 'How to Play', path: '/how-to-play', icon: BookOpen, category: 'Help' },
+    { name: 'Changelog', path: '/changelog', icon: History, category: 'Help' },
     
     { name: 'Settings', path: '/settings', icon: SettingsIcon, category: 'System' },
   ];

@@ -23,6 +23,8 @@ import { PublicProfile } from './pages/PublicProfile';
 import { Notifications } from './pages/Notifications';
 import { Quests } from './pages/Quests';
 import { Achievements } from './pages/Achievements';
+import { Changelog } from './pages/Changelog';
+import { HowToPlay } from './pages/HowToPlay';
 import { Loader2 } from 'lucide-react';
 import { FloatingChat } from './components/FloatingChat';
 
@@ -105,6 +107,8 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/:userId" element={<PublicProfile />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/how-to-play" element={<HowToPlay />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         )}

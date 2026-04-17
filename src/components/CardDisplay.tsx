@@ -15,6 +15,7 @@ interface CardDisplayProps {
     is_new?: boolean;
     flavor_text?: string;
     is_locked?: boolean;
+    slot_type?: string;
     // Other fields are ignored as per user request
     [key: string]: any; 
   };

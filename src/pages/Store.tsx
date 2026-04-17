@@ -17,14 +17,38 @@ import { PackOpeningFan } from '../components/PackOpeningFan';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { audioService } from '../services/AudioService';
 
-const PACK_ODDS = [
-  { rarity: 'Common',     pct: '70.00%', color: 'text-slate-500' },
-  { rarity: 'Uncommon',   pct: '20.00%', color: 'text-green-600' },
-  { rarity: 'Rare',       pct: '8.00%',  color: 'text-blue-600' },
-  { rarity: 'Super-Rare', pct: '1.50%',  color: 'text-purple-600' },
-  { rarity: 'Mythic',     pct: '0.40%',  color: 'text-yellow-600' },
-  { rarity: 'Divine',     pct: '0.10%',  color: 'text-red-600' },
-];
+const SLOT_LABELS: Record<string, { label: string; color: string }> = {
+  foundation:        { label: '✅ Common (100%)',                    color: 'text-slate-500' },
+  foil_foundation:   { label: '✨ Foil Common (100%)',               color: 'text-slate-400' },
+  synergy:           { label: '🟢 Uncommon (100%)',                  color: 'text-green-600' },
+  foil_synergy:      { label: '✨ Foil Uncommon (100%)',             color: 'text-green-500' },
+  variance:          { label: '🎲 Common 98.5% / Mythic-Divine 1.5%', color: 'text-orange-500' },
+  chase:             { label: '🎯 Rare 87.6% / SR 12.4%',           color: 'text-blue-600' },
+  foil_chase:        { label: '✨ Foil Rare 87.6% / SR 12.4%',      color: 'text-blue-400' },
+  foil_chase_sr_plus:{ label: '✨ Foil SR+ guaranteed',             color: 'text-purple-500' },
+  wildcard:          { label: '🃏 Any rarity (pity-tracked)',        color: 'text-indigo-500' },
+  foil_wildcard:     { label: '✨ Foil Any (1% SR+ floor)',          color: 'text-indigo-400' },
+  mythic_or_divine:  { label: '🔥 Guaranteed Mythic or Divine',     color: 'text-red-500' },
+  sr_or_higher:      { label: '⭐ Guaranteed SR+',                   color: 'text-purple-600' },
+};
+
+function SlotBreakdown({ slotConfig }: { slotConfig: any[] }) {
+  if (!slotConfig) return null;
+  // Count and group slots
+  const counts: Record<string, number> = {};
+  slotConfig.forEach(s => { counts[s.type] = (counts[s.type] || 0) + 1; });
+  return (
+    <div className="space-y-1 text-xs mt-2 border-t border-[var(--border)] pt-2">
+      <p className="font-black text-[10px] text-slate-400 uppercase mb-1">Pack Slots</p>
+      {Object.entries(counts).map(([type, count]) => (
+        <div key={type} className={cn("flex justify-between items-center gap-2", SLOT_LABELS[type]?.color || 'text-gray-500')}>
+          <span className="font-bold truncate">{SLOT_LABELS[type]?.label || type}</span>
+          <span className="font-black">×{count}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function Store() {
   const location = useLocation();
@@ -47,6 +71,7 @@ export function Store() {
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
   const [openingSummary, setOpeningSummary] = useState<{ xp_gained: number, new_card_count: number } | null>(null);
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
+  const [cosmicUseGems, setCosmicUseGems] = useState<Record<string, boolean>>({});
   const [inventory, setInventory] = useState<any[]>([]);
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
   const [lastPackResults, setLastPackResults] = useState<{ cards: any[], summary: any } | null>(null);
@@ -206,15 +231,15 @@ export function Store() {
         audioService.play('pack_shake');
 
         try {
-          // Open packs in parallel
-          const results = await Promise.all(
-            Array.from({ length: count }).map(() => 
-              supabase.rpc('open_pack', {
-                p_pack_type_id: packId,
-                p_use_gems: useGems
-              })
-            )
-          );
+          // Sequential open to avoid race conditions on pity counters
+          const results = [];
+          for (let i = 0; i < count; i++) {
+            const res = await supabase.rpc('open_pack', {
+              p_pack_type_id: packId,
+              p_use_gems: useGems
+            });
+            results.push(res);
+          }
 
           let allCards: any[] = [];
           let totalXp = 0;
@@ -430,7 +455,7 @@ export function Store() {
   };
 
   const handleSparkCard = async (rarity: string, cost: number) => {
-    if (!profile || profile.pack_points < cost) {
+    if (!profile || (profile as any).pack_points < cost) {
       toast.error('Not enough pack points!');
       return;
     }
@@ -469,6 +494,210 @@ export function Store() {
         }
       }
     });
+  };
+
+  const renderPackCard = (pack: any) => {
+    const isDualCost = (pack.cost_gold ?? 0) > 0 && (pack.cost_gems ?? 0) > 0;
+    const useGems = isDualCost ? (cosmicUseGems[pack.id] ?? false) : (pack.cost_gems > 0 && !((pack.cost_gold ?? 0) > 0));
+    const cost = useGems ? pack.cost_gems : pack.cost_gold;
+    const balance = useGems ? (profile?.gem_balance ?? 0) : (profile?.gold_balance ?? 0);
+    const canAfford = balance >= cost;
+
+    return (
+      <motion.div 
+        key={pack.id}
+        whileHover={{ y: -4, rotate: -1 }}
+        className={cn(
+          "bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col",
+          pack.pack_tier === 'booster_box' && "border-yellow-500 scale-[1.02] shadow-[12px_12px_0px_0px_rgba(234,179,8,0.2)]",
+          pack.pack_tier === 'collector' && "border-red-500 shadow-[12px_12px_0px_0px_rgba(239,68,68,0.2)]",
+          pack.pack_tier === 'premium' && "border-purple-500 shadow-[12px_12px_0px_0px_rgba(168,85,247,0.2)]",
+          !canAfford && "opacity-60"
+        )}
+      >
+        <div className={cn(
+          "aspect-[4/3] flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]",
+          pack.pack_tier === 'booster_box' ? "bg-yellow-50" : pack.pack_tier === 'collector' ? "bg-red-50" : pack.pack_tier === 'premium' ? "bg-purple-50" : "bg-blue-100"
+        )}>
+          {pack.pack_tier === 'collector' && (
+            <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase tracking-widest z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              Collector
+            </div>
+          )}
+          {pack.pack_tier === 'premium' && (
+            <div className="absolute top-2 left-2 bg-purple-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase tracking-widest z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              Premium
+            </div>
+          )}
+          {pack.pack_tier === 'booster_box' && (
+            <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase tracking-widest z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              Bulk Value
+            </div>
+          )}
+
+          {/* God Pack Odds */}
+          <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-yellow-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-yellow-400/50 uppercase tracking-tighter z-10 flex items-center gap-1">
+            <Zap className="w-3 h-3 fill-current" />
+            1:2000 God Pack
+          </div>
+
+          <div className="w-48 aspect-[4/3] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gradient-to-b from-slate-700 to-slate-900 relative transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)]">
+            <img
+              src={pack.image_url}
+              alt={pack.name}
+              className="w-full h-full object-cover relative z-10"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+              referrerPolicy="no-referrer"
+              loading="lazy"
+            />
+            {/* All Foil Banner on Hover */}
+            {(pack.pack_tier === 'collector' || pack.name.toLowerCase().includes('legendary')) && (
+              <div className="absolute inset-x-0 bottom-0 bg-yellow-400 text-black text-[10px] font-black py-1 text-center uppercase tracking-[0.2em] transform translate-y-full group-hover:translate-y-0 transition-transform z-20 border-t-2 border-black">
+                ✨ All Foil ✨
+              </div>
+            )}
+            {/* Fallback pack art shown when image fails */}
+            <div className="absolute inset-0 flex items-center justify-center z-0">
+              <PackageOpen className="w-16 h-16 text-white/30" />
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 flex flex-col flex-1">
+          <div className="flex items-start justify-between mb-2">
+            <h3 className="text-2xl font-black text-[var(--text)] uppercase">{pack.name}</h3>
+            <div className="flex flex-col items-end gap-1">
+              <div className="bg-blue-500 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                {pack.next_hard_pity_in === 1 ? '🔥 Rare Guaranteed!' : `Rare in ${pack.next_hard_pity_in}`}
+              </div>
+              <div className="bg-red-500 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                {pack.next_soft_pity_in === 1 ? '✨ Divine Boosted!' : `Divine in ${pack.next_soft_pity_in}`}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <div>
+              <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
+                <span className="flex items-center gap-1">
+                  <Star className="w-2 h-2 fill-current" />
+                  SR+ Guaranteed Progress
+                </span>
+                <span>{100 - pack.next_hard_pity_in}/100</span>
+              </div>
+              <div className="h-3 bg-slate-200 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${((100 - pack.next_hard_pity_in) / 100) * 100}%` }}
+                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 relative"
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                </motion.div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
+                <span className="flex items-center gap-1">
+                  <Zap className="w-2 h-2 fill-current" />
+                  Divine Boost Progress
+                </span>
+                <span>{50 - pack.next_soft_pity_in}/50</span>
+              </div>
+              <div className="h-3 bg-slate-200 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${((50 - pack.next_soft_pity_in) / 50) * 100}%` }}
+                  className="h-full bg-gradient-to-r from-orange-400 to-red-500 relative"
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                </motion.div>
+              </div>
+            </div>
+          </div>
+          
+          <p className="text-sm text-slate-600 font-bold mb-4 line-clamp-2 mt-4">{pack.description}</p>
+          
+          <button onClick={() => setShowOdds(prev => ({...prev, [pack.id]: !prev[pack.id]}))}
+            className="text-xs text-slate-500 font-bold underline mb-2 w-fit">
+            {showOdds[pack.id] ? 'Hide Slot Odds' : 'View Slot Odds'}
+          </button>
+          {showOdds[pack.id] && pack.slot_config && (
+            <SlotBreakdown slotConfig={pack.slot_config} />
+          )}
+
+          <div className="flex flex-col gap-3 mt-auto pt-4">
+            {isDualCost && (
+              <div className="flex gap-2 mb-2 p-1 bg-slate-100 rounded-xl border-2 border-black">
+                <button onClick={() => setCosmicUseGems(prev => ({ ...prev, [pack.id]: false }))}
+                  className={cn(
+                    "flex-1 py-1.5 rounded-lg text-xs font-black uppercase transition-all",
+                    !useGems ? "bg-yellow-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black" : "text-slate-500"
+                  )}>
+                  Gold
+                </button>
+                <button onClick={() => setCosmicUseGems(prev => ({ ...prev, [pack.id]: true }))}
+                  className={cn(
+                    "flex-1 py-1.5 rounded-lg text-xs font-black uppercase transition-all",
+                    useGems ? "bg-emerald-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black" : "text-slate-500"
+                  )}>
+                  Gems
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button 
+                onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost)}
+                disabled={opening || balance < cost}
+                className={cn(
+                  "flex-[2] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2",
+                  useGems ? "bg-emerald-400 hover:bg-emerald-500 text-black" : "bg-yellow-400 hover:bg-yellow-500 text-black",
+                  balance < cost && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                {useGems ? <Gem className="w-5 h-5 text-emerald-700" /> : <Coins className="w-5 h-5 text-yellow-700" />}
+                Open ({cost?.toLocaleString()})
+              </button>
+              <button 
+                onClick={() => handleBuyToInventory(pack.id, useGems, pack.name, cost)}
+                disabled={opening || balance < cost}
+                className="flex-1 bg-amber-100 hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed text-amber-900 font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                title="Buy to Inventory"
+              >
+                <PackageOpen className="w-4 h-4" />
+                Stash
+              </button>
+            </div>
+
+            {pack.card_count < 10 && (
+              <div className="space-y-2">
+                <button 
+                  onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost, 5)}
+                  disabled={opening || balance < cost * 5}
+                  className={cn(
+                    "w-full font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm",
+                    useGems ? "bg-emerald-500 hover:bg-emerald-600 text-black" : "bg-purple-500 hover:bg-purple-600 text-white",
+                    balance < cost * 5 && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  Open 5x ({(cost * 5).toLocaleString()})
+                </button>
+                <button 
+                  onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost, 10)}
+                  disabled={opening || balance < cost * 10}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
+                >
+                  Open 10x ({(cost * 10).toLocaleString()})
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
   };
 
   if (loading) {
@@ -566,7 +795,7 @@ export function Store() {
       )}
 
       {activeTab === 'packs' && (
-        <div className="space-y-8">
+        <div className="space-y-12">
           {lastPackResults && (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -600,289 +829,86 @@ export function Store() {
           )}
 
           {packs.length === 0 ? (
-          <div className="col-span-full">
-            <EmptyState 
-              icon={PackageOpen}
-              title="No packs available"
-              description="Check back later for new pack releases!"
-              ctaText="Back to Home"
-              ctaPath="/"
-            />
-            {profile?.is_admin && (
-              <div className="mt-8 text-center bg-blue-50 border-4 border-blue-200 rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(59,130,246,0.2)]">
-                <p className="text-lg font-black text-blue-900 mb-2 uppercase">Admin: Game is Empty?</p>
-                <p className="text-sm text-blue-700 font-bold mb-4">If you see no cards or packs, you need to seed the initial data in the Admin panel.</p>
-                <Link 
-                  to="/admin" 
-                  className="inline-block px-6 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  Go to Admin Panel
-                </Link>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {packs.map((pack) => {
-              const canAffordGold = (pack.cost_gold != null && pack.cost_gold > 0)
-                ? (profile?.gold_balance ?? 0) >= pack.cost_gold
-                : true;
-              const canAffordGems = (pack.cost_gems != null && pack.cost_gems > 0)
-                ? (profile?.gem_balance ?? 0) >= pack.cost_gems
-                : true;
-              const canAfford = canAffordGold && canAffordGems;
-
-              return (
-                <motion.div 
-                  key={pack.id}
-                  whileHover={{ y: -4, rotate: -1 }}
-                  className={cn(
-                    "bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden relative group shadow-[8px_8px_0px_0px_var(--border)] flex flex-col",
-                    pack.pack_tier === 'booster_box' && "border-yellow-500 scale-[1.02] shadow-[12px_12px_0px_0px_rgba(234,179,8,0.2)]",
-                    pack.pack_tier === 'collector' && "border-red-500 shadow-[12px_12px_0px_0px_rgba(239,68,68,0.2)]",
-                    !canAfford && "opacity-60"
-                  )}
-                >
-                  <div className={cn(
-                    "aspect-[4/3] flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]",
-                    pack.pack_tier === 'booster_box' ? "bg-yellow-50" : pack.pack_tier === 'collector' ? "bg-red-50" : "bg-blue-100"
-                  )}>
-                    {pack.pack_tier === 'booster_box' && (
-                      <div className="absolute top-4 left-4 z-20 bg-yellow-400 text-black px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                        Bulk Value
-                      </div>
-                    )}
-                    {pack.pack_tier === 'collector' && (
-                      <div className="absolute top-4 left-4 z-20 bg-red-600 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                        Collector's Edition
-                      </div>
-                    )}
-                    <div className="w-48 aspect-[4/3] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gradient-to-b from-slate-700 to-slate-900 relative transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)]">
-                      <img
-                        src={pack.image_url}
-                        alt={pack.name}
-                        className="w-full h-full object-cover relative z-10"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                        referrerPolicy="no-referrer"
-                        loading="lazy"
-                      />
-                      {/* Fallback pack art shown when image fails */}
-                      <div className="absolute inset-0 flex items-center justify-center z-0">
-                        <PackageOpen className="w-16 h-16 text-white/30" />
-                      </div>
-                    </div>
+            <div className="col-span-full">
+              <EmptyState 
+                icon={PackageOpen}
+                title="No packs available"
+                description="Check back later for new pack releases!"
+                ctaText="Back to Home"
+                ctaPath="/"
+              />
+              {profile?.is_admin && (
+                <div className="mt-8 text-center bg-blue-50 border-4 border-blue-200 rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(59,130,246,0.2)]">
+                  <p className="text-lg font-black text-blue-900 mb-2 uppercase">Admin: Game is Empty?</p>
+                  <p className="text-sm text-blue-700 font-bold mb-4">If you see no cards or packs, you need to seed the initial data in the Admin panel.</p>
+                  <Link 
+                    to="/admin" 
+                    className="inline-block px-6 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  >
+                    Go to Admin Panel
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-12">
+              {/* Gold Packs Section */}
+              {packs.filter(p => p.cost_gold > 0 && !(p.cost_gems > 0) && p.pack_tier === 'standard').length > 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+                    <Coins className="w-6 h-6 text-yellow-500" />
+                    Standard Packs
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+                    {packs.filter(p => p.cost_gold > 0 && !(p.cost_gems > 0) && p.pack_tier === 'standard').map(pack => renderPackCard(pack))}
                   </div>
+                </div>
+              )}
 
-                  <div className="p-6 flex flex-col flex-1">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-2xl font-black text-[var(--text)] uppercase">{pack.name}</h3>
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="bg-blue-500 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                          {pack.next_hard_pity_in === 1 ? '🔥 Rare Guaranteed!' : `Rare in ${pack.next_hard_pity_in}`}
-                        </div>
-                        <div className="bg-red-500 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                          {pack.next_soft_pity_in === 1 ? '✨ Divine Boosted!' : `Divine in ${pack.next_soft_pity_in}`}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 space-y-3">
-                      <div>
-                        <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
-                          <span>Hard Pity</span>
-                          <span>{100 - pack.next_hard_pity_in}/100</span>
-                        </div>
-                        <div className="h-2 bg-slate-200 rounded-full border-2 border-[var(--border)] overflow-hidden">
-                          <div 
-                            className="h-full bg-red-400 transition-all"
-                            style={{ width: `${((100 - pack.next_hard_pity_in) / 100) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
-                          <span>Soft Pity</span>
-                          <span>{50 - pack.next_soft_pity_in}/50</span>
-                        </div>
-                        <div className="h-2 bg-slate-200 rounded-full border-2 border-[var(--border)] overflow-hidden">
-                          <div 
-                            className="h-full bg-purple-400 transition-all"
-                            style={{ width: `${((50 - pack.next_soft_pity_in) / 50) * 100}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <p className="text-sm text-slate-600 font-bold mb-6 line-clamp-2 mt-4">{pack.description}</p>
-                    
-                    {pack.pack_tier === 'booster_box' && (
-                      <p className="text-[10px] text-yellow-600 font-black uppercase mb-4 flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-current" />
-                        Guaranteed minimum rare ratio!
-                      </p>
-                    )}
-                    {pack.pack_tier === 'collector' && (
-                      <p className="text-[10px] text-red-600 font-black uppercase mb-4 flex items-center gap-1">
-                        <Zap className="w-3 h-3 fill-current" />
-                        Premium: No Commons inside!
-                      </p>
-                    )}
-                    
-                    <button onClick={() => setShowOdds(prev => ({...prev, [pack.id]: !prev[pack.id]}))}
-                      className="text-xs text-slate-500 font-bold underline mt-1 mb-2">
-                      {showOdds[pack.id] ? 'Hide Odds' : 'View Odds'}
-                    </button>
-                    {showOdds[pack.id] && (
-                      <div className="mb-4 space-y-3 border-t border-[var(--border)] pt-4">
-                        <div className="space-y-2">
-                          {PACK_ODDS.map(o => {
-                            const pctValue = parseInt(o.pct);
-                            let displayPct = o.pct;
-                            let isPityBoosted = false;
-                            
-                            if (pack.next_hard_pity_in === 1) {
-                              if (o.rarity === 'Common' || o.rarity === 'Uncommon') {
-                                displayPct = '0%';
-                              } else if (o.rarity === 'Rare') {
-                                displayPct = '80%*';
-                                isPityBoosted = true;
-                              } else {
-                                isPityBoosted = true;
-                              }
-                            }
-
-                            if (pack.next_soft_pity_in === 1 && o.rarity === 'Divine') {
-                              displayPct = '5%*';
-                              isPityBoosted = true;
-                            }
-
-                            return (
-                              <div key={o.rarity} className="space-y-1">
-                                <div className="flex justify-between items-center text-[10px] font-black uppercase">
-                                  <span className={cn(o.color, isPityBoosted && "underline decoration-2 underline-offset-2")}>
-                                    {o.rarity}
-                                    {isPityBoosted && o.rarity === 'Rare' && <span className="ml-1 text-[8px] opacity-70">(Pity)</span>}
-                                  </span>
-                                  <span className={cn("text-[var(--text)]", isPityBoosted && "text-blue-600")}>
-                                    {displayPct}
-                                  </span>
-                                </div>
-                                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-                                  <motion.div 
-                                    initial={{ width: 0 }}
-                                    animate={{ width: isPityBoosted && o.rarity === 'Rare' ? '80%' : isPityBoosted && (o.rarity === 'Common' || o.rarity === 'Uncommon') ? '0%' : o.pct }}
-                                    className={cn(
-                                      "h-full rounded-full",
-                                      o.rarity === 'Common' ? "bg-slate-400" :
-                                      o.rarity === 'Uncommon' ? "bg-green-500" :
-                                      o.rarity === 'Rare' ? "bg-blue-500" :
-                                      o.rarity === 'Super-Rare' ? "bg-purple-500" :
-                                      o.rarity === 'Mythic' ? "bg-yellow-500" : "bg-red-500"
-                                    )}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {pack.next_hard_pity_in === 1 && (
-                          <p className="text-[9px] text-blue-500 italic font-bold">* Pity active: Guaranteed Rare or better.</p>
-                        )}
-                        {pack.next_soft_pity_in === 1 && (
-                          <p className="text-[9px] text-red-500 italic font-bold">* Soft pity active: Increased Divine chance!</p>
-                        )}
-                        {pack.foil_chance && (
-                          <div className="flex justify-between items-center text-[10px] font-black uppercase text-yellow-600 pt-1">
-                            <span>✨ Foil Chance</span>
-                            <span>{(Number(pack.foil_chance) * 100).toFixed(2)}%</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className="flex flex-col gap-3 mt-auto">
-                      {pack.cost_gold > 0 && (
-                        <div className="flex flex-col gap-2">
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={() => handleOpenPack(pack.id, false, pack.image_url, pack.name, pack.cost_gold)}
-                              disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
-                              className="flex-[2] bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
-                            >
-                              <Coins className="w-5 h-5 text-yellow-700" />
-                              Open
-                            </button>
-                            <button 
-                              onClick={() => handleBuyToInventory(pack.id, false, pack.name, pack.cost_gold)}
-                              disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold}
-                              className="flex-1 bg-amber-100 hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed text-amber-900 font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
-                              title="Buy to Inventory"
-                            >
-                              <PackageOpen className="w-4 h-4" />
-                              Stash
-                            </button>
-                          </div>
-                          <button 
-                            onClick={() => handleOpenPack(pack.id, false, pack.image_url, pack.name, pack.cost_gold, 10)}
-                            disabled={opening || (profile?.gold_balance || 0) < pack.cost_gold * 10}
-                            className="w-full bg-purple-500 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
-                          >
-                            Open 10x ({(pack.cost_gold * 10).toLocaleString()} Gold)
-                          </button>
-                        </div>
-                      )}
-                      {pack.cost_gems > 0 && (
-                        <div className="flex flex-col gap-2">
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={() => handleOpenPack(pack.id, true, pack.image_url, pack.name, pack.cost_gems)}
-                              disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
-                              className="flex-[2] bg-emerald-400 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
-                            >
-                              <Gem className="w-5 h-5 text-emerald-700" />
-                              Open
-                            </button>
-                            <button 
-                              onClick={() => handleBuyToInventory(pack.id, true, pack.name, pack.cost_gems)}
-                              disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems}
-                              className="flex-1 bg-amber-100 hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed text-amber-900 font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
-                              title="Buy to Inventory"
-                            >
-                              <PackageOpen className="w-4 h-4" />
-                              Stash
-                            </button>
-                          </div>
-                          <button 
-                            onClick={() => handleOpenPack(pack.id, true, pack.image_url, pack.name, pack.cost_gems, 5)}
-                            disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems * 5}
-                            className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
-                          >
-                            Open 5x
-                          </button>
-                          <button 
-                            onClick={() => handleOpenPack(pack.id, true, pack.image_url, pack.name, pack.cost_gems, 10)}
-                            disabled={opening || (profile?.gem_balance || 0) < pack.cost_gems * 10}
-                            className="w-full bg-purple-500 hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
-                          >
-                            Open 10x ({(pack.cost_gems * 10).toLocaleString()} Gems)
-                          </button>
-                        </div>
-                      )}
-                    </div>
+              {/* Premium Section */}
+              {packs.filter(p => p.pack_tier === 'premium').length > 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+                    <Star className="w-6 h-6 text-purple-500" />
+                    Premium Boxes
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+                    {packs.filter(p => p.pack_tier === 'premium').map(pack => renderPackCard(pack))}
                   </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )
-      }
-    </div>
-  )}
+                </div>
+              )}
 
-  {activeTab === 'spark' && (
+              {/* Collector Section */}
+              {packs.filter(p => p.pack_tier === 'collector').length > 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+                    <Zap className="w-6 h-6 text-red-500" />
+                    Collector Sets
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+                    {packs.filter(p => p.pack_tier === 'collector').map(pack => renderPackCard(pack))}
+                  </div>
+                </div>
+              )}
+
+              {/* Gem Packs & Specialty Section */}
+              {packs.filter(p => (p.cost_gems > 0) && (p.pack_tier !== 'collector' && p.pack_tier !== 'premium')).length > 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+                    <Gem className="w-6 h-6 text-emerald-500" />
+                    Specialty & Gem Packs
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+                    {packs.filter(p => (p.cost_gems > 0) && (p.pack_tier !== 'collector' && p.pack_tier !== 'premium')).map(pack => renderPackCard(pack))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'spark' && (
         <div className="space-y-8">
           <div className="bg-indigo-900 border-4 border-black rounded-3xl p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden">
              {/* Background glow */}
@@ -989,15 +1015,23 @@ export function Store() {
                 <PackageOpen className="w-6 h-6 text-blue-500" />
                 Stashed Packs
               </h2>
-              {inventory.length > 0 && (
-                <button 
-                  onClick={handleOpenAllFromInventory}
-                  disabled={opening}
-                  className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2 text-sm uppercase tracking-widest"
-                >
-                  Open All ({inventory.reduce((acc, inv) => acc + inv.quantity, 0)})
-                </button>
-              )}
+                <div className="flex items-center gap-4">
+                  <div className="hidden sm:flex flex-col items-end">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vault Capacity</p>
+                    <p className="text-xs font-black text-[var(--text)]">
+                      {inventory.reduce((acc, inv) => acc + inv.quantity, 0)} / 999 Packs
+                    </p>
+                  </div>
+                  {inventory.length > 0 && (
+                    <button 
+                      onClick={handleOpenAllFromInventory}
+                      disabled={opening}
+                      className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2 text-sm uppercase tracking-widest"
+                    >
+                      Open All
+                    </button>
+                  )}
+                </div>
             </div>
 
             {loading ? (
