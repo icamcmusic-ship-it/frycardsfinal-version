@@ -158,7 +158,6 @@ export function Layout() {
     { name: 'Home', path: '/', icon: Home, category: 'Main' },
     { name: 'Collection', path: '/collection', icon: LayoutGrid, category: 'Main' },
     { name: 'Decks', path: '/decks', icon: Layers, category: 'Main' },
-    { name: 'Battle', path: '/battle', icon: Sword, category: 'Main' },
     { name: 'Store', path: '/store', icon: Store, category: 'Main' },
     { name: 'Market', path: '/marketplace', icon: ShoppingBag, category: 'Main' },
     { name: 'Notifications', path: '/notifications', icon: Bell, category: 'Main' },
@@ -190,34 +189,33 @@ export function Layout() {
 
   const [nextRegen, setNextRegen] = useState<number | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
-  const requestRef = React.useRef<number>(null);
-
-  const animate = () => {
-    if (nextRegen) {
-      const diff = Math.max(0, nextRegen - Date.now());
-      setTimeRemaining(diff);
-      
-      if (diff <= 0) {
-        fetchProfile();
-      }
-    }
-    requestRef.current = requestAnimationFrame(animate);
-  };
+  const [isRefreshingEnergy, setIsRefreshingEnergy] = useState(false);
 
   useEffect(() => {
-    if (profile && profile.energy < profile.max_energy && profile.energy_last_regen) {
-      const regenTime = new Date(profile.energy_last_regen).getTime() + ENERGY_REGEN_INTERVAL;
-      setNextRegen(regenTime);
-      requestRef.current = requestAnimationFrame(animate);
-    } else {
+    if (!profile || profile.energy >= profile.max_energy || !profile.energy_last_regen) {
       setNextRegen(null);
       setTimeRemaining(0);
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      return;
     }
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [profile?.energy, profile?.energy_last_regen, profile?.max_energy, fetchProfile]);
+
+    const regenTime = new Date(profile.energy_last_regen).getTime() + ENERGY_REGEN_INTERVAL;
+    setNextRegen(regenTime);
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const diff = Math.max(0, regenTime - now);
+      setTimeRemaining(diff);
+
+      if (diff <= 0 && !isRefreshingEnergy) {
+        setIsRefreshingEnergy(true);
+        fetchProfile().finally(() => {
+          setTimeout(() => setIsRefreshingEnergy(false), 5000); // 5s cooldown
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [profile?.id, profile?.energy, profile?.energy_last_regen, profile?.max_energy, fetchProfile, isRefreshingEnergy]);
 
   const formatRegenTime = () => {
     if (!nextRegen || timeRemaining <= 0) return null;
@@ -229,21 +227,47 @@ export function Layout() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  if (user && profileLoading && !profile) {
-    return (
-      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-8">
-        <div className="max-w-7xl w-full space-y-8">
-          <div className="h-16 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="h-[600px] bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse hidden md:block shadow-[4px_4px_0px_0px_var(--border)]"></div>
-            <div className="md:col-span-3 space-y-8">
-              <div className="h-64 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[8px_8px_0px_0px_var(--border)]"></div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
-                <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
-                <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
+  if (user && !profile) {
+    if (profileLoading) {
+      return (
+        <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-8">
+          <div className="max-w-7xl w-full space-y-8">
+            <div className="h-16 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              <div className="h-[600px] bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse hidden md:block shadow-[4px_4px_0px_0px_var(--border)]"></div>
+              <div className="md:col-span-3 space-y-8">
+                <div className="h-64 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[8px_8px_0px_0px_var(--border)]"></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
+                  <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
+                  <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
+                </div>
               </div>
             </div>
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-8 shadow-[8px_8px_0px_0px_var(--border)] text-center">
+          <ShieldAlert className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-black uppercase mb-2">Profile Not Found</h2>
+          <p className="text-slate-600 font-bold mb-6">We couldn't load your profile. Please try refreshing or signing out and back in.</p>
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={() => fetchProfile()}
+              className="px-6 py-3 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 transition-transform"
+            >
+              Try Again
+            </button>
+            <button 
+              onClick={handleSignOut}
+              className="px-6 py-3 bg-red-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 transition-transform"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </div>

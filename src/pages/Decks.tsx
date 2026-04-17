@@ -282,7 +282,7 @@ export function Decks() {
                   {selectedCards.length === DECK_LIMIT && (
                     <div className="mt-6 p-4 bg-green-500/20 border-2 border-green-500 rounded-xl flex items-center gap-3">
                        <CheckCircle className="w-5 h-5 text-green-400" />
-                       <p className="text-xs font-black uppercase text-green-400">Deck Ready for Battle!</p>
+                       <p className="text-xs font-black uppercase text-green-400">Deck Ready!</p>
                     </div>
                   )}
                </div>
@@ -384,7 +384,7 @@ export function Decks() {
              <div className="text-center py-20 bg-[var(--surface)] border-4 border-dashed border-[var(--border)] rounded-3xl">
                 <LayoutGrid className="w-16 h-16 text-slate-300 mx-auto mb-4" />
                 <h3 className="text-2xl font-black uppercase text-slate-400">No Decks Found</h3>
-                <p className="text-slate-500 font-bold mb-8">Start your journey by creating your first battle strategy!</p>
+                <p className="text-slate-500 font-bold mb-8">Start your journey by creating your first strategy deck!</p>
                 <button 
                   onClick={handleCreateDeck}
                   className="px-8 py-3 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] uppercase"
