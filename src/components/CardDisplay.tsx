@@ -77,6 +77,7 @@ export function CardDisplay({
           alt={card.name} 
           className="full-art" 
           referrerPolicy="no-referrer" 
+          onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-card.png'; }}
         />
       )}
 

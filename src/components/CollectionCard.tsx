@@ -30,9 +30,9 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, activ
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={onSelect}
-      style={{ perspective: 1000 }}
+      style={{ perspective: 1000, containerType: 'inline-size' }}
       className={cn(
-        "relative group cursor-pointer transition-all duration-300",
+        "relative group cursor-pointer transition-all duration-300 [container-type:inline-size]",
         isSelected ? "ring-4 ring-blue-500/50 rounded-3xl" : "",
         className
       )}

@@ -12,10 +12,7 @@ export interface Profile {
   level: number;
   xp: number;
   pity_counter: number;
-  energy: number;
-  energy_last_regen: string;
   created_at: string;
-  max_energy: number;
   last_daily_claim: string | null;
   daily_streak: number;
   packs_opened: number;

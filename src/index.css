@@ -158,53 +158,154 @@ body { background-color: var(--bg); color: var(--text); }
 }
 
 /* === UNIVERSAL CARD STYLING === */
-.card-base { width: 100%; aspect-ratio: 3/4; position: relative; overflow: hidden; border-radius: 1.5rem; container-type: inline-size; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.full-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 1.25rem; }
-.sticker { position: absolute; color: #111; pointer-events: auto; }
-.brut-border { border: 4px solid #111; }
-.brut-shadow { box-shadow: 8px 8px 0px 0px #111; }
-
-.color-common, .color-gray  { background-color: rgba(209,213,221,0.5); backdrop-filter: blur(8px); }
-.color-uncommon, .color-green { background-color: rgba(165,201,156,0.5); backdrop-filter: blur(8px); }
-.color-rare, .color-blue    { background-color: rgba(75,163,227,0.5);  backdrop-filter: blur(8px); }
-.color-super-rare, .color-purple { background-color: rgba(226,168,255,0.5); backdrop-filter: blur(8px); }
-.color-mythic, .color-gold  { background-color: rgba(255,223,108,0.5); backdrop-filter: blur(8px); }
-.color-divine, .color-red   { background-color: rgba(254,52,72,0.5);   backdrop-filter: blur(8px); }
-
-.bg-white-trans { background-color: rgba(255,255,255,0.5); backdrop-filter: blur(8px); }
-
-.shadow-common, .shadow-gray    { box-shadow: 4px 4px 0px 0px #9ca3af; }
-.shadow-uncommon, .shadow-green { box-shadow: 4px 4px 0px 0px #a5c99c; }
-.shadow-rare, .shadow-blue      { box-shadow: 4px 4px 0px 0px #4ba3e3; }
-.shadow-super-rare, .shadow-purple { box-shadow: 4px 4px 0px 0px #e2a8ff; }
-.shadow-mythic, .shadow-gold    { box-shadow: 4px 4px 0px 0px #ffdf6c; }
-.shadow-divine, .shadow-red     { box-shadow: 4px 4px 0px 0px #fe3448; }
-
-.effect-sr { animation: sr-pulse 2.5s infinite; }
-.effect-mythic { animation: mythic-shimmer 3s infinite; }
-.effect-divine { animation: divine-pulse 2s infinite; }
-
-@keyframes sr-pulse {
-  0%, 100% { box-shadow: 8px 8px 0px 0px #111, 0 0 10px rgba(168,85,247,0.4); }
-  50% { box-shadow: 8px 8px 0px 0px #111, 0 0 25px rgba(168,85,247,0.8); }
+.card-base { 
+  width: 100%; 
+  aspect-ratio: 3/4; 
+  position: relative; 
+  overflow: hidden; 
+  border-radius: 1.5rem; 
+  container-type: inline-size; 
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+}
+.full-art { 
+  position: absolute; 
+  inset: 0; 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  border-radius: 1.25rem; 
 }
 
-@keyframes mythic-shimmer {
-  0% { box-shadow: 8px 8px 0px 0px #111, inset 0 0 10px rgba(255,223,108,0.3); }
-  50% { box-shadow: 8px 8px 0px 0px #111, 0 0 20px rgba(255,223,108,0.6), inset 0 0 25px rgba(255,223,108,0.5); }
-  100% { box-shadow: 8px 8px 0px 0px #111, inset 0 0 10px rgba(255,223,108,0.3); }
+/* ============================================
+   CARD CSS — MUST MATCH PROJECT SPEC EXACTLY
+   ============================================ */
+
+/* Neo-Brutalist utilities */
+.brut-border { border: 4px solid #111 !important; }
+.brut-border-2 { border: 2px solid #111 !important; }
+.brut-shadow { box-shadow: 8px 8px 0px 0px #111 !important; }
+.brut-shadow-sm { box-shadow: 4px 4px 0px 0px #111 !important; }
+
+/* Sticker base */
+.sticker {
+  position: absolute;
+  pointer-events: auto;
+  color: #111;
+}
+
+/* Rarity background colors — transparent with blur */
+.color-gray   { background-color: rgba(209, 213, 221, 0.5) !important; backdrop-filter: blur(8px); }
+.color-green  { background-color: rgba(165, 201, 156, 0.5) !important; backdrop-filter: blur(8px); }
+.color-blue   { background-color: rgba(75,  163, 227, 0.5) !important; backdrop-filter: blur(8px); }
+.color-purple { background-color: rgba(226, 168, 255, 0.5) !important; backdrop-filter: blur(8px); }
+.color-gold   { background-color: rgba(255, 223, 108, 0.5) !important; backdrop-filter: blur(8px); }
+.color-red    { background-color: rgba(254,  52,  72, 0.5) !important; backdrop-filter: blur(8px); }
+
+/* Transparent white for name/flavor stickers */
+.bg-white-trans { background-color: rgba(255, 255, 255, 0.5) !important; backdrop-filter: blur(8px); }
+
+/* Sticker rarity shadows */
+.shadow-gray   { box-shadow: 4px 4px 0px 0px #9ca3af !important; }
+.shadow-green  { box-shadow: 4px 4px 0px 0px #7b9c71 !important; }
+.shadow-blue   { box-shadow: 4px 4px 0px 0px #357db5 !important; }
+.shadow-purple { box-shadow: 4px 4px 0px 0px #b07bd1 !important; }
+.shadow-gold   { box-shadow: 4px 4px 0px 0px #cca738 !important; }
+.shadow-red    { box-shadow: 4px 4px 0px 0px #c92030 !important; }
+
+/* ============================================
+   RARITY EFFECTS
+   ============================================ */
+
+/* Super-Rare: purple pulse */
+.effect-sr { animation: sr-pulse 2s infinite alternate ease-in-out; }
+
+/* Mythic: golden float + holo shimmer overlay */
+.effect-mythic { animation: mythic-float 4s infinite ease-in-out; }
+.effect-mythic::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: linear-gradient(115deg,
+    transparent 20%,
+    rgba(255,223,108,0.8) 45%,
+    rgba(255,255,255,0.9) 50%,
+    rgba(255,223,108,0.8) 55%,
+    transparent 80%);
+  background-size: 300% 300%;
+  animation: holo-shimmer 2.5s infinite ease-in-out;
+  pointer-events: none;
+  mix-blend-mode: color-dodge;
+}
+
+/* Divine: red pulse */
+.effect-divine { animation: divine-pulse 1.5s infinite alternate ease-in-out; }
+
+/* ============================================
+   FOIL EFFECT — CORRECT DEFINITION (uses ::after)
+   ============================================ */
+
+.foil-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(255,255,255,0) 35%,
+    rgba(255,255,255,0.8) 45%,
+    rgba(255,255,255,0) 55%,
+    transparent 80%
+  );
+  background-size: 200% 200%;
+  animation: sweep-shine 4s infinite ease-in-out;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  border-radius: 1.5rem;
+}
+
+/* Foil badge — animated rainbow gradient */
+.badge-foil {
+  background: linear-gradient(90deg, #ffdf6c, #e2a8ff, #4ba3e3, #ffdf6c) !important;
+  background-size: 300% 100% !important;
+  animation: foil-badge-sweep 3s linear infinite !important;
+  backdrop-filter: none !important;
+}
+
+/* ============================================
+   ANIMATION KEYFRAMES
+   ============================================ */
+
+@keyframes sr-pulse {
+  0%   { box-shadow: 8px 8px 0px 0px #e2a8ff; }
+  100% { box-shadow: 12px 12px 0px 0px #111; transform: scale(1.01); }
+}
+
+@keyframes mythic-float {
+  0%, 100% { transform: translateY(0);    box-shadow: 8px 8px 0px 0px #111; }
+  50%       { transform: translateY(-10px); box-shadow: 12px 12px 0px 0px #ffdf6c; }
+}
+
+@keyframes holo-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 @keyframes divine-pulse {
-  0%, 100% { box-shadow: 8px 8px 0px 0px #111, 0 0 10px rgba(254,52,72,0.5); filter: brightness(1); }
-  50% { box-shadow: 8px 8px 0px 0px #111, 0 0 30px rgba(254,52,72,0.8); filter: brightness(1.1); }
+  0%   { box-shadow: 8px 8px 0px 0px #fe3448; }
+  100% { box-shadow: 12px 12px 0px 0px #111; transform: scale(1.02); }
 }
 
-.foil-shine { background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%); background-size: 200% 100%; animation: sweep-shine 2s linear infinite; }
-.badge-foil { background: linear-gradient(90deg,#e2a8ff,#ffdf6c,#4ba3e3,#e2a8ff); background-size: 300% 100%; animation: foil-badge-sweep 2s linear infinite; }
+@keyframes sweep-shine {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
-@keyframes sweep-shine { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-@keyframes foil-badge-sweep { 0%{background-position:0% 0} 100%{background-position:300% 0} }
+@keyframes foil-badge-sweep {
+  0%   { background-position: 0% 0; }
+  100% { background-position: 300% 0; }
+}
 
 .pb-nav-safe { 
   padding-bottom: calc(4rem + env(safe-area-inset-bottom)); 

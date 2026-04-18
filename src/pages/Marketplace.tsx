@@ -176,7 +176,7 @@ export function Marketplace() {
 
   const calculateTotalBid = (listing: any, amount: number) => {
     if (!listing) return 0;
-    const taxRate = 0.05; // 5% tax
+    const taxRate = 0.10; // 10% marketplace fee
     const tax = Math.ceil(amount * taxRate);
     return amount + tax;
   };
@@ -1081,12 +1081,16 @@ export function Marketplace() {
 
                 <div className="p-3 border-2 border-dashed border-slate-200 rounded-xl space-y-1">
                   <div className="flex justify-between text-[10px] font-black uppercase text-slate-400">
-                    <span>Market Tax (5%)</span>
-                    <span className="text-red-400">+{Math.ceil(bidAmount * 0.05)}</span>
+                    <span>Market Tax (10%)</span>
+                    <span className="text-red-400">+{Math.ceil(bidAmount * 0.10)}</span>
                   </div>
-                  <div className="flex justify-between text-xs font-black uppercase text-[var(--text)]">
+                  <div className="flex justify-between text-xs font-black uppercase text-slate-400 border-t border-slate-100 pt-1 mt-1">
+                    <span>Bid Amount</span>
+                    <span>{bidAmount.toLocaleString()} {selectedListingForBid.currency}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-black uppercase text-[var(--text)] border-t-2 border-[var(--border)] pt-2 mt-1">
                     <span>Total Deduction</span>
-                    <span>{calculateTotalBid(selectedListingForBid, bidAmount)} {selectedListingForBid.currency}</span>
+                    <span>{calculateTotalBid(selectedListingForBid, bidAmount).toLocaleString()} {selectedListingForBid.currency}</span>
                   </div>
                 </div>
 

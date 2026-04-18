@@ -8,8 +8,8 @@ import { motion, AnimatePresence } from 'motion/react';
 interface Message {
   id: string;
   user_id: string;
-  content: string;
-  body?: string;
+  content: string | null;
+  body: string | null;
   username: string;
   avatar_url: string;
   created_at: string;
@@ -205,8 +205,12 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type a message..."
+                  maxLength={500}
                   className="w-full pl-4 pr-12 py-3 bg-white border-4 border-[var(--border)] rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-[4px_4px_0px_0px_var(--border)]"
                 />
+                <div className="absolute -top-6 right-0 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {newMessage.length}/500
+                </div>
                 <button
                   type="submit"
                   disabled={!newMessage.trim()}

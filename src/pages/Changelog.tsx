@@ -39,8 +39,7 @@ const UPDATES = [
     color: 'text-emerald-500',
     changes: [
       'Updated Marketplace with 10% Auction Tax visibility for better transparency.',
-      'Added Global Chat toggle to the layout for easier communication.',
-      'Improved Energy regeneration tracking and UI feedback.'
+      'Added Global Chat toggle to the layout for easier communication.'
     ]
   },
   {

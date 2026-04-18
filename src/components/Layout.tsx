@@ -3,8 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { ENERGY_REGEN_INTERVAL } from '../constants';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History, Sword } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History, Sword } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 
@@ -18,7 +17,6 @@ export function Layout() {
   const [pendingSocialCount, setPendingSocialCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [showEnergyInfo, setShowEnergyInfo] = useState(false);
 
   const fetchUnreadCount = async () => {
     if (!user) return;
@@ -100,8 +98,25 @@ export function Layout() {
           schema: 'public',
           table: 'notifications',
           filter: `user_id=eq.${user.id}`
-        }, () => {
+        }, (payload) => {
           fetchUnreadCount();
+          const notif = payload.new;
+          if (notif.type === 'achievement') {
+            toast.success(notif.message || 'New Achievement Unlocked!', {
+              icon: '🏆',
+              duration: 5000,
+              position: 'top-center',
+              style: {
+                border: '4px solid #111',
+                padding: '16px',
+                color: '#111',
+                fontWeight: '900',
+                textTransform: 'uppercase',
+                borderRadius: '16px',
+                boxShadow: '8px 8px 0px 0px #111'
+              }
+            });
+          }
         })
         .subscribe();
 
@@ -187,46 +202,6 @@ export function Layout() {
     return acc;
   }, {} as Record<string, typeof navItems>);
 
-  const [nextRegen, setNextRegen] = useState<number | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState<number>(0);
-  const [isRefreshingEnergy, setIsRefreshingEnergy] = useState(false);
-
-  useEffect(() => {
-    if (!profile || profile.energy >= profile.max_energy || !profile.energy_last_regen) {
-      setNextRegen(null);
-      setTimeRemaining(0);
-      return;
-    }
-
-    const regenTime = new Date(profile.energy_last_regen).getTime() + ENERGY_REGEN_INTERVAL;
-    setNextRegen(regenTime);
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const diff = Math.max(0, regenTime - now);
-      setTimeRemaining(diff);
-
-      if (diff <= 0 && !isRefreshingEnergy) {
-        setIsRefreshingEnergy(true);
-        fetchProfile().finally(() => {
-          setTimeout(() => setIsRefreshingEnergy(false), 5000); // 5s cooldown
-        });
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [profile?.id, profile?.energy, profile?.energy_last_regen, profile?.max_energy, fetchProfile, isRefreshingEnergy]);
-
-  const formatRegenTime = () => {
-    if (!nextRegen || timeRemaining <= 0) return null;
-    const h = Math.floor(timeRemaining / 3600000);
-    const m = Math.floor((timeRemaining % 3600000) / 60000);
-    const s = Math.floor((timeRemaining % 60000) / 1000);
-    
-    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
   if (user && !profile) {
     if (profileLoading) {
       return (
@@ -288,55 +263,6 @@ export function Layout() {
 
           {profile && (
             <div className="flex items-center gap-4">
-              <div 
-                className="group relative flex items-center gap-1.5 bg-blue-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] cursor-help lg:hover:bg-blue-200"
-                onClick={() => setShowEnergyInfo(!showEnergyInfo)}
-                title={nextRegen ? `Next energy in ${formatRegenTime()}` : "Energy full"}
-              >
-                <div className="relative w-5 h-5 flex items-center justify-center">
-                  <svg className="progress-ring absolute -inset-1" width="28" height="28">
-                    <circle
-                      className="progress-ring__circle text-blue-200"
-                      strokeWidth="3"
-                      stroke="currentColor"
-                      fill="transparent"
-                      r="10"
-                      cx="14"
-                      cy="14"
-                    />
-                    <circle
-                      className="progress-ring__circle text-blue-600"
-                      strokeWidth="3"
-                      strokeDasharray={`${2 * Math.PI * 10}`}
-                      strokeDashoffset={`${2 * Math.PI * 10 * (timeRemaining / ENERGY_REGEN_INTERVAL)}`}
-                      strokeLinecap="round"
-                      stroke="currentColor"
-                      fill="transparent"
-                      r="10"
-                      cx="14"
-                      cy="14"
-                    />
-                  </svg>
-                  <Zap className="w-3 h-3 text-blue-600 relative z-10" />
-                </div>
-                <div className="flex flex-col leading-none ml-1">
-                  <span className="text-sm font-bold font-mono text-black">
-                    {profile.energy}/{profile.max_energy}
-                  </span>
-                  {(nextRegen || showEnergyInfo) && (
-                    <span className="text-[8px] font-black text-blue-600 uppercase tracking-tighter">
-                      {formatRegenTime()}
-                    </span>
-                  )}
-                </div>
-                
-                {/* Mobile Info Tooltip overlay */}
-                {showEnergyInfo && (
-                  <div className="absolute top-full right-0 mt-2 bg-black text-white p-2 rounded-lg text-xs font-black uppercase whitespace-nowrap z-[60] brut-border shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] lg:hidden">
-                    Next energy in {formatRegenTime() || 'Full'}
-                  </div>
-                )}
-              </div>
               <div className="flex items-center gap-1.5 bg-yellow-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]">
                 <Coins className="w-4 h-4 text-yellow-600" />
                 <span className="text-sm font-bold font-mono text-black">{profile.gold_balance?.toLocaleString() || 0}</span>

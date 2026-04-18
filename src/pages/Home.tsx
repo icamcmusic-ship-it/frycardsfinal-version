@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { ENERGY_REGEN_INTERVAL } from '../constants';
-import { Trophy, Zap, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift, Package, ShieldAlert } from 'lucide-react';
+import { Trophy, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift, Package, ShieldAlert, Target } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -14,8 +13,6 @@ export function Home() {
   const { profile } = useProfileStore();
   const [quests, setQuests] = useState<any[]>([]);
   const [loadingQuests, setLoadingQuests] = useState(true);
-  const [currentEnergy, setCurrentEnergy] = useState(0);
-  const [nextRegen, setNextRegen] = useState<number | null>(null);
 
   const [stats, setStats] = useState<{ unique_cards: number; total_possible: number; total_cards: number } | null>(null);
   const [passData, setPassData] = useState<any>(null);
@@ -59,7 +56,7 @@ export function Home() {
 
   const isDailyClaimable = () => {
     if (!profile?.last_daily_claim) return true;
-    const lastClaim = profile.last_daily_claim; // e.g. "2026-03-12"
+    const lastClaim = profile.last_daily_claim || "2000-01-01";
     const today = new Date();
     const localDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     return localDate > lastClaim;
@@ -86,19 +83,6 @@ export function Home() {
       }
     }
   }, [profile]);
-
-  useEffect(() => {
-    if (profile) {
-      setCurrentEnergy(profile.energy);
-      
-      if (profile.energy < profile.max_energy && profile.energy_last_regen) {
-        const regenTime = new Date(profile.energy_last_regen).getTime() + ENERGY_REGEN_INTERVAL;
-        setNextRegen(regenTime);
-      } else {
-        setNextRegen(null);
-      }
-    }
-  }, [profile?.energy, profile?.energy_last_regen, profile?.max_energy]);
 
   const fetchQuests = async () => {
     try {
@@ -351,28 +335,6 @@ export function Home() {
             <p className="text-3xl font-black text-[var(--text)] font-mono">{stats?.unique_cards ?? 0} / {stats?.total_possible ?? '?'}</p>
           </div>
         </div>
-
-        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform relative overflow-hidden">
-          <div className="w-14 h-14 rounded-xl bg-purple-300 flex items-center justify-center border-4 border-[var(--border)] transform -rotate-3">
-            <Zap className="w-7 h-7 text-black" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm text-slate-600 font-bold uppercase">Energy</p>
-            <div className="flex items-baseline gap-2">
-              <p className="text-3xl font-black text-[var(--text)] font-mono">{currentEnergy} / {profile?.max_energy ?? 20}</p>
-            </div>
-          </div>
-          {currentEnergy < (profile?.max_energy ?? 20) && nextRegen && (
-            <div className="absolute top-2 right-2 px-2 py-0.5 bg-purple-500 text-white text-[10px] font-black rounded-lg border-2 border-black rotate-3 animate-pulse">
-              {(() => {
-                const diff = Math.max(0, nextRegen - Date.now());
-                const mins = Math.floor(diff / 60000);
-                const secs = Math.floor((diff % 60000) / 1000);
-                return `${mins}:${secs.toString().padStart(2, '0')}`;
-              })()}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* My Packs Section */}
@@ -440,7 +402,7 @@ export function Home() {
         <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 md:p-8 shadow-[8px_8px_0px_0px_var(--border)]">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-black text-[var(--text)] flex items-center gap-2 uppercase">
-              <Zap className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+              <Trophy className="w-6 h-6 text-yellow-500" />
               Daily Missions
             </h2>
             <Link to="/quests" className="text-yellow-600 font-black uppercase text-sm hover:underline">Full List</Link>
@@ -458,7 +420,7 @@ export function Home() {
                 <div key={quest.id} className="bg-white border-2 border-[var(--border)] rounded-xl p-4 flex flex-col items-stretch gap-4 shadow-[2px_2px_0px_0px_var(--border)]">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded bg-blue-100 border-2 border-[var(--border)] flex items-center justify-center shrink-0">
-                      <Zap className="w-4 h-4 text-blue-600" />
+                      <Target className="w-4 h-4 text-blue-600" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-black text-[var(--text)] text-sm uppercase truncate">{(quest.mission_type || quest.quest_type || '').replace(/_/g, ' ')}</p>

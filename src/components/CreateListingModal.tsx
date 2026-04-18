@@ -237,18 +237,23 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
                 </label>
               )}
 
-              <button 
-                onClick={handleSubmit} 
-                disabled={submitting} 
-                className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-all active:translate-y-1 active:shadow-none uppercase disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <span>Listing...</span>
-                  </div>
-                ) : 'Confirm Listing'}
-              </button>
+              <div className="flex flex-col gap-1">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">
+                  ⚠️ 10% marketplace fee applied — you receive 90% of the sale price.
+                </p>
+                <button 
+                  onClick={handleSubmit} 
+                  disabled={submitting} 
+                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-all active:translate-y-1 active:shadow-none uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span>Listing...</span>
+                    </div>
+                  ) : 'Confirm Listing'}
+                </button>
+              </div>
             </div>
           </div>
         )}

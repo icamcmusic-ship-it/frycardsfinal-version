@@ -87,7 +87,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
           } catch (err) {
             console.error('Error marking cards as seen:', err);
           }
-        }, 5000);
+        }, 2000);
       }
     } catch (err) {
       console.error('Error fetching collection:', err);

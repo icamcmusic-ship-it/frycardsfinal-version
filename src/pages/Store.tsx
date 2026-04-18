@@ -71,6 +71,7 @@ export function Store() {
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
   const [openingSummary, setOpeningSummary] = useState<{ xp_gained: number, new_card_count: number } | null>(null);
   const [showGodPackCinematic, setShowGodPackCinematic] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number, total: number } | null>(null);
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
   const [cosmicUseGems, setCosmicUseGems] = useState<Record<string, boolean>>({});
   const [inventory, setInventory] = useState<any[]>([]);
@@ -232,43 +233,53 @@ export function Store() {
         audioService.play('pack_shake');
 
         try {
-          // Sequential open to avoid race conditions on pity counters
           const results = [];
+          setBulkProgress({ current: 0, total: count });
+          
           for (let i = 0; i < count; i++) {
-            const res = await supabase.rpc('open_pack', {
+            const { data, error } = await supabase.rpc('open_pack', {
               p_pack_type_id: packId,
               p_use_gems: useGems
             });
-            results.push(res);
+            
+            if (error) throw error;
+            results.push(data);
+            setBulkProgress({ current: i + 1, total: count });
           }
 
           let allCards: any[] = [];
           let totalXp = 0;
           let totalNew = 0;
+          let hasGodPack = false;
 
-          for (const { data, error } of results) {
-            if (error) throw error;
+          for (const data of results) {
             allCards = [...allCards, ...data.cards];
             totalXp += data.xp_gained;
             totalNew += data.new_card_count;
 
             if (data.is_god_pack) {
-              toast.success('⚡ GOD PACK! All cards are Super-Rare or better!', {
-                duration: 5000,
-                icon: '🌟',
-                style: { background: '#ffdf6c', fontWeight: 'bold' }
-              });
+              hasGodPack = true;
             }
+          }
+
+          if (hasGodPack) {
+            setShowGodPackCinematic(true);
+            audioService.play('god_pack_alarm');
+            toast.success('⚡ GOD PACK! All cards are Super-Rare or better!', {
+              duration: 10000,
+              icon: '🌟',
+              style: { background: '#ffdf6c', fontWeight: 'bold', border: '4px solid black' }
+            });
           }
           
           setOpenedCards(allCards);
           setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
           
-          // Auto-transition after 1.5s if user hasn't clicked
+          // Auto-transition after 1s if cards are ready, enough for some shake
           setTimeout(() => {
             setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
             audioService.play('pack_open');
-          }, 1500);
+          }, 1000);
 
           setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
 
@@ -317,6 +328,7 @@ export function Store() {
     setOpening(true);
     setOpeningPackImageUrl(packImageUrl);
     setPackOpeningStep('shaking');
+    setBulkProgress(null);
 
     try {
       const { data, error } = await supabase.rpc('open_pack_from_inventory', {
@@ -329,7 +341,7 @@ export function Store() {
       
       if (data.is_god_pack) {
         setShowGodPackCinematic(true);
-        audioService.play('god_pack_alarm'); // Assume this exists or will just fail silently
+        audioService.play('god_pack_alarm');
         toast.success('⚡ GOD PACK! All cards are Super-Rare or better!', {
           duration: 10000,
           icon: '🌟',
@@ -344,11 +356,11 @@ export function Store() {
         if (error) console.error('Achievement check failed:', error);
       });
 
-      // Auto-transition after 1.5s if user hasn't clicked
+      // Show results sooner
       setTimeout(() => {
         setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
         audioService.play('pack_open');
-      }, 1500);
+      }, 1000);
 
       setLastPackResults({ cards: data.cards, summary: { xp_gained: data.xp_gained, new_card_count: data.new_card_count } });
     } catch (err: any) {
@@ -367,15 +379,22 @@ export function Store() {
     if (opening || !profile || inventory.length === 0) return;
     setOpening(true);
     setPackOpeningStep('shaking');
+    setBulkProgress(null);
+    setOpeningPackImageUrl(inventory[0]?.image_url || '');
     
     try {
       let allCards: any[] = [];
       let totalXp = 0;
       let totalNew = 0;
+      let hasGodPack = false;
       
+      const totalPacks = inventory.reduce((acc, inv) => acc + (inv.quantity || 0), 0);
+      setBulkProgress({ current: 0, total: totalPacks });
+      let packCount = 0;
+
       // Open all packs sequentially to avoid race conditions on inventory quantity
       for (const inv of inventory) {
-        for (let i = 0; i < inv.quantity; i++) {
+        for (let i = 0; i < (inv.quantity || 0); i++) {
           const { data, error } = await supabase.rpc('open_pack_from_inventory_by_type', {
             p_pack_type_id: inv.pack_type_id
           });
@@ -384,17 +403,25 @@ export function Store() {
           allCards = [...allCards, ...data.cards];
           totalXp += data.xp_gained;
           totalNew += data.new_card_count;
+          if (data.is_god_pack) hasGodPack = true;
+
+          packCount++;
+          setBulkProgress({ current: packCount, total: totalPacks });
         }
       }
       
+      if (hasGodPack) {
+        setShowGodPackCinematic(true);
+        audioService.play('god_pack_alarm');
+      }
+
       setOpenedCards(allCards);
       setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
       
-      // Auto-transition after 1.5s if user hasn't clicked
       setTimeout(() => {
         setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
         audioService.play('pack_open');
-      }, 1500);
+      }, 1000);
 
       setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
       
@@ -480,6 +507,7 @@ export function Store() {
       onConfirm: async () => {
         setOpening(true);
         setPackOpeningStep('shaking');
+        setBulkProgress(null);
         // Placeholder image for spark
         setOpeningPackImageUrl('https://picsum.photos/seed/spark/400/300');
 
@@ -490,13 +518,23 @@ export function Store() {
 
           if (error) throw error;
 
+          if (data.is_god_pack) {
+            setShowGodPackCinematic(true);
+            audioService.play('god_pack_alarm');
+            toast.success('⚡ GOD PACK! All cards are Super-Rare or better!', {
+              duration: 10000,
+              icon: '🌟',
+              style: { background: '#ffdf6c', fontWeight: 'bold', border: '4px solid black' }
+            });
+          }
+
           setOpenedCards(data.cards);
           setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
           
           setTimeout(() => {
             setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
             audioService.play('pack_open');
-          }, 1500);
+          }, 1000);
 
         } catch (err: any) {
           toast.error(err.message || 'Failed to spark card');
@@ -1166,9 +1204,40 @@ export function Store() {
               <motion.p 
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: 0.8, repeat: Infinity }}
-                className="text-yellow-400 font-black text-2xl uppercase tracking-widest"
+                className="text-yellow-400 font-black text-2xl uppercase tracking-widest text-center"
               >
-                {openedCards && openedCards.length > 0 ? 'Ready!' : 'Opening...'}
+                {openedCards && openedCards.length > 0 ? (
+                  <motion.div 
+                    initial={{ scale: 0.9 }}
+                    animate={{ scale: [0.9, 1.1, 0.9] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                    className="text-yellow-400 flex flex-col items-center gap-1"
+                  >
+                    <span className="text-4xl text-green-400">READY!</span>
+                    <span className="text-sm italic text-white tracking-widest bg-black/40 px-6 py-1 rounded-full border border-white/10 shadow-xl">
+                      TAP TO REVEAL {openedCards.length} CARDS
+                    </span>
+                  </motion.div>
+                ) : (
+                  <div className="flex flex-col items-center gap-4">
+                     <span className="animate-pulse">Opening...</span>
+                     {bulkProgress && bulkProgress.total > 1 && (
+                       <div className="flex flex-col items-center gap-2">
+                        <div className="w-64 h-3 bg-white/10 rounded-full overflow-hidden p-1 border border-white/10 shadow-inner">
+                          <motion.div 
+                            className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                            transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
+                          />
+                        </div>
+                        <span className="text-xs font-mono text-white/60 bg-black/40 px-3 py-1 rounded-md border border-white/5">
+                          SECURED {bulkProgress.current} / {bulkProgress.total} PACKS
+                        </span>
+                       </div>
+                     )}
+                  </div>
+                )}
               </motion.p>
               <p className="text-white/40 text-sm font-bold">tap to skip</p>
             </div>
@@ -1201,7 +1270,13 @@ export function Store() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-4 overflow-hidden"
-            onClick={() => setShowGodPackCinematic(false)}
+            onClick={() => {
+              setShowGodPackCinematic(false);
+              if (packOpeningStep === 'shaking' && openedCards && openedCards.length > 0) {
+                setPackOpeningStep('revealing');
+                audioService.play('pack_open');
+              }
+            }}
           >
             {/* Pulsing Backlight */}
             <motion.div 
@@ -1246,6 +1321,14 @@ export function Store() {
               </div>
               
               <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowGodPackCinematic(false);
+                  if (packOpeningStep === 'shaking' && openedCards && openedCards.length > 0) {
+                    setPackOpeningStep('revealing');
+                    audioService.play('pack_open');
+                  }
+                }}
                 className="mt-16 px-12 py-6 bg-white text-black font-black text-2xl rounded-2xl border-8 border-black shadow-[12px_12px_0px_0px_rgba(255,255,255,0.3)] hover:scale-110 active:scale-95 transition-all uppercase italic"
               >
                 Reveal the Glory
