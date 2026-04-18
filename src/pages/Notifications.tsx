@@ -128,10 +128,10 @@ export function Notifications() {
         {notifications.some(n => !n.is_read) && (
           <button 
             onClick={markAllAsRead}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-all active:translate-y-1 shadow-[6px_6px_0px_0px_var(--border)] flex items-center gap-2 group"
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-black rounded-xl border-4 border-black transition-all active:translate-y-1 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 group"
           >
             <Check className="w-6 h-6 group-hover:scale-125 transition-transform" />
-            <span className="uppercase tracking-tight text-lg">Mark All As Read</span>
+            <span className="uppercase tracking-tight text-lg">Mark All Read</span>
           </button>
         )}
       </div>

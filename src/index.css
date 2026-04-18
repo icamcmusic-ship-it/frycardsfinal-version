@@ -158,24 +158,47 @@ body { background-color: var(--bg); color: var(--text); }
 }
 
 /* === UNIVERSAL CARD STYLING === */
-.card-base { width: 100%; aspect-ratio: 3/4; position: relative; overflow: hidden; border-radius: 1.5rem; container-type: inline-size; }
+.card-base { width: 100%; aspect-ratio: 3/4; position: relative; overflow: hidden; border-radius: 1.5rem; container-type: inline-size; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .full-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 1.25rem; }
-.sticker { position: absolute; color: #111; }
+.sticker { position: absolute; color: #111; pointer-events: auto; }
 .brut-border { border: 4px solid #111; }
 .brut-shadow { box-shadow: 8px 8px 0px 0px #111; }
+
 .color-common, .color-gray  { background-color: rgba(209,213,221,0.5); backdrop-filter: blur(8px); }
 .color-uncommon, .color-green { background-color: rgba(165,201,156,0.5); backdrop-filter: blur(8px); }
 .color-rare, .color-blue    { background-color: rgba(75,163,227,0.5);  backdrop-filter: blur(8px); }
 .color-super-rare, .color-purple { background-color: rgba(226,168,255,0.5); backdrop-filter: blur(8px); }
 .color-mythic, .color-gold  { background-color: rgba(255,223,108,0.5); backdrop-filter: blur(8px); }
 .color-divine, .color-red   { background-color: rgba(254,52,72,0.5);   backdrop-filter: blur(8px); }
+
 .bg-white-trans { background-color: rgba(255,255,255,0.5); backdrop-filter: blur(8px); }
+
 .shadow-common, .shadow-gray    { box-shadow: 4px 4px 0px 0px #9ca3af; }
 .shadow-uncommon, .shadow-green { box-shadow: 4px 4px 0px 0px #a5c99c; }
 .shadow-rare, .shadow-blue      { box-shadow: 4px 4px 0px 0px #4ba3e3; }
 .shadow-super-rare, .shadow-purple { box-shadow: 4px 4px 0px 0px #e2a8ff; }
 .shadow-mythic, .shadow-gold    { box-shadow: 4px 4px 0px 0px #ffdf6c; }
 .shadow-divine, .shadow-red     { box-shadow: 4px 4px 0px 0px #fe3448; }
+
+.effect-sr { animation: sr-pulse 2.5s infinite; }
+.effect-mythic { animation: mythic-shimmer 3s infinite; }
+.effect-divine { animation: divine-pulse 2s infinite; }
+
+@keyframes sr-pulse {
+  0%, 100% { box-shadow: 8px 8px 0px 0px #111, 0 0 10px rgba(168,85,247,0.4); }
+  50% { box-shadow: 8px 8px 0px 0px #111, 0 0 25px rgba(168,85,247,0.8); }
+}
+
+@keyframes mythic-shimmer {
+  0% { box-shadow: 8px 8px 0px 0px #111, inset 0 0 10px rgba(255,223,108,0.3); }
+  50% { box-shadow: 8px 8px 0px 0px #111, 0 0 20px rgba(255,223,108,0.6), inset 0 0 25px rgba(255,223,108,0.5); }
+  100% { box-shadow: 8px 8px 0px 0px #111, inset 0 0 10px rgba(255,223,108,0.3); }
+}
+
+@keyframes divine-pulse {
+  0%, 100% { box-shadow: 8px 8px 0px 0px #111, 0 0 10px rgba(254,52,72,0.5); filter: brightness(1); }
+  50% { box-shadow: 8px 8px 0px 0px #111, 0 0 30px rgba(254,52,72,0.8); filter: brightness(1.1); }
+}
 
 .foil-shine { background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%); background-size: 200% 100%; animation: sweep-shine 2s linear infinite; }
 .badge-foil { background: linear-gradient(90deg,#e2a8ff,#ffdf6c,#4ba3e3,#e2a8ff); background-size: 300% 100%; animation: foil-badge-sweep 2s linear infinite; }

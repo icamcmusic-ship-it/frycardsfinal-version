@@ -274,6 +274,8 @@ export function Layout() {
     );
   }
 
+  const [showEnergyInfo, setShowEnergyInfo] = useState(false);
+
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-red-400/30">
       {/* Top Bar */}
@@ -289,7 +291,8 @@ export function Layout() {
           {profile && (
             <div className="flex items-center gap-4">
               <div 
-                className="group relative flex items-center gap-1.5 bg-blue-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] cursor-help"
+                className="group relative flex items-center gap-1.5 bg-blue-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] cursor-help lg:hover:bg-blue-200"
+                onClick={() => setShowEnergyInfo(!showEnergyInfo)}
                 title={nextRegen ? `Next energy in ${formatRegenTime()}` : "Energy full"}
               >
                 <div className="relative w-5 h-5 flex items-center justify-center">
@@ -322,12 +325,19 @@ export function Layout() {
                   <span className="text-sm font-bold font-mono text-black">
                     {profile.energy}/{profile.max_energy}
                   </span>
-                  {nextRegen && (
+                  {(nextRegen || showEnergyInfo) && (
                     <span className="text-[8px] font-black text-blue-600 uppercase tracking-tighter">
                       {formatRegenTime()}
                     </span>
                   )}
                 </div>
+                
+                {/* Mobile Info Tooltip overlay */}
+                {showEnergyInfo && (
+                  <div className="absolute top-full right-0 mt-2 bg-black text-white p-2 rounded-lg text-xs font-black uppercase whitespace-nowrap z-[60] brut-border shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] lg:hidden">
+                    Next energy in {formatRegenTime() || 'Full'}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-1.5 bg-yellow-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]">
                 <Coins className="w-4 h-4 text-yellow-600" />

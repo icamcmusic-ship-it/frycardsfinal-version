@@ -35,7 +35,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
           event: 'INSERT',
           schema: 'public',
           table: 'messages_history',
-          filter: "room_id=eq.'global'"
+          filter: "room_id=eq.global"
         }, (payload) => {
           setMessages(prev => [...prev, payload.new as Message]);
         })

@@ -72,25 +72,25 @@ export function CardDisplay({
       )}
 
       {/* Content Overlay */}
-      <div className="absolute inset-0 z-10 p-[4cqw] pointer-events-none">
+      <div className="absolute inset-0 z-10 pointer-events-none">
         {/* Top Section: Type & Rarity Stickers */}
-        <div className="flex justify-between items-start">
+        <div className="absolute top-[4cqw] left-[4cqw] -rotate-12">
           {/* Type Sticker */}
-          <div className="flex flex-col gap-[1cqw] items-center -rotate-12">
-            <div className={cn(
-              "sticker !relative flex items-center justify-center w-[22cqw] h-[22cqw] rounded-full brut-border overflow-hidden",
-              `color-${rarityKey}`,
-              `shadow-${rarityKey}`
-            )}>
-              <span className="text-[3cqw] font-black uppercase tracking-tighter text-center leading-none px-[1cqw] truncate w-full">
-                {card.card_type || 'Unit'}
-              </span>
-            </div>
+          <div className={cn(
+            "sticker flex items-center justify-center w-[22cqw] h-[22cqw] rounded-full brut-border overflow-hidden",
+            `color-${rarityKey}`,
+            `shadow-${rarityKey}`
+          )}>
+            <span className="text-[3cqw] font-black uppercase tracking-tighter text-center leading-none px-[1cqw] truncate w-full">
+              {card.card_type || 'Unit'}
+            </span>
           </div>
+        </div>
 
+        <div className="absolute top-[4cqw] right-[4cqw] rotate-6">
           {/* Rarity Sticker */}
           <div className={cn(
-            "sticker !relative px-[3cqw] py-[1.5cqw] rounded-[3cqw] brut-border rotate-6 flex flex-col items-center justify-center",
+            "sticker relative px-[3cqw] py-[1.5cqw] rounded-[3cqw] brut-border flex flex-col items-center justify-center",
             isFoil ? "badge-foil" : "bg-white-trans",
             `shadow-${rarityKey}`
           )}>
@@ -126,7 +126,7 @@ export function CardDisplay({
 
           {/* Title Sticker */}
           <div className={cn(
-            "sticker !relative bg-white-trans px-[4cqw] py-[3cqw] rounded-[4cqw] brut-border -rotate-2 w-full flex items-center justify-center min-h-[14cqw]",
+            "sticker relative bg-white-trans px-[4cqw] py-[3cqw] rounded-[4cqw] brut-border -rotate-2 w-full flex items-center justify-center min-h-[14cqw]",
             `shadow-${rarityKey}`
           )}>
             <h2 className={cn(
@@ -142,7 +142,7 @@ export function CardDisplay({
           {/* Flavor Text Sticker */}
           {card.flavor_text && (
             <div className={cn(
-              "sticker !relative px-[4cqw] py-[2cqw] rounded-br-[6cqw] rounded-tl-[6cqw] brut-border rotate-3 self-end max-w-[85%]",
+              "sticker relative px-[4cqw] py-[2cqw] rounded-br-[6cqw] rounded-tl-[6cqw] brut-border rotate-3 self-end max-w-[85%]",
               `color-${rarityKey}`,
               `shadow-${rarityKey}`
             )}>

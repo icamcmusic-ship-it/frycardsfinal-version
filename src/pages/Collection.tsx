@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Search, Filter, LayoutGrid, Coins, Star, PackageOpen, Check, Trophy, Trash2 } from 'lucide-react';
+import { Loader2, Search, Filter, LayoutGrid, Coins, Star, PackageOpen, Check, Trophy, Trash2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -300,13 +300,13 @@ export function Collection() {
           )}
 
           {activeTab === 'collection' && isBatchMode && selectedCardIds.length > 0 && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => {
                   setConfirmConfig({
                     isOpen: true,
                     title: 'Mill Selected Cards',
-                    message: `Are you sure you want to mill ${selectedCardIds.length} selected cards? This cannot be undone.`,
+                    message: `Are you sure you want to mill ${selectedCardIds.length} selected cards? This cannot be undone. You will receive Gold based on the card rarities.`,
                     variant: 'danger',
                     onConfirm: async () => {
                       try {
@@ -330,7 +330,43 @@ export function Collection() {
                 className="px-4 py-2 bg-red-400 hover:bg-red-500 text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
               >
                 <Trash2 className="w-5 h-5" />
-                Mill Selected ({selectedCardIds.length})
+                Mill ({selectedCardIds.length})
+              </button>
+
+              <button
+                onClick={() => {
+                  setConfirmConfig({
+                    isOpen: true,
+                    title: 'Quicksell Selected Cards',
+                    message: `Are you sure you want to quicksell ${selectedCardIds.length} selected cards? This cannot be undone. You will receive immediate Gold.`,
+                    variant: 'warning',
+                    onConfirm: async () => {
+                      try {
+                        let totalGold = 0;
+                        const promises = selectedCardIds.map(id => supabase.rpc('quicksell_card', { p_user_card_id: id }));
+                        const results = await Promise.all(promises);
+                        
+                        for (const res of results) {
+                          if (res.error) throw res.error;
+                          if (res.data?.gold_earned) totalGold += res.data.gold_earned;
+                        }
+                        
+                        toast.success(`Quicksold ${selectedCardIds.length} cards for ${totalGold} Gold!`, { icon: '💰' });
+                        setSelectedCardIds([]);
+                        setIsBatchMode(false);
+                        fetchCollection();
+                        fetchStats();
+                        useProfileStore.getState().refreshProfile();
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to quicksell selected cards');
+                      }
+                    }
+                  });
+                }}
+                className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+              >
+                <Coins className="w-5 h-5" />
+                Quicksell ({selectedCardIds.length})
               </button>
             </div>
           )}
@@ -388,6 +424,17 @@ export function Collection() {
                   <option key={r} value={r.toLowerCase()}>{r}</option>
                 ))}
               </select>
+
+              <button
+                onClick={() => setFoilFilter(prev => prev === 'foil' ? 'all' : 'foil')}
+                className={cn(
+                  "px-4 py-2 font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-all flex items-center gap-2",
+                  foilFilter === 'foil' ? "bg-yellow-400 text-black border-yellow-500" : "bg-[var(--surface)]"
+                )}
+              >
+                <Sparkles className={cn("w-4 h-4", foilFilter === 'foil' && "fill-current")} />
+                Foils Only
+              </button>
 
               <button
                 onClick={() => setIsBatchMode(!isBatchMode)}

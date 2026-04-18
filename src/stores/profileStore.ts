@@ -38,7 +38,7 @@ interface ProfileState {
   refreshProfile: () => Promise<void>;
 }
 
-export const useProfileStore = create<ProfileState>((set) => ({
+export const useProfileStore = create<ProfileState>((set, get) => ({
   profile: null,
   loading: true,
   setProfile: (profile) => set({ profile, loading: false }),
@@ -50,6 +50,16 @@ export const useProfileStore = create<ProfileState>((set) => ({
       if (data) {
         set({ profile: data as Profile, loading: false });
       } else {
+        // Retry once after delay — profile may be mid-creation
+        const currentProfile = get().profile;
+        if (!currentProfile) {
+          setTimeout(() => {
+            const stillNoProfile = get().profile;
+            if (!stillNoProfile) {
+              get().fetchProfile().catch(err => console.error('Retry fetch profile error:', err));
+            }
+          }, 1500);
+        }
         set({ loading: false });
       }
     } catch (err) {

@@ -67,9 +67,13 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        useProfileStore.getState().fetchProfile();
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -85,7 +89,19 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Toaster position="bottom-right" />
+      <Toaster 
+        position="bottom-center"
+        toastOptions={{
+          className: 'brut-border text-sm font-black uppercase',
+          style: {
+            borderRadius: '1rem',
+            background: '#fff',
+            color: '#111',
+            border: '4px solid #111',
+            boxShadow: '4px 4px 0px 0px #111',
+          },
+        }}
+      />
       <Routes>
         {!user ? (
           <>

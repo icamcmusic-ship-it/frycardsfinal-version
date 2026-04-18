@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star, Sparkles, Bookmark, X, History } from 'lucide-react';
+import { Loader2, Store, Clock, Coins, Gem, Search, Plus, Filter, Star, Sparkles, Bookmark, X, History, Trophy, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
@@ -169,6 +169,17 @@ export function Marketplace() {
     onConfirm: () => {},
     variant: 'danger'
   });
+
+  const [bidAmount, setBidAmount] = useState<number>(0);
+  const [isBidModalOpen, setIsBidModalOpen] = useState(false);
+  const [selectedListingForBid, setSelectedListingForBid] = useState<any>(null);
+
+  const calculateTotalBid = (listing: any, amount: number) => {
+    if (!listing) return 0;
+    const taxRate = 0.05; // 5% tax
+    const tax = Math.ceil(amount * taxRate);
+    return amount + tax;
+  };
 
   useEffect(() => {
     const expireAuctions = async () => {
@@ -956,77 +967,42 @@ export function Marketplace() {
                 <div className="w-full py-3 bg-slate-200 text-slate-500 font-black rounded-xl border-4 border-[var(--border)] flex items-center justify-center uppercase">
                   Your Listing
                 </div>
-              ) : listing.type === 'fixed_price' ? (
-                <button 
-                  onClick={() => handleBuy(listing)}
-                  disabled={buying === listing.id}
-                  className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
-                >
-                  {buying === listing.id ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <Coins className="w-5 h-5" />
-                      Buy Now
-                    </>
-                  )}
-                </button>
               ) : (
                 <div className="flex gap-2">
-                  <input 
-                    type="number" 
-                    min={(listing.current_bid_gold || listing.current_bid_gems || listing.price) + 1}
-                    placeholder="Bid amount"
-                    id={`bid-${listing.id}`}
-                    className="w-full px-3 py-2 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl text-[var(--text)] font-bold focus:outline-none"
-                  />
-                      <button 
-                        onClick={async () => {
-                          const input = document.getElementById(`bid-${listing.id}`) as HTMLInputElement;
-                          const bidAmount = Number(input?.value);
-                          if (!bidAmount || bidAmount <= (listing.current_bid_gold || listing.current_bid_gems || listing.price)) {
-                            toast.error('Bid must be higher than current bid');
-                            return;
-                          }
-                          
-                          const taxAmount = Math.ceil(bidAmount * 0.10);
-                          const totalCost = bidAmount + taxAmount;
-                          const currencyName = listing.currency === 'gold' ? 'Gold' : 'Gems';
-                          
-                          setConfirmModal({
-                            isOpen: true,
-                            title: 'Confirm Bid',
-                            message: `Place a bid on ${listing.card_name}? Bid: ${bidAmount} ${currencyName} + 10% tax (${taxAmount} ${currencyName}) = ${totalCost} ${currencyName} total`,
-                            variant: 'info',
-                            onConfirm: async () => {
-                              setBuying(listing.id);
-                              try {
-                                const { data, error } = await supabase.rpc('place_bid', {
-                                  p_listing_id: listing.id,
-                                  p_bid_gold: listing.currency === 'gold' ? bidAmount : 0,
-                                  p_bid_gems: listing.currency === 'gems' ? bidAmount : 0
-                                });
-                                if (error) throw error;
-                                const taxStr = data?.tax_paid ? ` (${data.tax_paid} ${currencyName} tax paid)` : '';
-                                toast.success(`Bid placed successfully!${taxStr}`, { icon: '🔨' });
-                                
-                                // Refresh profile to update gold/gems
-                                await useProfileStore.getState().refreshProfile();
-                                
-                                fetchListings();
-                              } catch (err: any) {
-                                toast.error(err.message || 'Failed to place bid');
-                              } finally {
-                                setBuying(null);
-                              }
-                            }
-                          });
-                        }}
-                        disabled={buying === listing.id || profile?.id === listing.seller_id}
-                        className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-2 border-[var(--border)] transition-transform active:translate-y-1 shadow-[2px_2px_0px_0px_var(--border)] flex items-center justify-center whitespace-nowrap"
-                      >
-                        {buying === listing.id ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Place Bid'}
-                      </button>
+                  <button 
+                    onClick={() => {
+                      if (listing.listing_type === 'fixed_price') {
+                        handleBuy(listing);
+                      } else {
+                        setSelectedListingForBid(listing);
+                        setBidAmount(Math.ceil((listing.current_bid || listing.price) * 1.05));
+                        setIsBidModalOpen(true);
+                      }
+                    }}
+                    disabled={buying === listing.id}
+                    className="flex-1 py-3 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                  >
+                    {buying === listing.id ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        {listing.listing_type === 'fixed_price' ? <Coins className="w-5 h-5" /> : <Trophy className="w-5 h-5" />}
+                        {listing.listing_type === 'fixed_price' ? 'Buy Now' : 'Place Bid'}
+                      </>
+                    )}
+                  </button>
+                      {listing.listing_type === 'auction' && (
+                    <button 
+                      onClick={() => {
+                        setSelectedListingForBids(listing);
+                        toggleBidHistory(listing.id);
+                        setShowBidHistoryModal(true);
+                      }}
+                      className="p-3 bg-[var(--surface)] hover:bg-slate-100 rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               )}
             </motion.div>
@@ -1058,6 +1034,108 @@ export function Marketplace() {
         bids={selectedListingForBids ? bidHistories[selectedListingForBids.id] || [] : []}
         loading={selectedListingForBids ? loadingBids.has(selectedListingForBids.id) : false}
       />
+
+      <AnimatePresence>
+        {isBidModalOpen && selectedListingForBid && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-3xl p-8 max-w-sm w-full shadow-[12px_12px_0px_0px_var(--border)]"
+            >
+              <h2 className="text-2xl font-black uppercase text-[var(--text)] mb-2">Place Bid</h2>
+              <p className="text-sm font-bold text-slate-500 mb-6">
+                Bidding on <span className="text-[var(--text)]">{selectedListingForBid.card_name}</span>
+              </p>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-[var(--bg)] border-2 border-[var(--border)] rounded-2xl">
+                  <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 mb-1">
+                    <span>Current High Bid</span>
+                    <span>Min Next Bid</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1 font-black text-xl text-[var(--text)]">
+                      {selectedListingForBid.currency === 'gold' ? <Coins className="w-5 h-5 text-yellow-500" /> : <Gem className="w-5 h-5 text-emerald-500" />}
+                      {selectedListingForBid.current_bid || selectedListingForBid.price}
+                    </div>
+                    <div className="flex items-center gap-1 font-black text-sm text-blue-500">
+                      {Math.ceil((selectedListingForBid.current_bid || selectedListingForBid.price) * 1.05)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    min={Math.ceil((selectedListingForBid.current_bid || selectedListingForBid.price) * 1.05)}
+                    value={bidAmount}
+                    onChange={e => setBidAmount(parseInt(e.target.value))}
+                    className="w-full pl-4 pr-12 py-4 border-4 border-[var(--border)] rounded-2xl font-black text-2xl bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500 shadow-[4px_4px_0px_0px_var(--border)]"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    {selectedListingForBid.currency === 'gold' ? <Coins className="w-6 h-6 text-yellow-500" /> : <Gem className="w-6 h-6 text-emerald-500" />}
+                  </div>
+                </div>
+
+                <div className="p-3 border-2 border-dashed border-slate-200 rounded-xl space-y-1">
+                  <div className="flex justify-between text-[10px] font-black uppercase text-slate-400">
+                    <span>Market Tax (5%)</span>
+                    <span className="text-red-400">+{Math.ceil(bidAmount * 0.05)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-black uppercase text-[var(--text)]">
+                    <span>Total Deduction</span>
+                    <span>{calculateTotalBid(selectedListingForBid, bidAmount)} {selectedListingForBid.currency}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button 
+                    onClick={() => setIsBidModalOpen(false)}
+                    className="py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black rounded-xl border-4 border-slate-200 transition-all uppercase text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      if (!bidAmount) return;
+                      const minBid = Math.ceil((selectedListingForBid.current_bid || selectedListingForBid.price) * 1.05);
+                      if (bidAmount < minBid) {
+                        toast.error(`Minimum bid is ${minBid}`);
+                        return;
+                      }
+
+                      setBuying(selectedListingForBid.id);
+                      try {
+                        const { data, error } = await supabase.rpc('place_bid', {
+                          p_listing_id: selectedListingForBid.id,
+                          p_bid_gold: selectedListingForBid.currency === 'gold' ? bidAmount : 0,
+                          p_bid_gems: selectedListingForBid.currency === 'gems' ? bidAmount : 0
+                        });
+                        if (error) throw error;
+                        
+                        toast.success(`Bid placed!`, { icon: '🔨' });
+                        await useProfileStore.getState().refreshProfile();
+                        setIsBidModalOpen(false);
+                        fetchListings();
+                      } catch (err: any) {
+                        toast.error(err.message || 'Failed to place bid');
+                      } finally {
+                        setBuying(null);
+                      }
+                    }}
+                    disabled={buying === selectedListingForBid.id}
+                    className="py-3 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_black] transition-all active:translate-y-1 active:shadow-none uppercase text-sm flex items-center justify-center gap-2"
+                  >
+                    {buying === selectedListingForBid.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Bid'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

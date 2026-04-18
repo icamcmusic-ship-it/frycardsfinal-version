@@ -126,10 +126,17 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
   }, [isOpen, isGodPack]);
 
   return (
-    <div className={cn(
-      "fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-end transition-opacity duration-500",
-      isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-    )}>
+    <div 
+      onClick={() => {
+        if (!showSummary && !isAutoRunning) {
+          autoFlipAll();
+        }
+      }}
+      className={cn(
+        "fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-end transition-opacity duration-500 cursor-pointer",
+        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      )}
+    >
       {/* God Pack Flash */}
       {isGodPack && isOpen && flippedCount === 0 && (
         <motion.div 

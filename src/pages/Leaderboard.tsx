@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { ClickableUsername } from '../components/ClickableUsername';
-import { Loader2, Trophy, Package, LayoutGrid, Repeat, Library } from 'lucide-react';
+import { useProfileStore } from '../stores/profileStore';
+import { Loader2, Trophy, Package, LayoutGrid, Repeat, Library, User } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const LEADERBOARD_TYPES = [
@@ -12,6 +13,7 @@ const LEADERBOARD_TYPES = [
 ];
 
 export function Leaderboard() {
+  const { profile } = useProfileStore();
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [type, setType] = useState('xp');
@@ -60,8 +62,9 @@ export function Leaderboard() {
             <div className="text-center py-16 font-bold text-slate-500">No data yet — be the first!</div>
           ) : leaderboard.map((entry, i) => (
             <div key={entry.user_id}
-              className={cn("flex items-center gap-4 px-6 py-4 border-b-2 border-slate-100",
-                i === 0 && "bg-yellow-50 text-black", i === 1 && "bg-slate-50 text-black", i === 2 && "bg-orange-50 text-black", i > 2 && "text-[var(--text)]")}>
+              className={cn("flex items-center gap-4 px-6 py-4 border-b-2 border-slate-100 transition-colors",
+                entry.user_id === profile?.id ? "bg-blue-100 ring-4 ring-blue-500 ring-inset z-10" :
+                i === 0 ? "bg-yellow-50 text-black" : i === 1 ? "bg-slate-50 text-black" : i === 2 ? "bg-orange-50 text-black" : "text-[var(--text)]")}>
               <span className={cn("w-10 text-2xl font-black text-center",
                 i === 0 && "text-yellow-500", i === 1 && "text-slate-400", i === 2 && "text-orange-400")}>
                 {i < 3 ? ['🥇','🥈','🥉'][i] : `#${i + 1}`}
