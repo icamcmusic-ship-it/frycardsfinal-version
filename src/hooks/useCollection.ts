@@ -95,7 +95,16 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [profile, activeTab, filters]);
+  }, [
+    profile?.id, 
+    activeTab, 
+    filters.rarity, 
+    filters.sortBy, 
+    filters.cardType, 
+    filters.setId, 
+    filters.search, 
+    filters.foilFilter
+  ]);
 
   useEffect(() => {
     if (profile && (activeTab === 'collection' || activeTab === 'wishlist')) {
@@ -103,7 +112,19 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
       fetchStats();
       fetchWishlistCardIds();
     }
-  }, [profile, activeTab, filters.sortBy, filters.rarity, filters.cardType, filters.setId, filters.search, filters.foilFilter, fetchCollection, fetchStats, fetchWishlistCardIds]);
+  }, [
+    profile?.id, 
+    activeTab, 
+    filters.sortBy, 
+    filters.rarity, 
+    filters.cardType, 
+    filters.setId, 
+    filters.search, 
+    filters.foilFilter, 
+    fetchCollection, 
+    fetchStats, 
+    fetchWishlistCardIds
+  ]);
 
   return {
     cards,

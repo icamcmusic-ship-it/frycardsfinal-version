@@ -111,7 +111,9 @@ export function Trades() {
       
       // Check achievements after trade
       if (accept) {
-        supabase.rpc('check_and_unlock_achievements').catch(console.error);
+        supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
+          if (error) console.error('Achievement check failed:', error);
+        });
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to respond to trade');

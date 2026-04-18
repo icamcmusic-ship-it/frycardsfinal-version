@@ -340,7 +340,9 @@ export function Store() {
       setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
       
       // Check achievements after pack open
-      supabase.rpc('check_and_unlock_achievements').catch(console.error);
+      supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
+        if (error) console.error('Achievement check failed:', error);
+      });
 
       // Auto-transition after 1.5s if user hasn't clicked
       setTimeout(() => {
@@ -397,7 +399,9 @@ export function Store() {
       setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
       
       // Check achievements after bulk open
-      supabase.rpc('check_and_unlock_achievements').catch(console.error);
+      supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
+        if (error) console.error('Achievement check failed:', error);
+      });
 
       // Refresh inventory
       fetchInventory();

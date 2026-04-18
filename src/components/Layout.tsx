@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
 import { ENERGY_REGEN_INTERVAL } from '../constants';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History, Sword, Layers } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Zap, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History, Sword } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 
@@ -18,6 +18,7 @@ export function Layout() {
   const [pendingSocialCount, setPendingSocialCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [showEnergyInfo, setShowEnergyInfo] = useState(false);
 
   const fetchUnreadCount = async () => {
     if (!user) return;
@@ -157,7 +158,6 @@ export function Layout() {
   const navItems = [
     { name: 'Home', path: '/', icon: Home, category: 'Main' },
     { name: 'Collection', path: '/collection', icon: LayoutGrid, category: 'Main' },
-    { name: 'Decks', path: '/decks', icon: Layers, category: 'Main' },
     { name: 'Store', path: '/store', icon: Store, category: 'Main' },
     { name: 'Market', path: '/marketplace', icon: ShoppingBag, category: 'Main' },
     { name: 'Notifications', path: '/notifications', icon: Bell, category: 'Main' },
@@ -273,8 +273,6 @@ export function Layout() {
       </div>
     );
   }
-
-  const [showEnergyInfo, setShowEnergyInfo] = useState(false);
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-red-400/30">
