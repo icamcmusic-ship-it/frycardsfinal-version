@@ -70,6 +70,7 @@ export function Store() {
   const [packOpeningStep, setPackOpeningStep] = useState<'idle' | 'shaking' | 'revealing'>('idle');
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
   const [openingSummary, setOpeningSummary] = useState<{ xp_gained: number, new_card_count: number } | null>(null);
+  const [showGodPackCinematic, setShowGodPackCinematic] = useState(false);
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
   const [cosmicUseGems, setCosmicUseGems] = useState<Record<string, boolean>>({});
   const [inventory, setInventory] = useState<any[]>([]);
@@ -327,15 +328,20 @@ export function Store() {
       setOpenedCards(data.cards);
       
       if (data.is_god_pack) {
+        setShowGodPackCinematic(true);
+        audioService.play('god_pack_alarm'); // Assume this exists or will just fail silently
         toast.success('⚡ GOD PACK! All cards are Super-Rare or better!', {
-          duration: 5000,
+          duration: 10000,
           icon: '🌟',
-          style: { background: '#ffdf6c', fontWeight: 'bold' }
+          style: { background: '#ffdf6c', fontWeight: 'bold', border: '4px solid black' }
         });
       }
 
       setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
       
+      // Check achievements after pack open
+      supabase.rpc('check_and_unlock_achievements').catch(console.error);
+
       // Auto-transition after 1.5s if user hasn't clicked
       setTimeout(() => {
         setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
@@ -390,6 +396,9 @@ export function Store() {
 
       setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
       
+      // Check achievements after bulk open
+      supabase.rpc('check_and_unlock_achievements').catch(console.error);
+
       // Refresh inventory
       fetchInventory();
     } catch (err: any) {
@@ -570,52 +579,15 @@ export function Store() {
             <h3 className="text-2xl font-black text-[var(--text)] uppercase">{pack.name}</h3>
             <div className="flex flex-col items-end gap-1">
               <div className="bg-blue-500 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                {pack.next_hard_pity_in === 1 ? '🔥 Rare Guaranteed!' : `Rare in ${pack.next_hard_pity_in}`}
-              </div>
-              <div className="bg-red-500 text-white px-3 py-1 rounded-lg border-2 border-black text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                {pack.next_soft_pity_in === 1 ? '✨ Divine Boosted!' : `Divine in ${pack.next_soft_pity_in}`}
+                {pack.card_count} Cards
               </div>
             </div>
           </div>
 
-          <div className="mt-4 space-y-3">
-            <div>
-              <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
-                <span className="flex items-center gap-1">
-                  <Star className="w-2 h-2 fill-current" />
-                  SR+ Guaranteed Progress
-                </span>
-                <span>{100 - pack.next_hard_pity_in}/100</span>
-              </div>
-              <div className="h-3 bg-slate-200 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${((100 - pack.next_hard_pity_in) / 100) * 100}%` }}
-                  className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 relative"
-                >
-                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                </motion.div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
-                <span className="flex items-center gap-1">
-                  <Zap className="w-2 h-2 fill-current" />
-                  Divine Boost Progress
-                </span>
-                <span>{50 - pack.next_soft_pity_in}/50</span>
-              </div>
-              <div className="h-3 bg-slate-200 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${((50 - pack.next_soft_pity_in) / 50) * 100}%` }}
-                  className="h-full bg-gradient-to-r from-orange-400 to-red-500 relative"
-                >
-                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                </motion.div>
-              </div>
-            </div>
+          <div className="mt-4 space-y-1">
+             <div className="flex justify-between text-[10px] font-black uppercase text-slate-400">
+                <span>Set: {pack.description?.split('.')[0] || 'Base Set'}</span>
+             </div>
           </div>
           
           <p className="text-sm text-slate-600 font-bold mb-4 line-clamp-2 mt-4">{pack.description}</p>
@@ -796,6 +768,64 @@ export function Store() {
 
       {activeTab === 'packs' && (
         <div className="space-y-12">
+          {/* Global Pity Progress Section */}
+          <div className="bg-[var(--surface)] border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full" />
+             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-1">
+                   <h2 className="text-2xl font-black uppercase text-[var(--text)] tracking-tight flex items-center gap-2">
+                      <Target className="w-6 h-6 text-indigo-500" />
+                      Global Pity Tracker
+                   </h2>
+                   <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Progress counts across ALL standard packs</p>
+                </div>
+
+                <div className="flex-1 max-w-2xl grid grid-cols-1 sm:grid-cols-2 gap-6">
+                   {packs.length > 0 && (
+                     <>
+                        <div className="space-y-2">
+                           <div className="flex justify-between text-[10px] font-black uppercase text-slate-500">
+                             <span className="flex items-center gap-1 text-purple-600">
+                               <Star className="w-3 h-3 fill-current" />
+                               SR+ Guaranteed
+                             </span>
+                             <span className="text-[var(--text)]">{100 - packs[0].next_hard_pity_in}/100</span>
+                           </div>
+                           <div className="h-4 bg-slate-100 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
+                             <motion.div 
+                               initial={{ width: 0 }}
+                               animate={{ width: `${((100 - packs[0].next_hard_pity_in) / 100) * 100}%` }}
+                               className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 relative"
+                             >
+                                <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                             </motion.div>
+                           </div>
+                        </div>
+
+                        <div className="space-y-2">
+                           <div className="flex justify-between text-[10px] font-black uppercase text-slate-500">
+                             <span className="flex items-center gap-1 text-orange-600">
+                               <Zap className="w-3 h-3 fill-current" />
+                               Divine Boost
+                             </span>
+                             <span className="text-[var(--text)]">{50 - packs[0].next_soft_pity_in}/50</span>
+                           </div>
+                           <div className="h-4 bg-slate-100 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
+                             <motion.div 
+                               initial={{ width: 0 }}
+                               animate={{ width: `${((50 - packs[0].next_soft_pity_in) / 50) * 100}%` }}
+                               className="h-full bg-gradient-to-r from-orange-500 to-red-600 relative"
+                             >
+                                <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                             </motion.div>
+                           </div>
+                        </div>
+                     </>
+                   )}
+                </div>
+             </div>
+          </div>
+
           {lastPackResults && (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
@@ -1158,6 +1188,86 @@ export function Store() {
           )}
         </div>
       )}
+
+      {/* God Pack Cinematic Overlay */}
+      <AnimatePresence>
+        {showGodPackCinematic && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-4 overflow-hidden"
+            onClick={() => setShowGodPackCinematic(false)}
+          >
+            {/* Pulsing Backlight */}
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.5, 1],
+                opacity: [0.3, 0.6, 0.3]
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="absolute w-[800px] h-[800px] rounded-full bg-yellow-400/20 blur-[120px]"
+            />
+
+            <motion.div
+              initial={{ scale: 0.5, y: 100, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              transition={{ type: "spring", damping: 12 }}
+              className="relative z-10 text-center"
+            >
+              <div className="inline-block">
+                <h2 className="text-8xl md:text-9xl font-black italic uppercase tracking-tighter text-yellow-400 drop-shadow-[0_10px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-4">
+                  <Sparkles className="w-20 h-20 animate-pulse" />
+                  GOD PACK!
+                  <Sparkles className="w-20 h-20 animate-pulse" />
+                </h2>
+              </div>
+              
+              <div className="mt-8 flex flex-col gap-4">
+                <p className="text-2xl font-black text-white uppercase tracking-widest animate-bounce">
+                  All Super-Rare or Higher!
+                </p>
+                <div className="flex justify-center gap-2">
+                   {Array.from({ length: 5 }).map((_, i) => (
+                      <motion.div 
+                        key={i}
+                        animate={{ y: [0, -20, 0], rotate: [0, 360] }}
+                        transition={{ duration: 1, delay: i * 0.1, repeat: Infinity }}
+                        className="text-4xl"
+                      >
+                         ✨
+                      </motion.div>
+                   ))}
+                </div>
+              </div>
+              
+              <button 
+                className="mt-16 px-12 py-6 bg-white text-black font-black text-2xl rounded-2xl border-8 border-black shadow-[12px_12px_0px_0px_rgba(255,255,255,0.3)] hover:scale-110 active:scale-95 transition-all uppercase italic"
+              >
+                Reveal the Glory
+              </button>
+            </motion.div>
+
+            {/* Particle Burst Simulation */}
+            <div className="absolute inset-0 pointer-events-none">
+               {Array.from({ length: 30 }).map((_, i) => (
+                 <motion.div
+                    key={i}
+                    initial={{ x: "50%", y: "50%", opacity: 1 }}
+                    animate={{ 
+                      x: [`${Math.random() * 100}%`, `${Math.random() * 100}%`], 
+                      y: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
+                      opacity: [1, 0],
+                      scale: [1, Math.random() * 2]
+                    }}
+                    transition={{ duration: 3, delay: Math.random() * 0.5, repeat: Infinity }}
+                    className="absolute w-2 h-2 bg-yellow-400 rounded-full"
+                 />
+               ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

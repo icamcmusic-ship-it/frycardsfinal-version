@@ -108,6 +108,11 @@ export function Trades() {
       if (data && data.success === false) throw new Error(data.error);
       fetchTrades();
       toast.success(accept ? 'Trade accepted!' : 'Trade declined!', { icon: accept ? '✅' : '❌' });
+      
+      // Check achievements after trade
+      if (accept) {
+        supabase.rpc('check_and_unlock_achievements').catch(console.error);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to respond to trade');
     }

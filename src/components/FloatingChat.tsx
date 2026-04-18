@@ -64,7 +64,7 @@ export function FloatingChat() {
       const { error } = await supabase.from('messages_history').insert({
         user_id: profile.id,
         username: profile.username,
-        content: newMessage.trim(),
+        body: newMessage.trim(),
         room_id: 'global'
       });
 
@@ -150,7 +150,7 @@ export function FloatingChat() {
                           ? "bg-blue-400 text-black rounded-tr-none" 
                           : "bg-white text-black rounded-tl-none"
                       )}>
-                        {msg.content}
+                        {msg.body || msg.content}
                       </div>
                     </div>
                   ))}

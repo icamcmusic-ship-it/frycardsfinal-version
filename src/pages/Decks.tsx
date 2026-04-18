@@ -54,7 +54,6 @@ export function Decks() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoadingCollection(true); // Wait, should be false
       setLoadingCollection(false);
     }
   };
@@ -81,7 +80,7 @@ export function Decks() {
       toast.error('Deck name is required');
       return;
     }
-    if (selectedCards.length < DECK_LIMIT) {
+    if (selectedCards.length !== DECK_LIMIT) {
        toast.error(`Deck must have exactly ${DECK_LIMIT} cards. Current: ${selectedCards.length}`);
        return;
     }

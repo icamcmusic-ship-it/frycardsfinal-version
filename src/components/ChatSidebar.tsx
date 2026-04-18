@@ -9,6 +9,7 @@ interface Message {
   id: string;
   user_id: string;
   content: string;
+  body?: string;
   username: string;
   avatar_url: string;
   created_at: string;
@@ -84,7 +85,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
         .insert({
           room_id: 'global',
           user_id: profile.id,
-          content: msgContent,
+          body: msgContent,
           username: profile.username || 'Anonymous',
           avatar_url: profile.avatar_url
         });
@@ -181,7 +182,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                             ? "bg-blue-100 border-blue-400 text-blue-900" 
                             : "bg-white border-[var(--border)] text-[var(--text)]"
                         )}>
-                          {msg.content}
+                          {msg.body || msg.content}
                         </div>
                         <span className="text-[8px] font-bold text-slate-400 whitespace-nowrap mb-1">
                           {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../lib/utils';
-import { Lock, Unlock, Star } from 'lucide-react';
+import { Lock, Unlock, Star, Coins } from 'lucide-react';
 
 interface CardDisplayProps {
   card: {
@@ -39,6 +39,15 @@ export function CardDisplay({
   isWishlisted
 }: CardDisplayProps) {
   const rarityKey = (card.rarity || 'common').toLowerCase().replace(/\s+/g, '-');
+  const RARITY_COLOR_MAP: Record<string, string> = {
+    'common':     'gray',
+    'uncommon':   'green',
+    'rare':       'blue',
+    'super-rare': 'purple',
+    'mythic':     'gold',
+    'divine':     'red',
+  };
+  const colorKey = RARITY_COLOR_MAP[rarityKey] ?? 'gray';
   const isFoil = card.is_foil || (card.foil_quantity ?? 0) > 0;
 
   return (
@@ -78,8 +87,8 @@ export function CardDisplay({
           {/* Type Sticker */}
           <div className={cn(
             "sticker flex items-center justify-center w-[22cqw] h-[22cqw] rounded-full brut-border overflow-hidden",
-            `color-${rarityKey}`,
-            `shadow-${rarityKey}`
+            `color-${colorKey}`,
+            `shadow-${colorKey}`
           )}>
             <span className="text-[3cqw] font-black uppercase tracking-tighter text-center leading-none px-[1cqw] truncate w-full">
               {card.card_type || 'Unit'}
@@ -92,7 +101,7 @@ export function CardDisplay({
           <div className={cn(
             "sticker relative px-[3cqw] py-[1.5cqw] rounded-[3cqw] brut-border flex flex-col items-center justify-center",
             isFoil ? "badge-foil" : "bg-white-trans",
-            `shadow-${rarityKey}`
+            `shadow-${colorKey}`
           )}>
             {isFoil && (
               <span className="text-[2.5cqw] font-black uppercase tracking-widest leading-none mb-[1cqw]">
@@ -101,11 +110,11 @@ export function CardDisplay({
             )}
             <span className={cn(
               "text-[4cqw] font-black uppercase leading-none",
-              rarityKey === 'uncommon' ? 'text-green-800' :
-              rarityKey === 'rare' ? 'text-blue-800' :
-              rarityKey === 'super-rare' ? 'text-purple-800' :
-              rarityKey === 'mythic' ? 'text-yellow-700' :
-              rarityKey === 'divine' ? 'text-red-700' : 'text-slate-700'
+              colorKey === 'green' ? 'text-green-800' :
+              colorKey === 'blue' ? 'text-blue-800' :
+              colorKey === 'purple' ? 'text-purple-800' :
+              colorKey === 'gold' ? 'text-yellow-700' :
+              colorKey === 'red' ? 'text-red-700' : 'text-slate-700'
             )}>
               {card.rarity}
             </span>
@@ -127,7 +136,7 @@ export function CardDisplay({
           {/* Title Sticker */}
           <div className={cn(
             "sticker relative bg-white-trans px-[4cqw] py-[3cqw] rounded-[4cqw] brut-border -rotate-2 w-full flex items-center justify-center min-h-[14cqw]",
-            `shadow-${rarityKey}`
+            `shadow-${colorKey}`
           )}>
             <h2 className={cn(
               "font-black uppercase text-center leading-none text-black",
@@ -143,8 +152,8 @@ export function CardDisplay({
           {card.flavor_text && (
             <div className={cn(
               "sticker relative px-[4cqw] py-[2cqw] rounded-br-[6cqw] rounded-tl-[6cqw] brut-border rotate-3 self-end max-w-[85%]",
-              `color-${rarityKey}`,
-              `shadow-${rarityKey}`
+              `color-${colorKey}`,
+              `shadow-${colorKey}`
             )}>
               <p className="text-[3.5cqw] font-bold leading-tight italic text-black">
                 "{card.flavor_text}"
@@ -201,6 +210,33 @@ export function CardDisplay({
               <Star className={cn("w-[4cqw] h-[4cqw]", isWishlisted && "fill-current")} />
             </button>
           )}
+        </div>
+
+        {/* Hover Info Tooltip */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 scale-90 group-hover:scale-110">
+           <div className="bg-black/90 text-white px-[4cqw] py-[3cqw] rounded-[4cqw] border-[0.6cqw] border-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-[2cqw] min-w-[35cqw]">
+              <div className="flex flex-col">
+                 <span className="text-[2.5cqw] font-black uppercase text-slate-400 tracking-widest leading-none mb-[1cqw]">Yield</span>
+                 <span className="text-[4cqw] font-black leading-none flex items-center gap-[1.5cqw]">
+                    <Coins className="w-[3.5cqw] h-[3.5cqw] text-yellow-400" />
+                    {(() => {
+                      const baseValue = { common: 10, uncommon: 25, rare: 100, 'super-rare': 250, mythic: 500, divine: 1000 }[rarityKey] ?? 10;
+                      return (isFoil ? baseValue * 3 : baseValue).toLocaleString();
+                    })()}
+                 </span>
+              </div>
+              <div className="h-[0.4cqw] bg-white/20 rounded-full" />
+              <div className="flex flex-col">
+                 <span className="text-[2.5cqw] font-black uppercase text-slate-400 tracking-widest leading-none mb-[1cqw]">Value</span>
+                 <span className="text-[4cqw] font-black leading-none flex items-center gap-[1.5cqw]">
+                    <Star className="w-[3.5cqw] h-[3.5cqw] text-purple-400" />
+                    {(() => {
+                      const xpValue = { common: 5, uncommon: 15, rare: 50, 'super-rare': 150, mythic: 500, divine: 2500 }[rarityKey] ?? 5;
+                      return (isFoil ? xpValue * 5 : xpValue).toLocaleString();
+                    })()} XP
+                 </span>
+              </div>
+           </div>
         </div>
       </div>
     </div>
