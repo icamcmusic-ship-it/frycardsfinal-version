@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History, Sword } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
+import toast from 'react-hot-toast';
 
 export function Layout() {
   const { user, signOut } = useAuthStore();

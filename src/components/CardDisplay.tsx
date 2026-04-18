@@ -84,23 +84,23 @@ export function CardDisplay({
       {/* Content Overlay */}
       <div className="absolute inset-0 z-10 pointer-events-none">
         {/* Top Section: Type & Rarity Stickers */}
-        <div className="absolute top-[4cqw] left-[4cqw] -rotate-12">
+        <div className="absolute top-[6cqw] left-[6cqw] -rotate-12 z-20">
           {/* Type Sticker */}
           <div className={cn(
-            "sticker flex items-center justify-center w-[22cqw] h-[22cqw] rounded-full brut-border overflow-hidden",
+            "sticker shrink-0 w-[22cqw] h-[22cqw] rounded-full brut-border shadow-sm",
             `color-${colorKey}`,
             `shadow-${colorKey}`
           )}>
-            <span className="text-[3cqw] font-black uppercase tracking-tighter text-center leading-none px-[1cqw] truncate w-full">
+            <span className="text-[3cqw] font-black uppercase tracking-tighter text-center leading-none px-[1cqw] truncate">
               {card.card_type || 'Unit'}
             </span>
           </div>
         </div>
 
-        <div className="absolute top-[4cqw] right-[4cqw] rotate-6">
+        <div className="absolute top-[6cqw] right-[6cqw] rotate-6 z-20">
           {/* Rarity Sticker */}
           <div className={cn(
-            "sticker relative px-[3cqw] py-[1.5cqw] rounded-[3cqw] brut-border flex flex-col items-center justify-center",
+            "sticker relative px-[3cqw] py-[1.5cqw] rounded-[3cqw] brut-border shadow-sm flex flex-col",
             isFoil ? "badge-foil" : "bg-white-trans",
             `shadow-${colorKey}`
           )}>
@@ -123,11 +123,11 @@ export function CardDisplay({
         </div>
 
         {/* Bottom Section: Title & Flavor Text */}
-        <div className="absolute bottom-[4cqw] left-[4cqw] right-[4cqw] flex flex-col gap-[2cqw] items-center">
+        <div className="absolute bottom-[4cqw] left-[2cqw] right-[2cqw] flex flex-col gap-[1.5cqw] items-center pointer-events-none">
           {/* Set Indicator - Subtle hover reveal */}
           {card.set_name && (
             <div 
-              className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-[2cqw] py-[0.5cqw] rounded-full border-[0.5cqw] border-black text-[2.5cqw] font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] mb-[-1cqw] z-20"
+              className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-[2cqw] py-[0.5cqw] rounded-full border-[0.5cqw] border-black text-[2.5cqw] font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-20"
               style={{ backgroundColor: card.set_theme_color || '#fff', color: '#000' }}
             >
               {card.set_name}
@@ -135,30 +135,34 @@ export function CardDisplay({
           )}
 
           {/* Title Sticker */}
-          <div className={cn(
-            "sticker relative bg-white-trans px-[4cqw] py-[3cqw] rounded-[4cqw] brut-border -rotate-2 w-full flex items-center justify-center min-h-[14cqw]",
-            `shadow-${colorKey}`
-          )}>
-            <h2 className={cn(
-              "font-black uppercase text-center leading-none text-black",
-              card.name.length > 20 ? "text-[5cqw]" : 
-              card.name.length > 15 ? "text-[6cqw]" : 
-              "text-[8cqw]"
+          <div className="w-full px-[2cqw]">
+            <div className={cn(
+              "sticker relative bg-white-trans px-[4cqw] py-[3cqw] rounded-[4cqw] brut-border -rotate-2 w-full min-h-[14cqw]",
+              `shadow-${colorKey}`
             )}>
-              {card.name}
-            </h2>
+              <h2 className={cn(
+                "font-black uppercase text-center leading-[1.1] text-black",
+                card.name.length > 20 ? "text-[4.5cqw]" : 
+                card.name.length > 15 ? "text-[5.5cqw]" : 
+                "text-[7.5cqw]"
+              )}>
+                {card.name}
+              </h2>
+            </div>
           </div>
 
           {/* Flavor Text Sticker */}
           {card.flavor_text && (
-            <div className={cn(
-              "sticker relative px-[4cqw] py-[2cqw] rounded-br-[6cqw] rounded-tl-[6cqw] brut-border rotate-3 self-end max-w-[85%]",
-              `color-${colorKey}`,
-              `shadow-${colorKey}`
-            )}>
-              <p className="text-[3.5cqw] font-bold leading-tight italic text-black">
-                "{card.flavor_text}"
-              </p>
+            <div className="w-full flex justify-end px-[2cqw]">
+              <div className={cn(
+                "sticker relative px-[4cqw] py-[2cqw] rounded-br-[6cqw] rounded-tl-[6cqw] brut-border rotate-3 max-w-[90%] shadow-sm",
+                `color-${colorKey}`,
+                `shadow-${colorKey}`
+              )}>
+                <p className="text-[3.2cqw] font-bold leading-tight italic text-black">
+                  "{card.flavor_text}"
+                </p>
+              </div>
             </div>
           )}
         </div>

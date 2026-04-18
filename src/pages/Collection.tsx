@@ -25,7 +25,7 @@ export function Collection() {
   const [filter, setFilter] = useState(() => sessionStorage.getItem('col_filter') || 'all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price'>(() =>
+  const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price' | 'name'>(() =>
     (sessionStorage.getItem('col_sort') as any) || 'rarity'
   );
   const [cardType, setCardType] = useState<string>(() => sessionStorage.getItem('col_card_type') || 'all');
@@ -43,6 +43,7 @@ export function Collection() {
   const [cardToList, setCardToList] = useState<any>(null);
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
+  const loadingMoreRef = useRef(false);
   const [sets, setSets] = useState<any[]>([]);
   const [loadingSets, setLoadingSets] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -180,7 +181,13 @@ export function Collection() {
   };
 
   const handleBulkMill = async () => {
-    const duplicateCount = stats ? stats.total_cards - stats.unique_cards : 0;
+    // Re-fetch stats first to ensure accurate count
+    const freshStats = await fetchStats();
+    
+    // Calculate duplicates after refresh
+    const duplicateCount = freshStats ? freshStats.total_cards - freshStats.unique_cards : 
+                         stats ? stats.total_cards - stats.unique_cards : 0;
+    
     if (duplicateCount <= 0) {
       toast.error('No duplicates found to mill!');
       return;
@@ -210,16 +217,20 @@ export function Collection() {
 
   // Infinite scroll listener
   useEffect(() => {
+    loadingMoreRef.current = loadingMore;
+  }, [loadingMore]);
+
+  useEffect(() => {
     const handleScroll = () => {
       if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
-        if (hasMore && !loadingMore && activeTab === 'collection') {
+        if (hasMore && !loadingMoreRef.current && activeTab === 'collection') {
           fetchCollection(true);
         }
       }
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [hasMore, loadingMore, activeTab, fetchCollection]);
+  }, [hasMore, activeTab, fetchCollection]);
 
   if (loading && cards.length === 0) {
     return (

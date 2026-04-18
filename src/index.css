@@ -188,9 +188,12 @@ body { background-color: var(--bg); color: var(--text); }
 
 /* Sticker base */
 .sticker {
-  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: auto;
   color: #111;
+  z-index: 10;
 }
 
 /* Rarity background colors — transparent with blur */

@@ -18,8 +18,10 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
     try {
       const { data } = await supabase.rpc('get_my_collection_stats');
       if (data) setStats(data);
+      return data;
     } catch (err) {
       console.error('Error fetching stats:', err);
+      return null;
     }
   }, []);
 
@@ -87,7 +89,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
           } catch (err) {
             console.error('Error marking cards as seen:', err);
           }
-        }, 2000);
+        }, 5000);
       }
     } catch (err) {
       console.error('Error fetching collection:', err);

@@ -292,6 +292,7 @@ export function Store() {
           setOpening(false);
           useProfileStore.getState().refreshProfile();
           fetchPacks();
+          fetchInventory();
         }
       }
     });
@@ -517,18 +518,9 @@ export function Store() {
           });
 
           if (error) throw error;
+          if (data?.success === false) throw new Error(data.error || 'Spark failed');
 
-          if (data.is_god_pack) {
-            setShowGodPackCinematic(true);
-            audioService.play('god_pack_alarm');
-            toast.success('⚡ GOD PACK! All cards are Super-Rare or better!', {
-              duration: 10000,
-              icon: '🌟',
-              style: { background: '#ffdf6c', fontWeight: 'bold', border: '4px solid black' }
-            });
-          }
-
-          setOpenedCards(data.cards);
+          setOpenedCards([{ ...data.card }]);
           setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
           
           setTimeout(() => {
@@ -1137,6 +1129,13 @@ export function Store() {
                           {inv.quantity} PACKS
                         </div>
                       </div>
+                      
+                      {inv.slot_config && (
+                        <div className="text-left py-2 border-t border-slate-200 mt-2">
+                           <SlotBreakdown slotConfig={inv.slot_config} />
+                        </div>
+                      )}
+
                       <button
                         onClick={() => handleOpenFromInventory(inv.id, inv.image_url)}
                         disabled={opening}
