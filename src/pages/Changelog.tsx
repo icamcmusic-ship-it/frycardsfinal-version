@@ -12,7 +12,7 @@ const UPDATES = [
     color: 'text-yellow-500',
     changes: [
       'Implemented Crescendo Reveal Animation for pack opening—cards now reveal with dramatic timing!',
-      'Added dynamic Pity Progress Bars to all pack types in the store.',
+      'Added dynamic Pity Progress Bars to all pack types — Hard Pity (100 rolls) and Mythic Boost (50 rolls).',
       'Introduced God Pack (1:2000) visual and audio indicators.',
       'Added "All Foil" badges and hover effects for Collector and Legendary packs.',
       'Enhanced Card Metadata display: "Variance Hit!" and "Chase Slot" labels during reveal.'

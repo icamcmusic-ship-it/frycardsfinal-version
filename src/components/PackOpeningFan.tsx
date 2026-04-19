@@ -9,7 +9,11 @@ interface PackOpeningFanProps {
   isOpen: boolean;
   onClose: () => void;
   cards: any[];
-  summary: { xp_gained: number, new_card_count: number } | null;
+  summary: { 
+    xp_gained: number, 
+    new_card_count: number,
+    pack_points_earned?: number
+  } | null;
 }
 
 export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningFanProps) {
@@ -249,7 +253,7 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
 
                 {/* Back (Front of card) */}
                 <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white border-2 border-black rounded-xl overflow-hidden">
-                   <CardDisplay card={card} showQuantity={false} showNewBadge={card.is_new} />
+                   <CardDisplay card={card} showQuantity={false} showNewBadge={true} />
                    
                    {/* Slot Type Label */}
                    {state === 'chase' && (
@@ -306,6 +310,20 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
                   <p className="text-xl font-black text-yellow-600">{summary.new_card_count}</p>
                 </div>
               </div>
+              {summary.pack_points_earned && summary.pack_points_earned > 0 && (
+                <>
+                  <div className="w-px h-10 bg-slate-200" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center border-2 border-indigo-200">
+                      <Sparkles className="w-6 h-6 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase">Points Earned</p>
+                      <p className="text-xl font-black text-indigo-600">+{summary.pack_points_earned}</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}

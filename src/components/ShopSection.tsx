@@ -45,24 +45,24 @@ export function ShopSection({ shopItems, profile, userCosmetics, onBuyItem }: Sh
         )}
       >
         <div className={cn(
-          "relative rounded-xl overflow-hidden border-2 border-[var(--border)] bg-slate-100 group",
+          "relative overflow-hidden border-4 border-[var(--border)] rounded-xl bg-slate-100",
           aspectClass
         )}>
-          <img 
-            src={item.image_url} 
-            alt={item.name}
-            className={cn(
-              "w-full h-full object-cover transition-transform duration-500",
-              !isOwned && "group-hover:scale-110"
-            )}
-            referrerPolicy="no-referrer"
-          />
-          
+          {item.image_url ? (
+            <img
+              src={item.image_url}
+              alt={item.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <ImageIcon className="w-8 h-8 text-slate-300" />
+            </div>
+          )}
           {isOwned && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
-              <div className="bg-emerald-500 text-white p-2 rounded-full border-2 border-white shadow-lg">
-                <Check className="w-6 h-6" />
-              </div>
+            <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
+              <Check className="w-10 h-10 text-emerald-600 drop-shadow-lg" />
             </div>
           )}
 

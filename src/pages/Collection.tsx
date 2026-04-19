@@ -86,6 +86,10 @@ export function Collection() {
   }, [search]);
 
   useEffect(() => {
+    fetchSets();
+  }, []);
+
+  useEffect(() => {
     sessionStorage.setItem('col_active_tab', activeTab);
     sessionStorage.setItem('col_filter', filter);
     sessionStorage.setItem('col_sort', sortBy);
@@ -413,6 +417,17 @@ export function Collection() {
                   className="w-full pl-10 pr-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)]"
                 />
               </div>
+
+              <select
+                value={selectedSetId}
+                onChange={(e) => setSelectedSetId(e.target.value)}
+                className="px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)]"
+              >
+                <option value="all">All Sets</option>
+                {sets.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
 
               <select
                 value={sortBy}

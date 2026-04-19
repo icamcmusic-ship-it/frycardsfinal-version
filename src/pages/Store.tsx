@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon, LayoutGrid, Star, Zap, Plus, Target, Award } from 'lucide-react';
+import { PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon, LayoutGrid, Star, Zap, Plus, Target, Award, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import toast from 'react-hot-toast';
@@ -69,7 +69,11 @@ export function Store() {
   const [selectedCard, setSelectedCard] = useState<any>(null);
   const [packOpeningStep, setPackOpeningStep] = useState<'idle' | 'shaking' | 'revealing'>('idle');
   const [openedCards, setOpenedCards] = useState<any[] | null>(null);
-  const [openingSummary, setOpeningSummary] = useState<{ xp_gained: number, new_card_count: number } | null>(null);
+  const [openingSummary, setOpeningSummary] = useState<{ 
+    xp_gained: number, 
+    new_card_count: number,
+    pack_points_earned?: number 
+  } | null>(null);
   const [showGodPackCinematic, setShowGodPackCinematic] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ current: number, total: number } | null>(null);
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
@@ -236,6 +240,8 @@ export function Store() {
           const results = [];
           setBulkProgress({ current: 0, total: count });
           
+          let hasGodPack = false;
+
           for (let i = 0; i < count; i++) {
             const { data, error } = await supabase.rpc('open_pack', {
               p_pack_type_id: packId,
@@ -245,21 +251,25 @@ export function Store() {
             if (error) throw error;
             results.push(data);
             setBulkProgress({ current: i + 1, total: count });
+            
+            // ✨ Show god pack immediately on detection
+            if (data.is_god_pack && !hasGodPack) {
+              hasGodPack = true;
+              setShowGodPackCinematic(true);
+              audioService.play('god_pack_alarm');
+            }
           }
 
           let allCards: any[] = [];
           let totalXp = 0;
           let totalNew = 0;
-          let hasGodPack = false;
+          let totalPoints = 0;
 
           for (const data of results) {
             allCards = [...allCards, ...data.cards];
             totalXp += data.xp_gained;
             totalNew += data.new_card_count;
-
-            if (data.is_god_pack) {
-              hasGodPack = true;
-            }
+            totalPoints += data.pack_points_earned || 0;
           }
 
           if (hasGodPack) {
@@ -273,7 +283,11 @@ export function Store() {
           }
           
           setOpenedCards(allCards);
-          setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
+          setOpeningSummary({ 
+            xp_gained: totalXp, 
+            new_card_count: totalNew,
+            pack_points_earned: totalPoints
+          });
           
           // Auto-transition after 1s if cards are ready, enough for some shake
           setTimeout(() => {
@@ -281,7 +295,17 @@ export function Store() {
             audioService.play('pack_open');
           }, 1000);
 
-          setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
+          // Notify missions update
+          window.dispatchEvent(new CustomEvent('missions_updated'));
+
+          setLastPackResults({ 
+            cards: allCards, 
+            summary: { 
+              xp_gained: totalXp, 
+              new_card_count: totalNew,
+              pack_points_earned: totalPoints
+            } 
+          });
 
         } catch (err: any) {
           toast.error(err.message || 'Failed to open pack');
@@ -350,7 +374,11 @@ export function Store() {
         });
       }
 
-      setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
+      setOpeningSummary({ 
+        xp_gained: data.xp_gained, 
+        new_card_count: data.new_card_count,
+        pack_points_earned: data.pack_points_earned
+      });
       
       // Check achievements after pack open
       supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
@@ -387,6 +415,7 @@ export function Store() {
       let allCards: any[] = [];
       let totalXp = 0;
       let totalNew = 0;
+      let totalPoints = 0;
       let hasGodPack = false;
       
       const totalPacks = inventory.reduce((acc, inv) => acc + (inv.quantity || 0), 0);
@@ -404,7 +433,13 @@ export function Store() {
           allCards = [...allCards, ...data.cards];
           totalXp += data.xp_gained;
           totalNew += data.new_card_count;
-          if (data.is_god_pack) hasGodPack = true;
+          totalPoints += data.pack_points_earned || 0;
+
+          if (data.is_god_pack && !hasGodPack) {
+            hasGodPack = true;
+            setShowGodPackCinematic(true);
+            audioService.play('god_pack_alarm');
+          }
 
           packCount++;
           setBulkProgress({ current: packCount, total: totalPacks });
@@ -417,19 +452,33 @@ export function Store() {
       }
 
       setOpenedCards(allCards);
-      setOpeningSummary({ xp_gained: totalXp, new_card_count: totalNew });
+      setOpeningSummary({ 
+        xp_gained: totalXp, 
+        new_card_count: totalNew,
+        pack_points_earned: totalPoints
+      });
       
       setTimeout(() => {
         setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
         audioService.play('pack_open');
       }, 1000);
 
-      setLastPackResults({ cards: allCards, summary: { xp_gained: totalXp, new_card_count: totalNew } });
+      setLastPackResults({ 
+        cards: allCards, 
+        summary: { 
+          xp_gained: totalXp, 
+          new_card_count: totalNew,
+          pack_points_earned: totalPoints
+        } 
+      });
       
       // Check achievements after bulk open
       supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
         if (error) console.error('Achievement check failed:', error);
       });
+
+      // Notify missions update
+      window.dispatchEvent(new CustomEvent('missions_updated'));
 
       // Refresh inventory
       fetchInventory();
@@ -496,7 +545,7 @@ export function Store() {
   };
 
   const handleSparkCard = async (rarity: string, cost: number) => {
-    if (!profile || (profile as any).pack_points < cost) {
+    if (!profile || ((profile?.pack_points ?? 0) < cost)) {
       toast.error('Not enough pack points!');
       return;
     }
@@ -510,7 +559,7 @@ export function Store() {
         setPackOpeningStep('shaking');
         setBulkProgress(null);
         // Placeholder image for spark
-        setOpeningPackImageUrl('https://picsum.photos/seed/spark/400/300');
+        setOpeningPackImageUrl('https://cdn.midjourney.com/77de7f93-c2aa-4265-8c45-b4a9784e689c/0_3.png');
 
         try {
           const { data, error } = await supabase.rpc('spark_card', {
@@ -559,53 +608,63 @@ export function Store() {
         )}
       >
         <div className={cn(
-          "aspect-[4/3] flex items-center justify-center p-8 relative border-b-4 border-[var(--border)]",
+          "aspect-[4/3] relative border-b-4 border-[var(--border)] overflow-hidden",
           pack.pack_tier === 'booster_box' ? "bg-yellow-50" : pack.pack_tier === 'collector' ? "bg-red-50" : pack.pack_tier === 'premium' ? "bg-purple-50" : "bg-blue-100"
         )}>
+          {/* God Pack Odds */}
+          <div className="absolute top-2 left-2 bg-[#1a1a2e] text-yellow-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-yellow-400/50 uppercase tracking-tighter z-30 flex items-center gap-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <Zap className="w-3 h-3 fill-current" />
+            1:2000 GOD PACK
+          </div>
+
+          {profile?.soft_pity_counter >= 50 && (
+            <div className="absolute top-10 left-2 z-30 px-2 py-1 bg-orange-500 text-white text-[10px] font-black uppercase rounded-full border-2 border-black animate-pulse shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              ⚡ Mythic Boost Active!
+            </div>
+          )}
+
+          {(pack.pack_tier === 'collector' || pack.pack_tier === 'booster_box') && (
+            <div className="absolute top-2 right-2 z-30 badge-foil px-2 py-1 text-[9px] font-black uppercase rounded-full border-2 border-black text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              ✨ All Foil
+            </div>
+          )}
+
           {pack.pack_tier === 'collector' && (
-            <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase tracking-widest z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <div className="absolute top-[75px] left-2 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase tracking-widest z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               Collector
             </div>
           )}
           {pack.pack_tier === 'premium' && (
-            <div className="absolute top-2 left-2 bg-purple-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase tracking-widest z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <div className="absolute top-[75px] left-2 bg-purple-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase tracking-widest z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               Premium
             </div>
           )}
           {pack.pack_tier === 'booster_box' && (
-            <div className="absolute top-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase tracking-widest z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <div className="absolute top-[75px] left-2 bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black uppercase tracking-widest z-10 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               Bulk Value
             </div>
           )}
 
-          {/* God Pack Odds */}
-          <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-yellow-400 text-[10px] font-black px-2 py-0.5 rounded-full border border-yellow-400/50 uppercase tracking-tighter z-10 flex items-center gap-1">
-            <Zap className="w-3 h-3 fill-current" />
-            1:2000 God Pack
-          </div>
-
-          <div className="w-48 aspect-[4/3] rounded-xl overflow-hidden border-4 border-[var(--border)] bg-gradient-to-b from-slate-700 to-slate-900 relative transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-300 shadow-[4px_4px_0px_0px_var(--border)]">
+          {pack.image_url ? (
             <img
               src={pack.image_url}
               alt={pack.name}
-              className="w-full h-full object-cover relative z-10"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               referrerPolicy="no-referrer"
               loading="lazy"
             />
-            {/* All Foil Banner on Hover */}
-            {(pack.pack_tier === 'collector' || pack.name.toLowerCase().includes('legendary')) && (
-              <div className="absolute inset-x-0 bottom-0 bg-yellow-400 text-black text-[10px] font-black py-1 text-center uppercase tracking-[0.2em] transform translate-y-full group-hover:translate-y-0 transition-transform z-20 border-t-2 border-black">
-                ✨ All Foil ✨
-              </div>
-            )}
-            {/* Fallback pack art shown when image fails */}
-            <div className="absolute inset-0 flex items-center justify-center z-0">
-              <PackageOpen className="w-16 h-16 text-white/30" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100">
+              <Package className="w-16 h-16 text-indigo-300 opacity-50" />
             </div>
-          </div>
+          )}
+
+          {/* All Foil Banner on Hover */}
+          {(pack.pack_tier === 'collector' || pack.name.toLowerCase().includes('legendary')) && (
+            <div className="absolute inset-x-0 bottom-0 bg-yellow-400 text-black text-[10px] font-black py-1 text-center uppercase tracking-[0.2em] transform translate-y-full group-hover:translate-y-0 transition-transform z-20 border-t-2 border-black">
+              ✨ All Foil ✨
+            </div>
+          )}
         </div>
 
         <div className="p-6 flex flex-col flex-1">
@@ -654,52 +713,54 @@ export function Store() {
               </div>
             )}
 
-            <div className="flex gap-2">
-              <button 
-                onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost)}
-                disabled={opening || balance < cost}
-                className={cn(
-                  "flex-[2] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2",
-                  useGems ? "bg-emerald-400 hover:bg-emerald-500 text-black" : "bg-yellow-400 hover:bg-yellow-500 text-black",
-                  balance < cost && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                {useGems ? <Gem className="w-5 h-5 text-emerald-700" /> : <Coins className="w-5 h-5 text-yellow-700" />}
-                Open ({cost?.toLocaleString()})
-              </button>
-              <button 
-                onClick={() => handleBuyToInventory(pack.id, useGems, pack.name, cost)}
-                disabled={opening || balance < cost}
-                className="flex-1 bg-amber-100 hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed text-amber-900 font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
-                title="Buy to Inventory"
-              >
-                <PackageOpen className="w-4 h-4" />
-                Stash
-              </button>
-            </div>
-
-            {pack.card_count < 10 && (
-              <div className="space-y-2">
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
                 <button 
-                  onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost, 5)}
-                  disabled={opening || balance < cost * 5}
+                  onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost)}
+                  disabled={opening || balance < cost}
                   className={cn(
-                    "w-full font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm",
-                    useGems ? "bg-emerald-500 hover:bg-emerald-600 text-black" : "bg-purple-500 hover:bg-purple-600 text-white",
-                    balance < cost * 5 && "opacity-50 cursor-not-allowed"
+                    "flex-[2] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2",
+                    useGems ? "bg-emerald-400 hover:bg-emerald-500 text-black" : "bg-yellow-400 hover:bg-yellow-500 text-black",
+                    balance < cost && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  Open 5x ({(cost * 5).toLocaleString()})
+                  {useGems ? <Gem className="w-5 h-5 text-emerald-700" /> : <Coins className="w-5 h-5 text-yellow-700" />}
+                  Open ({cost?.toLocaleString()})
                 </button>
                 <button 
-                  onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost, 10)}
-                  disabled={opening || balance < cost * 10}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-sm"
+                  onClick={() => handleBuyToInventory(pack.id, useGems, pack.name, cost)}
+                  disabled={opening || balance < cost}
+                  className="flex-1 bg-amber-100 hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed text-amber-900 font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-xs"
+                  title="Buy to Inventory"
                 >
-                  Open 10x ({(cost * 10).toLocaleString()})
+                  <PackageOpen className="w-4 h-4" />
+                  Stash
                 </button>
               </div>
-            )}
+
+              {pack.pack_tier === 'standard' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost, 5)}
+                    disabled={opening || balance < cost * 5}
+                    className={cn(
+                      "font-black py-2 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 text-sm",
+                      useGems ? "bg-emerald-500 hover:bg-emerald-600 text-black" : "bg-purple-500 hover:bg-purple-600 text-white",
+                      balance < cost * 5 && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    Open 5x
+                  </button>
+                  <button 
+                    onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost, 10)}
+                    disabled={opening || balance < cost * 10}
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-2 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 text-sm"
+                  >
+                    Open 10x
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </motion.div>
@@ -823,12 +884,12 @@ export function Store() {
                                <Star className="w-3 h-3 fill-current" />
                                SR+ Guaranteed
                              </span>
-                             <span className="text-[var(--text)]">{100 - packs[0].next_hard_pity_in}/100</span>
+                             <span className="text-[var(--text)]">{profile?.pity_counter ?? 0}/100</span>
                            </div>
                            <div className="h-4 bg-slate-100 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
                              <motion.div 
                                initial={{ width: 0 }}
-                               animate={{ width: `${((100 - packs[0].next_hard_pity_in) / 100) * 100}%` }}
+                               animate={{ width: `${((profile?.pity_counter ?? 0) / 100) * 100}%` }}
                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 relative"
                              >
                                 <div className="absolute inset-0 bg-white/20 animate-pulse" />
@@ -840,14 +901,14 @@ export function Store() {
                            <div className="flex justify-between text-[10px] font-black uppercase text-slate-500">
                              <span className="flex items-center gap-1 text-orange-600">
                                <Zap className="w-3 h-3 fill-current" />
-                               Divine Boost
+                               Mythic Boost
                              </span>
-                             <span className="text-[var(--text)]">{50 - packs[0].next_soft_pity_in}/50</span>
+                             <span className="text-[var(--text)]">{profile?.soft_pity_counter ?? 0}/50</span>
                            </div>
                            <div className="h-4 bg-slate-100 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
                              <motion.div 
                                initial={{ width: 0 }}
-                               animate={{ width: `${((50 - packs[0].next_soft_pity_in) / 50) * 100}%` }}
+                               animate={{ width: `${((profile?.soft_pity_counter ?? 0) / 50) * 100}%` }}
                                className="h-full bg-gradient-to-r from-orange-500 to-red-600 relative"
                              >
                                 <div className="absolute inset-0 bg-white/20 animate-pulse" />
@@ -888,6 +949,12 @@ export function Store() {
               <div className="flex gap-4 text-xs font-black uppercase">
                 <span className="text-blue-500">+{lastPackResults.summary.xp_gained} XP</span>
                 <span className="text-yellow-500">{lastPackResults.summary.new_card_count} New Cards</span>
+                {lastPackResults.summary.pack_points_earned !== undefined && (
+                  <span className="text-indigo-500 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    +{lastPackResults.summary.pack_points_earned} Pts
+                  </span>
+                )}
               </div>
             </motion.div>
           )}
@@ -916,6 +983,19 @@ export function Store() {
             </div>
           ) : (
             <div className="space-y-12">
+              {/* === BOOSTER BOX SECTION === */}
+              {packs.filter(p => p.pack_tier === 'booster_box').length > 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+                    <Package className="w-6 h-6 text-yellow-500" />
+                    Booster Box
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+                    {packs.filter(p => p.pack_tier === 'booster_box').map(pack => renderPackCard(pack))}
+                  </div>
+                </div>
+              )}
+
               {/* Gold Packs Section */}
               {packs.filter(p => p.cost_gold > 0 && !(p.cost_gems > 0) && p.pack_tier === 'standard').length > 0 && (
                 <div className="space-y-6">
@@ -956,14 +1036,14 @@ export function Store() {
               )}
 
               {/* Gem Packs & Specialty Section */}
-              {packs.filter(p => (p.cost_gems > 0) && (p.pack_tier !== 'collector' && p.pack_tier !== 'premium')).length > 0 && (
+              {packs.filter(p => (p.cost_gems > 0) && !['collector', 'premium', 'booster_box'].includes(p.pack_tier)).length > 0 && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
                     <Gem className="w-6 h-6 text-emerald-500" />
                     Specialty & Gem Packs
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
-                    {packs.filter(p => (p.cost_gems > 0) && (p.pack_tier !== 'collector' && p.pack_tier !== 'premium')).map(pack => renderPackCard(pack))}
+                    {packs.filter(p => (p.cost_gems > 0) && !['collector', 'premium', 'booster_box'].includes(p.pack_tier)).map(pack => renderPackCard(pack))}
                   </div>
                 </div>
               )}
@@ -999,10 +1079,10 @@ export function Store() {
                   <button
                     key={item.rarity}
                     onClick={() => handleSparkCard(item.rarity, item.cost)}
-                    disabled={profile?.pack_points < item.cost}
+                    disabled={(profile?.pack_points ?? 0) < item.cost}
                     className={cn(
                       "group bg-indigo-800/50 border-4 border-black p-6 rounded-2xl text-left transition-all hover:translate-y-[-4px] active:translate-y-0 relative overflow-hidden",
-                      profile?.pack_points >= item.cost ? "hover:bg-indigo-700/50 cursor-pointer shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" : "opacity-50 cursor-not-allowed"
+                      (profile?.pack_points ?? 0) >= item.cost ? "hover:bg-indigo-700/50 cursor-pointer shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]" : "opacity-50 cursor-not-allowed"
                     )}
                   >
                     <div className={cn("w-12 h-1.5 rounded-full mb-4", item.color)} />
@@ -1012,7 +1092,7 @@ export function Store() {
                        {item.cost.toLocaleString()} pts
                     </p>
                     
-                    {profile?.pack_points >= item.cost && (
+                    {(profile?.pack_points ?? 0) >= item.cost && (
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Plus className="w-5 h-5 text-indigo-400" />
                       </div>
@@ -1055,7 +1135,7 @@ export function Store() {
                 </p>
                 <div className="p-4 bg-black/20 rounded-xl border-2 border-white/20">
                    <p className="text-xs font-black uppercase tracking-widest leading-loose">
-                      Pools updated weekly with new card releases. Divine Sparking is only available for legacy divine cards.
+                      Pools updated weekly with new card releases. All rarities available to spark — costs scale with rarity.
                    </p>
                 </div>
              </div>
@@ -1112,9 +1192,9 @@ export function Store() {
                 {inventory.map((inv) => (
                   <div 
                     key={inv.pack_type_id}
-                    className="group relative bg-[var(--bg)] border-4 border-[var(--border)] rounded-2xl p-4 shadow-[8px_8px_0px_0px_var(--border)] hover:translate-y-[-4px] transition-all"
+                    className="group relative bg-[var(--bg)] border-4 border-[var(--border)] rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_var(--border)] hover:translate-y-[-4px] transition-all flex flex-col"
                   >
-                    <div className="aspect-[3/4] mb-4 overflow-hidden rounded-xl border-2 border-[var(--border)] bg-indigo-50 flex items-center justify-center">
+                    <div className="aspect-[3/4] overflow-hidden border-b-4 border-[var(--border)] bg-indigo-50 flex items-center justify-center">
                       <img
                         src={inv.image_url}
                         alt={inv.name}
@@ -1122,7 +1202,7 @@ export function Store() {
                         referrerPolicy="no-referrer"
                       />
                     </div>
-                    <div className="text-center space-y-3">
+                    <div className="p-4 text-center flex-1 flex flex-col justify-between gap-3">
                       <div>
                         <p className="font-black text-sm uppercase truncate text-[var(--text)]">{inv.name}</p>
                         <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-black rounded-full border-2 border-black">
@@ -1131,7 +1211,7 @@ export function Store() {
                       </div>
                       
                       {inv.slot_config && (
-                        <div className="text-left py-2 border-t border-slate-200 mt-2">
+                        <div className="text-left py-2 border-t border-slate-200">
                            <SlotBreakdown slotConfig={inv.slot_config} />
                         </div>
                       )}

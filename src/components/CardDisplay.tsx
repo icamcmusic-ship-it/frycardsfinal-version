@@ -124,13 +124,15 @@ export function CardDisplay({
 
         {/* Bottom Section: Title & Flavor Text */}
         <div className="absolute bottom-[4cqw] left-[2cqw] right-[2cqw] flex flex-col gap-[1.5cqw] items-center pointer-events-none">
-          {/* Set Indicator - Subtle hover reveal */}
+          {/* Set Indicator */}
           {card.set_name && (
             <div 
-              className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-[2cqw] py-[0.5cqw] rounded-full border-[0.5cqw] border-black text-[2.5cqw] font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-20"
-              style={{ backgroundColor: card.set_theme_color || '#fff', color: '#000' }}
+              className="sticker absolute bottom-[16cqw] right-[3cqw] px-[2cqw] py-[1cqw] rounded-[3cqw] brut-border rotate-1 z-20 flex items-center justify-center min-w-[15cqw]"
+              style={{ backgroundColor: card.set_theme_color ? `${card.set_theme_color}` : 'rgba(255,255,255,0.95)' }}
             >
-              {card.set_name}
+              <span className="text-[2.2cqw] font-black uppercase tracking-widest text-black">
+                {card.set_name}
+              </span>
             </div>
           )}
 

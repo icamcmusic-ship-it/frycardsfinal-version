@@ -26,7 +26,7 @@ export function HowToPlay() {
       title: 'The Store & Pity',
       icon: Store,
       color: 'bg-indigo-100 text-indigo-600',
-      content: 'Opening packs is the primary way to collect cards. Every pack has a Hard Pity (guaranteed Super-Rare+) and a Soft Pity (boosted Divine rates). God Packs (1:2000) contain only all-SR+ foil cards!'
+      content: 'Opening packs is the primary way to collect cards. Every pack has a Hard Pity at 100 rolls (guaranteed Rare+) and a Mythic Boost at 50 rolls (boosted Mythic & SR rates). God Packs (1:2000) contain only all-SR+ foil cards!'
     },
     {
       title: 'Marketplace & Trading',
