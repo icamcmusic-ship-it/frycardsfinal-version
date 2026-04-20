@@ -76,6 +76,7 @@ export function Store() {
   } | null>(null);
   const [showGodPackCinematic, setShowGodPackCinematic] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ current: number, total: number } | null>(null);
+  const [collectionStats, setCollectionStats] = useState<any>(null);
   const [showOdds, setShowOdds] = useState<Record<string, boolean>>({});
   const [cosmicUseGems, setCosmicUseGems] = useState<Record<string, boolean>>({});
   const [inventory, setInventory] = useState<any[]>([]);
@@ -139,8 +140,17 @@ export function Store() {
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchPacks(), fetchUserCosmetics(), fetchInventory(), fetchWishlistCardIds(), fetchShopItems()]);
+    await Promise.all([fetchPacks(), fetchUserCosmetics(), fetchInventory(), fetchWishlistCardIds(), fetchShopItems(), fetchCollectionStats()]);
     setLoading(false);
+  };
+
+  const fetchCollectionStats = async () => {
+    try {
+      const { data } = await supabase.rpc('get_my_collection_stats');
+      if (data) setCollectionStats(data);
+    } catch (err) {
+      console.error('Error fetching collection stats:', err);
+    }
   };
 
   const fetchShopItems = async () => {
@@ -322,27 +332,30 @@ export function Store() {
     });
   };
 
-  const handleBuyToInventory = async (packId: string, useGems: boolean, packName: string, cost: number) => {
+  const handleBuyToInventory = async (packId: string, useGems: boolean, packName: string, cost: number, count: number = 1) => {
     if (!profile) return;
     
     setConfirmModal({
       isOpen: true,
-      title: 'Stash Pack',
-      message: `Are you sure you want to stash ${packName} for ${cost} ${useGems ? 'Gems' : 'Gold'}?`,
+      title: count > 1 ? `Stash ${count} Packs` : 'Stash Pack',
+      message: `Are you sure you want to stash ${count > 1 ? `${count}x ` : ''}${packName} for ${cost * count} ${useGems ? 'Gems' : 'Gold'}?`,
       onConfirm: async () => {
+        const toastId = toast.loading(`Stashing ${count > 1 ? `${count}x ` : ''}${packName}...`);
         try {
-          const { error } = await supabase.rpc('buy_pack_to_inventory', {
-            p_pack_type_id: packId,
-            p_use_gems: useGems
-          });
-
-          if (error) throw error;
+          // Process sequentially to avoid dropping requests if bulk isn't natively supported
+          for (let i = 0; i < count; i++) {
+            const { error } = await supabase.rpc('buy_pack_to_inventory', {
+              p_pack_type_id: packId,
+              p_use_gems: useGems
+            });
+            if (error) throw error;
+          }
           
-          toast.success('Pack added to inventory!', { icon: '📦' });
+          toast.success(`${count > 1 ? `${count}x ` : ''}Pack${count > 1 ? 's' : ''} added to inventory!`, { id: toastId, icon: '📦' });
           fetchInventory();
           useProfileStore.getState().refreshProfile();
         } catch (err: any) {
-          toast.error(err.message || 'Failed to buy pack');
+          toast.error(err.message || 'Failed to buy pack', { id: toastId });
         }
       }
     });
@@ -403,6 +416,71 @@ export function Store() {
     }
   };
 
+
+  const handleOpenBulkFromInventoryByType = async (inv: any, count: number) => {
+    if (opening || !profile) return;
+    setOpening(true);
+    setPackOpeningStep('shaking');
+    setBulkProgress(null);
+    setOpeningPackImageUrl(inv.image_url);
+    
+    try {
+      let allCards: any[] = [];
+      let totalXp = 0;
+      let totalNew = 0;
+      let totalPoints = 0;
+      let hasGodPack = false;
+      
+      setBulkProgress({ current: 0, total: count });
+      let packCount = 0;
+
+      for (let i = 0; i < count; i++) {
+        const { data, error } = await supabase.rpc('open_pack_from_inventory_by_type', {
+          p_pack_type_id: inv.pack_type_id
+        });
+        if (error) throw error;
+        
+        allCards = [...allCards, ...data.cards];
+        totalXp += data.xp_gained;
+        totalNew += data.new_card_count;
+        totalPoints += data.pack_points_earned || 0;
+
+        if (data.is_god_pack && !hasGodPack) {
+          hasGodPack = true;
+          setShowGodPackCinematic(true);
+          audioService.play('god_pack_alarm');
+        }
+
+        packCount++;
+        setBulkProgress({ current: packCount, total: count });
+      }
+
+      setOpenedCards(allCards);
+      setOpeningSummary({ 
+        xp_gained: totalXp, 
+        new_card_count: totalNew,
+        pack_points_earned: totalPoints
+      });
+
+      supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
+        if (error) console.error('Achievement check failed:', error);
+      });
+
+      if (!hasGodPack) {
+        setTimeout(() => {
+          setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
+          audioService.play('pack_open');
+        }, 1000);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to open packs');
+      setPackOpeningStep('idle');
+    } finally {
+      setOpening(false);
+      useProfileStore.getState().refreshProfile();
+      fetchInventory();
+    }
+  };
 
   const handleOpenAllFromInventory = async () => {
     if (opening || !profile || inventory.length === 0) return;
@@ -716,47 +794,38 @@ export function Store() {
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
                 <button 
-                  onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost)}
+                  onClick={() => handleBuyToInventory(pack.id, useGems, pack.name, cost)}
                   disabled={opening || balance < cost}
                   className={cn(
-                    "flex-[2] font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2",
+                    "flex-1 font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2",
                     useGems ? "bg-emerald-400 hover:bg-emerald-500 text-black" : "bg-yellow-400 hover:bg-yellow-500 text-black",
                     balance < cost && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  {useGems ? <Gem className="w-5 h-5 text-emerald-700" /> : <Coins className="w-5 h-5 text-yellow-700" />}
-                  Open ({cost?.toLocaleString()})
-                </button>
-                <button 
-                  onClick={() => handleBuyToInventory(pack.id, useGems, pack.name, cost)}
-                  disabled={opening || balance < cost}
-                  className="flex-1 bg-amber-100 hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed text-amber-900 font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2 text-xs"
-                  title="Buy to Inventory"
-                >
-                  <PackageOpen className="w-4 h-4" />
-                  Stash
+                  <PackageOpen className="w-5 h-5" />
+                  Stash ({cost?.toLocaleString()})
                 </button>
               </div>
 
-              {pack.pack_tier === 'standard' && (
+              {pack.pack_tier !== 'collector' && pack.pack_tier !== 'premium' && (
                 <div className="grid grid-cols-2 gap-2">
                   <button 
-                    onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost, 5)}
+                    onClick={() => handleBuyToInventory(pack.id, useGems, pack.name, cost, 5)}
                     disabled={opening || balance < cost * 5}
                     className={cn(
                       "font-black py-2 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 text-sm",
-                      useGems ? "bg-emerald-500 hover:bg-emerald-600 text-black" : "bg-purple-500 hover:bg-purple-600 text-white",
+                      useGems ? "bg-emerald-500 hover:bg-emerald-600 text-black" : "bg-cyan-500 hover:bg-cyan-600 text-black",
                       balance < cost * 5 && "opacity-50 cursor-not-allowed"
                     )}
                   >
-                    Open 5x
+                    Stash 5x
                   </button>
                   <button 
-                    onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost, 10)}
+                    onClick={() => handleBuyToInventory(pack.id, useGems, pack.name, cost, 10)}
                     disabled={opening || balance < cost * 10}
                     className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black py-2 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2 text-sm"
                   >
-                    Open 10x
+                    Stash 10x
                   </button>
                 </div>
               )}
@@ -1087,10 +1156,20 @@ export function Store() {
                   >
                     <div className={cn("w-12 h-1.5 rounded-full mb-4", item.color)} />
                     <h4 className="text-xl font-black uppercase mb-1">{item.rarity}</h4>
-                    <p className="text-indigo-300 font-bold flex items-center gap-2">
+                    <p className="text-indigo-300 font-bold flex items-center gap-2 mb-2">
                        <Sparkles className="w-4 h-4" />
                        {item.cost.toLocaleString()} pts
                     </p>
+                    {collectionStats && collectionStats.rarity_counts && collectionStats.rarity_counts[item.rarity] && (
+                      <div className="flex justify-between items-center bg-black/40 px-3 py-1.5 rounded-lg border border-black/20 text-xs font-black uppercase tracking-wider text-indigo-200">
+                        <span>Owned</span>
+                        <span className={cn(
+                          "px-2 py-0.5 rounded border border-current",
+                          collectionStats.rarity_counts[item.rarity].owned >= collectionStats.rarity_counts[item.rarity].total ? "text-emerald-400" : "text-white"
+                        )}>{collectionStats.rarity_counts[item.rarity].owned || 0} / {collectionStats.rarity_counts[item.rarity].total || '?'}
+                        </span>
+                      </div>
+                    )}
                     
                     {(profile?.pack_points ?? 0) >= item.cost && (
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1216,13 +1295,33 @@ export function Store() {
                         </div>
                       )}
 
-                      <button
-                        onClick={() => handleOpenFromInventory(inv.id, inv.image_url)}
-                        disabled={opening}
-                        className="w-full py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 active:shadow-none uppercase text-xs"
-                      >
-                        Open One
-                      </button>
+                      <div className="flex flex-col gap-2">
+                        <button
+                          onClick={() => handleOpenFromInventory(inv.id, inv.image_url)}
+                          disabled={opening}
+                          className="w-full py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 active:shadow-none uppercase text-xs"
+                        >
+                          Open One
+                        </button>
+                        {inv.quantity >= 5 && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => handleOpenBulkFromInventoryByType(inv, 5)}
+                              disabled={opening}
+                              className="py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-black rounded-lg border-2 border-black transition-transform active:translate-y-1 uppercase text-[10px]"
+                            >
+                              Open 5x
+                            </button>
+                            <button
+                              onClick={() => handleOpenBulkFromInventoryByType(inv, Math.min(10, inv.quantity))}
+                              disabled={opening || inv.quantity < 10}
+                              className="py-1.5 bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white font-black rounded-lg border-2 border-black transition-transform active:translate-y-1 uppercase text-[10px] opacity-90 disabled:cursor-not-allowed"
+                            >
+                              Open 10x
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

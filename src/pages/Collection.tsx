@@ -219,32 +219,56 @@ export function Collection() {
     });
   };
 
+  const observerRef = useRef<HTMLDivElement>(null);
+
   // Infinite scroll listener
   useEffect(() => {
     loadingMoreRef.current = loadingMore;
   }, [loadingMore]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.innerHeight + document.documentElement.scrollTop >= document.documentElement.offsetHeight - 500) {
-        if (hasMore && !loadingMoreRef.current && activeTab === 'collection') {
+    if (activeTab !== 'collection') return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMoreRef.current) {
+          loadingMoreRef.current = true;
           fetchCollection(true);
         }
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    );
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => observer.disconnect();
   }, [hasMore, activeTab, fetchCollection]);
 
-  if (loading && cards.length === 0) {
+  const isProfileLoading = !profile;
+  const isInitialLoad = (loading || isProfileLoading) && cards.length === 0;
+
+  if (isInitialLoad && activeTab !== 'sets') {
     return (
       <div className="space-y-8">
-        <div className="h-40 bg-slate-200 animate-pulse rounded-2xl border-4 border-black mb-8" />
+        <div className="h-40 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
           {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="skeleton-card" />
+            <div key={i} className="skeleton-card h-64 bg-[var(--surface)] rounded-2xl border-4 border-[var(--border)] animate-pulse" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  // Handle sets tab while profile is missing
+  if (!profile) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
       </div>
     );
   }
@@ -519,6 +543,7 @@ export function Collection() {
             )}
           </div>
 
+          <div ref={observerRef} className="h-10 w-full" />
           {loadingMore && <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>}
         </>
       )}

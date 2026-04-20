@@ -12,10 +12,18 @@ function OtherUserCollection({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.rpc('get_other_user_collection', { p_target_user_id: userId }).then(({ data }) => {
-      setCards(data || []);
-      setLoading(false);
-    });
+    const fetchCollection = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_other_user_collection', { p_target_user_id: userId });
+        if (error) throw error;
+        setCards(data || []);
+      } catch (err) {
+        console.error('Error fetching other user collection:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCollection();
   }, [userId]);
 
   if (loading) return <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>;

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', filters: any) {
   const { profile } = useProfileStore();
   const [cards, setCards] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [stats, setStats] = useState<any>(null);
@@ -36,7 +36,10 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
   }, []);
 
   const fetchCollection = useCallback(async (isLoadMore = false) => {
-    if (!profile) return;
+    if (!profile) {
+      setLoading(false);
+      return;
+    }
     
     try {
       const targetOffset = isLoadMore ? offsetRef.current : 0;
@@ -71,7 +74,11 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
       
       const fetchedCards = data || [];
       if (isLoadMore) {
-        setCards(prev => [...prev, ...fetchedCards]);
+        setCards(prev => {
+          const prevIds = new Set(prev.map(c => c.user_card_id || c.id));
+          const newUniqueCards = fetchedCards.filter((c: any) => !prevIds.has(c.user_card_id || c.id));
+          return [...prev, ...newUniqueCards];
+        });
       } else {
         setCards(fetchedCards);
       }
@@ -93,6 +100,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
       }
     } catch (err) {
       console.error('Error fetching collection:', err);
+      toast.error('Failed to load collection. Please refresh.');
     } finally {
       setLoading(false);
       setLoadingMore(false);

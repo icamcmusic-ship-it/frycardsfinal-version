@@ -47,6 +47,7 @@ export function Profile() {
   }, []);
 
   const fetchAchievements = async () => {
+    if (!profile?.id) return;
     await supabase.rpc('check_and_unlock_achievements', { p_user_id: profile?.id });
     const { data } = await supabase.rpc('get_user_achievements');
     setAchievements(data || []);

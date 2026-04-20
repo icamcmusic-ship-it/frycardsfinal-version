@@ -817,7 +817,7 @@ export function Marketplace() {
               <div className="flex justify-between items-start">
                 <div className="flex gap-3">
                   <div className="w-12 h-16 shrink-0 rounded-lg overflow-hidden border-2 border-[var(--border)] bg-slate-100 shadow-[2px_2px_0px_0px_var(--border)]">
-                    <img src={listing.card?.image_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={listing.card_image_url} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
                   <div>
                     <div className={cn(
@@ -909,7 +909,7 @@ export function Marketplace() {
               
               <div className="flex-1 flex items-center justify-center py-2 relative">
                 <div className="w-full max-w-[240px] container-type-inline-size">
-                  <CardDisplay card={{ ...listing.card, is_foil: listing.is_foil }} showQuantity={false} showNewBadge={false} />
+                  <CardDisplay card={{ ...listing.card, name: listing.card_name, rarity: listing.card_rarity, image_url: listing.card_image_url, is_foil: listing.is_foil }} showQuantity={false} showNewBadge={false} />
                 </div>
               </div>
 
@@ -991,17 +991,26 @@ export function Marketplace() {
                       </>
                     )}
                   </button>
-                      {listing.listing_type === 'auction' && (
-                    <button 
-                      onClick={() => {
-                        setSelectedListingForBids(listing);
-                        toggleBidHistory(listing.id);
-                        setShowBidHistoryModal(true);
-                      }}
-                      className="p-3 bg-[var(--surface)] hover:bg-slate-100 rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
+                  {listing.listing_type === 'auction' && (
+                    <>
+                      <button 
+                        onClick={() => handleToggleWatchlist(listing.id)}
+                        className="flex-1 py-3 bg-[var(--surface)] hover:bg-slate-100 text-slate-600 font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                      >
+                        <Bookmark className={cn("w-5 h-5", watchlistedIds.has(listing.id) && "fill-current text-yellow-500")} />
+                        Watch
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setSelectedListingForBids(listing);
+                          toggleBidHistory(listing.id);
+                          setShowBidHistoryModal(true);
+                        }}
+                        className="p-3 bg-[var(--surface)] hover:bg-slate-100 rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </>
                   )}
                 </div>
               )}

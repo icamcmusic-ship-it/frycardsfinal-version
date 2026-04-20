@@ -53,7 +53,7 @@ export function CardDisplay({
   return (
     <div 
       className={cn(
-        'card-base brut-border brut-shadow transition-all duration-300 group',
+        'card-base brut-border brut-shadow transition-all duration-300 group hover:-translate-y-2 hover:scale-[1.02]',
         rarityKey === 'super-rare' && 'effect-sr',
         rarityKey === 'mythic' && 'effect-mythic',
         rarityKey === 'divine' && 'effect-divine',
@@ -87,7 +87,7 @@ export function CardDisplay({
         <div className="absolute top-[6cqw] left-[6cqw] -rotate-12 z-20">
           {/* Type Sticker */}
           <div className={cn(
-            "sticker shrink-0 w-[22cqw] h-[22cqw] rounded-full brut-border shadow-sm",
+            "sticker shrink-0 w-[22cqw] h-[22cqw] rounded-full brut-border shadow-sm flex items-center justify-center",
             `color-${colorKey}`,
             `shadow-${colorKey}`
           )}>
@@ -155,16 +155,13 @@ export function CardDisplay({
 
           {/* Flavor Text Sticker */}
           {card.flavor_text && (
-            <div className="w-full flex justify-end px-[2cqw]">
-              <div className={cn(
-                "sticker relative px-[4cqw] py-[2cqw] rounded-br-[6cqw] rounded-tl-[6cqw] brut-border rotate-3 max-w-[90%] shadow-sm",
-                `color-${colorKey}`,
-                `shadow-${colorKey}`
-              )}>
-                <p className="text-[3.2cqw] font-bold leading-tight italic text-black">
-                  "{card.flavor_text}"
-                </p>
-              </div>
+            <div 
+              className="sticker relative mt-[-3cqw] self-end mr-[4cqw] px-[3cqw] py-[1.5cqw] rounded-[3cqw] brut-border rotate-3 bg-white/95 z-20 shadow-sm"
+              style={{ maxWidth: '85%' }}
+            >
+               <p className="text-[2.8cqw] font-bold leading-tight italic text-black">
+                 "{card.flavor_text}"
+               </p>
             </div>
           )}
         </div>
@@ -180,14 +177,14 @@ export function CardDisplay({
         )}
 
         {/* Quantity Badge */}
-        {showQuantity && ((card.quantity != null && card.quantity > 1) || (card.foil_quantity != null && card.foil_quantity > 0)) && (
+        {showQuantity && ((card.quantity != null && card.quantity > 0) || (card.foil_quantity != null && card.foil_quantity > 0)) && (
           <div className="sticker absolute bottom-[4cqw] left-[-2cqw] bg-black text-white px-[3cqw] py-[1.5cqw] rounded-[2.5cqw] border-[0.6cqw] border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center gap-[1.5cqw] z-30">
             {card.quantity != null && card.quantity > 0 && (
               <span className="text-[4.5cqw] font-black leading-none">×{card.quantity}</span>
             )}
             {card.foil_quantity != null && card.foil_quantity > 0 && (
               <span className="text-[4.5cqw] font-black leading-none text-yellow-400 flex items-center">
-                {card.quantity != null && card.quantity > 1 && <span className="mx-[0.5cqw]">+</span>} ✨×{card.foil_quantity}
+                {card.quantity != null && card.quantity > 0 && <span className="mr-[0.5cqw]">+</span>}✨×{card.foil_quantity}
               </span>
             )}
           </div>

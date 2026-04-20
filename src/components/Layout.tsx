@@ -13,6 +13,7 @@ export function Layout() {
   const { profile, fetchProfile, setProfile, loading: profileLoading } = useProfileStore();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [newCardCount, setNewCardCount] = useState(0);
   const [pendingTradeCount, setPendingTradeCount] = useState(0);
   const [pendingSocialCount, setPendingSocialCount] = useState(0);
@@ -157,15 +158,29 @@ export function Layout() {
         })
         .subscribe();
 
+      const chatChannel = supabase
+        .channel('chat-updates')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages_history',
+        }, (payload) => {
+          if (payload.new && payload.new.user_id !== user.id && !isChatOpen) {
+            setUnreadChatCount(prev => prev + 1);
+          }
+        })
+        .subscribe();
+
       return () => {
         profileChannel.unsubscribe();
         notifChannel.unsubscribe();
         cardsChannel.unsubscribe();
         tradesChannel.unsubscribe();
         socialChannel.unsubscribe();
+        chatChannel.unsubscribe();
       };
     }
-  }, [user, fetchProfile, setProfile]);
+  }, [user, fetchProfile, setProfile, isChatOpen]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -293,9 +308,9 @@ export function Layout() {
                 )}
               </Link>
               <button 
-                onClick={() => setIsChatOpen(!isChatOpen)}
+                onClick={() => { setIsChatOpen(!isChatOpen); if(!isChatOpen) setUnreadChatCount(0); }}
                 className={cn(
-                  "p-2 rounded-full transition-all border-2",
+                  "p-2 rounded-full transition-all border-2 relative",
                   isChatOpen 
                     ? "bg-blue-400 text-black border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]" 
                     : "hover:bg-blue-100 text-[var(--text)] border-transparent hover:border-[var(--border)] hover:shadow-[2px_2px_0px_0px_var(--border)]"
@@ -303,6 +318,11 @@ export function Layout() {
                 title="Global Chat"
               >
                 <MessageSquare className="w-4 h-4" />
+                {unreadChatCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-[var(--border)]">
+                    {unreadChatCount > 9 ? '!' : unreadChatCount}
+                  </span>
+                )}
               </button>
               <button 
                 onClick={handleSignOut}
@@ -400,6 +420,24 @@ export function Layout() {
                 </Link>
               );
             })}
+            
+            {/* Added Chat to Bottom Nav */}
+            <button
+              onClick={() => { setIsChatOpen(!isChatOpen); if(!isChatOpen) setUnreadChatCount(0); setIsMobileMenuOpen(false); }}
+              className={cn(
+                "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative",
+                isChatOpen ? "text-blue-600 font-bold" : "text-[var(--text)] opacity-70 hover:opacity-100"
+              )}
+            >
+              <MessageSquare className={cn("w-5 h-5", isChatOpen && "text-blue-600")} />
+              <span className="text-[10px]">Chat</span>
+              {unreadChatCount > 0 && (
+                <span className="absolute top-2 right-4 bg-red-500 text-white text-[8px] font-black w-3 h-3 rounded-full flex items-center justify-center border border-[var(--border)]">
+                  {unreadChatCount > 9 ? '!' : unreadChatCount}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={cn(
