@@ -352,21 +352,28 @@ export function Home() {
             {userPacks.slice(0, 6).map((pack) => (
               <Link
                 key={pack.pack_id}
-                to={`/store?open=${pack.pack_id}`}
-                className="group relative bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-3 shadow-[4px_4px_0px_0px_var(--border)] hover:translate-y-[-2px] transition-all"
+                to={`/store?tab=inventory`}
+                className="group relative"
               >
-                <div className="aspect-[3/4] mb-2 overflow-hidden rounded-lg border-2 border-[var(--border)] bg-indigo-50 flex items-center justify-center">
-                  <img
-                    src={pack.image_url}
-                    alt={pack.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-                <div className="text-center">
-                  <p className="font-black text-[10px] uppercase truncate text-[var(--text)]">{pack.name}</p>
-                  <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-black rounded-full border-2 border-black">
-                    {pack.quantity}
+                {/* Stack Deco */}
+                {pack.quantity > 1 && (
+                  <div className="absolute inset-0 translate-x-1 translate-y-1 bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl -z-10" />
+                )}
+                
+                <div className="relative bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-2 shadow-[2px_2px_0px_0px_var(--border)] group-hover:translate-y-[-2px] transition-all h-full flex flex-col">
+                  <div className="aspect-[3/4] mb-2 overflow-hidden rounded-lg border-2 border-[var(--border)] bg-indigo-50 flex items-center justify-center relative">
+                    <img
+                      src={pack.image_url}
+                      alt={pack.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute top-1 right-1 bg-black text-white text-[9px] font-black px-1.5 py-0.5 rounded-full border border-white shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+                      ×{pack.quantity}
+                    </div>
+                  </div>
+                  <div className="text-center mt-auto">
+                    <p className="font-black text-[9px] uppercase truncate text-[var(--text)]">{pack.name}</p>
                   </div>
                 </div>
               </Link>

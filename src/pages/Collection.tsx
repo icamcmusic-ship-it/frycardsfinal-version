@@ -155,32 +155,63 @@ export function Collection() {
   };
 
   const handleQuicksell = async (card: any) => {
-    const baseValue = { Common: 10, Uncommon: 25, Rare: 100, 'Super-Rare': 250, Mythic: 500, Divine: 1000 }[card.rarity] ?? 10;
-    const value = (card.is_foil || (card.foil_quantity ?? 0) > 0) ? baseValue * 3 : baseValue;
+    const foilPrice = ({ Common: 10, Uncommon: 25, Rare: 100, 'Super-Rare': 250, Mythic: 500, Divine: 1000 }[card.rarity] ?? 10) * 3;
+    const normalPrice = { Common: 10, Uncommon: 25, Rare: 100, 'Super-Rare': 250, Mythic: 500, Divine: 1000 }[card.rarity] ?? 10;
     
+    // Check if we have specific copy or aggregated quantities
+    const hasNormal = (card.quantity ?? 0) > 0 || !card.is_foil;
+    const hasFoil = (card.foil_quantity ?? 0) > 0 || card.is_foil;
+
+    const performQuicksell = async (sellFoil: boolean) => {
+      try {
+        const { data, error } = await supabase.rpc('quicksell_card', {
+          p_card_id: card.id,
+          p_is_foil: sellFoil,
+          p_quantity: 1,
+        });
+        if (error) throw error;
+        
+        toast.success(`Sold ${card.name} for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
+        fetchCollection();
+        fetchStats();
+        useProfileStore.getState().refreshProfile();
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to sell');
+      }
+    };
+
+    if (hasFoil && hasNormal && (card.quantity ?? 0) > 0 && (card.foil_quantity ?? 0) > 0) {
+      toast((t) => (
+        <div className="flex flex-col gap-3">
+          <p className="font-bold text-sm">Quicksell {card.name}: Choose Version</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { performQuicksell(false); toast.dismiss(t.id); }}
+              className="px-3 py-2 bg-slate-200 border-2 border-black rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none"
+            >
+              Normal (+{normalPrice} G)
+            </button>
+            <button
+              onClick={() => { performQuicksell(true); toast.dismiss(t.id); }}
+              className="px-3 py-2 bg-yellow-400 border-2 border-black rounded-lg text-[10px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none"
+            >
+              Foil (+{foilPrice} G)
+            </button>
+          </div>
+        </div>
+      ), { duration: 5000, position: 'bottom-center' });
+      return;
+    }
+
+    const sellFoil = hasFoil && (card.foil_quantity > 0 || card.is_foil);
+    const value = sellFoil ? foilPrice : normalPrice;
+
     setConfirmConfig({
       isOpen: true,
       title: 'Quicksell Card',
-      message: `Quicksell ${card.name} for ${value} Gold?`,
+      message: `Quicksell ${sellFoil ? 'Foil ' : ''}${card.name} for ${value} Gold?`,
       variant: 'danger',
-      onConfirm: async () => {
-        try {
-          const { data, error } = await supabase.rpc('quicksell_card', {
-            p_card_id: card.id,
-            p_is_foil: (card.is_foil || (card.foil_quantity ?? 0) > 0) || false,
-            p_quantity: 1,
-          });
-          if (error) throw error;
-          
-          toast.success(`Sold ${card.name} for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
-          fetchCollection();
-          fetchStats();
-          useProfileStore.getState().refreshProfile();
-          supabase.rpc('increment_mission_progress', { p_mission_type: 'quicksell_cards', p_amount: 1 });
-        } catch (err: any) {
-          toast.error(err.message || 'Failed to sell');
-        }
-      }
+      onConfirm: () => performQuicksell(sellFoil)
     });
   };
 
@@ -350,7 +381,7 @@ export function Collection() {
                     onConfirm: async () => {
                       try {
                         const { data, error } = await supabase.rpc('mill_selected_cards', {
-                          p_user_card_ids: selectedCardIds
+                          p_card_ids: selectedCardIds
                         });
                         if (error) throw error;
                         
@@ -472,6 +503,17 @@ export function Collection() {
                 <option value="all">All Rarities</option>
                 {['Common', 'Uncommon', 'Rare', 'Super-Rare', 'Mythic', 'Divine'].map(r => (
                   <option key={r} value={r.toLowerCase()}>{r}</option>
+                ))}
+              </select>
+
+              <select
+                value={cardType}
+                onChange={(e) => setCardType(e.target.value)}
+                className="px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)]"
+              >
+                <option value="all">All Types</option>
+                {['Unit','Event','Location','Artifact','Leader','Sacred'].map(t => (
+                  <option key={t} value={t.toLowerCase()}>{t}</option>
                 ))}
               </select>
 

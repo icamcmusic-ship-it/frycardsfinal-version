@@ -49,7 +49,7 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, activ
       <CardDisplay 
         card={card} 
         showNewBadge={true} 
-        showQuantity={showQuantity && (card.quantity || 0) > 1}
+        showQuantity={showQuantity && ((card.quantity || 0) + (card.foil_quantity || 0) > 1)}
         onToggleLock={() => onToggleLock && onToggleLock()}
         onToggleWishlist={() => onToggleWishlist && onToggleWishlist()}
         isWishlisted={isWishlisted}

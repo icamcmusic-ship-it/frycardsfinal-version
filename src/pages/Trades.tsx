@@ -148,6 +148,7 @@ export function Trades() {
       if (error) throw error;
       
       toast.success('Trade offer sent!', { icon: '🤝' });
+      supabase.rpc('increment_mission_progress', { p_mission_type: 'send_trade', p_amount: 1 });
       setShowCreate(false);
       setOfferedIds([]);
       setRequestedIds([]);

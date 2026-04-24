@@ -156,7 +156,7 @@ export function CardDisplay({
           {/* Flavor Text Sticker */}
           {card.flavor_text && (
             <div 
-              className="sticker relative mt-[-3cqw] self-end mr-[4cqw] px-[3cqw] py-[1.5cqw] rounded-[3cqw] brut-border rotate-3 bg-white/95 z-20 shadow-sm"
+              className="sticker relative mt-[1cqw] self-end mr-[4cqw] px-[3cqw] py-[1.5cqw] rounded-[3cqw] brut-border rotate-3 bg-white/95 z-20 shadow-sm"
               style={{ maxWidth: '85%' }}
             >
                <p className="text-[2.8cqw] font-bold leading-tight italic text-black">

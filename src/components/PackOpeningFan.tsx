@@ -48,47 +48,65 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
     }));
   }, [cards]);
 
+  const flippedCountRef = useRef(0);
+  const isAutoRunningRef = useRef(false);
+  const revealingIndicesRef = useRef<Set<number>>(new Set());
+
   useEffect(() => {
     if (isOpen) {
       setFlippedCount(0);
+      flippedCountRef.current = 0;
+      revealingIndicesRef.current.clear();
       setFlippedStates({});
       setIsAutoRunning(false);
+      isAutoRunningRef.current = false;
       setBlockManualClicks(false);
       setShowSummary(false);
     }
   }, [isOpen, cards]);
 
-  const flipAndMove = async (idx: number, fromAuto = false) => {
-    if (!fromAuto && blockManualClicks) return;
+  const flipAndMove = async (idx: number, fromAuto = false, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!fromAuto && (blockManualClicks || isAutoRunningRef.current)) return;
     if (flippedStates[idx] && flippedStates[idx] !== 'idle') return;
-    if (idx === chaseIndex && flippedCount < cards.length - 1) return;
+    if (revealingIndicesRef.current.has(idx)) return;
+    
+    // Check if we're trying to flip the chase card too early
+    if (idx === chaseIndex && flippedCountRef.current < cards.length - 1) {
+      return;
+    }
 
     audioService.play('card_reveal');
+    revealingIndicesRef.current.add(idx);
     
     setFlippedStates(prev => ({ ...prev, [idx]: 'revealing' }));
-    setFlippedCount(prev => prev + 1);
+    flippedCountRef.current += 1;
+    setFlippedCount(flippedCountRef.current);
 
     const isChase = idx === chaseIndex;
-    const displayDuration = isAutoRunning ? 200 : 600;
+    const displayDuration = (isAutoRunningRef.current || fromAuto) ? 200 : 600;
 
     setTimeout(() => {
       if (isChase) {
         setFlippedStates(prev => ({ ...prev, [idx]: 'chase' }));
         audioService.play('divine_reveal');
-        setTimeout(() => setShowSummary(true), 1000);
+        setTimeout(() => setShowSummary(true), 1200);
       } else {
         setFlippedStates(prev => ({ ...prev, [idx]: 'collected' }));
       }
     }, displayDuration);
 
-    // If all but chase are flipped, unlock chase
-    if (flippedCount === cards.length - 1 && !isChase) {
+    // If all non-chase cards are flipped, or we just flipped the chase, ensure clicks are unblocked
+    if (flippedCountRef.current >= cards.length - 1) {
       setBlockManualClicks(false);
     }
   };
 
-  const autoFlipAll = async () => {
-    if (isAutoRunning) return;
+  const autoFlipAll = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (isAutoRunningRef.current) return;
+    
+    isAutoRunningRef.current = true;
     setIsAutoRunning(true);
     setBlockManualClicks(true);
 
@@ -99,18 +117,22 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
       }
     }
 
-    // Sort sequentially (left to right) for the crescendo effect
+    // Sort sequentially
     stack.sort((a, b) => a - b);
 
     for (let i = 0; i < stack.length; i++) {
-      flipAndMove(stack[i], true);
-      // Crescendo effect: shorter delay at start, longer towards the end
-      // Start at 80ms, end at 300ms
+      await flipAndMove(stack[i], true);
       const progress = i / stack.length;
       const delay = 80 + (progress * 220);
       await new Promise(r => setTimeout(r, delay));
     }
     
+    // Final check for chase card
+    if (flippedCountRef.current === cards.length - 1 && chaseIndex !== -1) {
+       setBlockManualClicks(false);
+    }
+
+    isAutoRunningRef.current = false;
     setIsAutoRunning(false);
   };
 
@@ -131,9 +153,9 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
 
   return (
     <div 
-      onClick={() => {
-        if (!showSummary && !isAutoRunning) {
-          autoFlipAll();
+      onClick={(e) => {
+        if (!showSummary && !isAutoRunningRef.current) {
+          autoFlipAll(e);
         }
       }}
       className={cn(
@@ -239,7 +261,7 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
                 isChase && !isLocked && !isChaseRevealed && "animate-pulse shadow-[0_0_20px_#ffdf6c]"
               )}
               style={{ transform, zIndex, transformStyle: 'preserve-3d' }}
-              onClick={() => flipAndMove(i)}
+              onClick={(e) => flipAndMove(i, false, e)}
             >
               <div className={cn(
                 "relative w-full h-full transition-transform duration-700 preserve-3d rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",

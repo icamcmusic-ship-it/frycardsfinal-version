@@ -1267,60 +1267,79 @@ export function Store() {
                 <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">Buy some from the shop and stash them!</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-10">
                 {inventory.map((inv) => (
-                  <div 
-                    key={inv.pack_type_id}
-                    className="group relative bg-[var(--bg)] border-4 border-[var(--border)] rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_var(--border)] hover:translate-y-[-4px] transition-all flex flex-col"
-                  >
-                    <div className="aspect-[3/4] overflow-hidden border-b-4 border-[var(--border)] bg-indigo-50 flex items-center justify-center">
-                      <img
-                        src={inv.image_url}
-                        alt={inv.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                    <div className="p-4 text-center flex-1 flex flex-col justify-between gap-3">
-                      <div>
-                        <p className="font-black text-sm uppercase truncate text-[var(--text)]">{inv.name}</p>
-                        <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-black rounded-full border-2 border-black">
-                          {inv.quantity} PACKS
-                        </div>
-                      </div>
-                      
-                      {inv.slot_config && (
-                        <div className="text-left py-2 border-t border-slate-200">
-                           <SlotBreakdown slotConfig={inv.slot_config} />
-                        </div>
-                      )}
+                  <div key={inv.pack_type_id} className="relative group">
+                    {/* Stack Deco - Visual layers for quantity */}
+                    {inv.quantity > 1 && (
+                      <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 bg-[var(--bg)] border-4 border-[var(--border)] rounded-2xl -z-10" />
+                    )}
+                    {inv.quantity > 2 && (
+                      <div className="absolute inset-0 translate-x-3 translate-y-3 bg-[var(--bg)] border-4 border-[var(--border)] rounded-2xl -z-20 opacity-50" />
+                    )}
 
-                      <div className="flex flex-col gap-2">
-                        <button
-                          onClick={() => handleOpenFromInventory(inv.id, inv.image_url)}
-                          disabled={opening}
-                          className="w-full py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-1 active:shadow-none uppercase text-xs"
-                        >
-                          Open One
-                        </button>
-                        {inv.quantity >= 5 && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <button
-                              onClick={() => handleOpenBulkFromInventoryByType(inv, 5)}
-                              disabled={opening}
-                              className="py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-black rounded-lg border-2 border-black transition-transform active:translate-y-1 uppercase text-[10px]"
-                            >
-                              Open 5x
-                            </button>
-                            <button
-                              onClick={() => handleOpenBulkFromInventoryByType(inv, Math.min(10, inv.quantity))}
-                              disabled={opening || inv.quantity < 10}
-                              className="py-1.5 bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white font-black rounded-lg border-2 border-black transition-transform active:translate-y-1 uppercase text-[10px] opacity-90 disabled:cursor-not-allowed"
-                            >
-                              Open 10x
-                            </button>
+                    <div 
+                      className={cn(
+                        "relative h-full bg-[var(--bg)] border-4 border-[var(--border)] rounded-2xl overflow-hidden shadow-[4px_4px_0px_0px_var(--border)] hover:translate-y-[-2px] transition-all flex flex-col",
+                        inv.pack_tier === 'booster_box' && "border-yellow-500 shadow-[4px_4px_0px_0px_rgba(234,179,8,1)]",
+                        inv.pack_tier === 'collector' && "border-red-500 shadow-[4px_4px_0px_0px_rgba(239,68,68,1)]"
+                      )}
+                    >
+                      <div className="aspect-[3/4] overflow-hidden border-b-4 border-[var(--border)] bg-indigo-50 relative">
+                        <img
+                          src={inv.image_url}
+                          alt={inv.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          referrerPolicy="no-referrer"
+                        />
+                        {/* Quantity Badge */}
+                        <div className="absolute top-2 right-2 bg-black text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] z-10">
+                          ×{inv.quantity}
+                        </div>
+                        
+                        {/* Tier Badge */}
+                        {inv.pack_tier && inv.pack_tier !== 'regular' && (
+                          <div className={cn(
+                            "absolute bottom-2 left-2 px-1.5 py-0.5 rounded border-2 border-black text-[9px] font-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
+                            inv.pack_tier === 'booster_box' ? "bg-yellow-400" : "bg-purple-400 text-white"
+                          )}>
+                            {inv.pack_tier.replace('_', ' ')}
                           </div>
                         )}
+                      </div>
+                      
+                      <div className="p-3 text-center flex-1 flex flex-col justify-between gap-3">
+                        <div className="min-h-[2.5rem] flex items-center justify-center">
+                          <p className="font-black text-[11px] uppercase leading-tight text-[var(--text)] line-clamp-2">{inv.name}</p>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => handleOpenFromInventory(inv.id, inv.image_url)}
+                            disabled={opening}
+                            className="w-full py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white font-black rounded-xl border-4 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-transform active:translate-y-0.5 active:shadow-none uppercase text-[10px]"
+                          >
+                            Open
+                          </button>
+                          {inv.quantity >= 5 && (
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => handleOpenBulkFromInventoryByType(inv, 5)}
+                                disabled={opening}
+                                className="py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-black rounded-lg border-2 border-black transition-transform active:translate-y-0.5 uppercase text-[9px]"
+                              >
+                                5x
+                              </button>
+                              <button
+                                onClick={() => handleOpenBulkFromInventoryByType(inv, Math.min(10, inv.quantity))}
+                                disabled={opening || inv.quantity < 10}
+                                className="py-1.5 bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white font-black rounded-lg border-2 border-black transition-transform active:translate-y-0.5 uppercase text-[9px] disabled:opacity-50"
+                              >
+                                10x
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
