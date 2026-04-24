@@ -72,7 +72,7 @@ export function Trades() {
       p_rarity: null,
       p_sort_by: 'name',
       p_limit: 500,
-      p_element_type: null,
+      p_card_type_filter: null,
       p_is_foil: null,
       p_search: null,
       p_offset: 0

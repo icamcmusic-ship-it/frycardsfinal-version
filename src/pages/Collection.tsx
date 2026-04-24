@@ -412,14 +412,11 @@ export function Collection() {
                     variant: 'warning',
                     onConfirm: async () => {
                       try {
-                        let totalGold = 0;
-                        const promises = selectedCardIds.map(id => supabase.rpc('quicksell_card', { p_user_card_id: id }));
-                        const results = await Promise.all(promises);
-                        
-                        for (const res of results) {
-                          if (res.error) throw res.error;
-                          if (res.data?.gold_earned) totalGold += res.data.gold_earned;
-                        }
+                        const { data, error } = await supabase.rpc('bulk_quicksell_user_cards', {
+                          p_user_card_ids: selectedCardIds
+                        });
+                        if (error) throw error;
+                        const totalGold = data?.gold_earned ?? 0;
                         
                         toast.success(`Quicksold ${selectedCardIds.length} cards for ${totalGold} Gold!`, { icon: '💰' });
                         setSelectedCardIds([]);
@@ -596,8 +593,8 @@ export function Collection() {
           card={selectedCard}
           cardBackUrl={profile?.card_back_url || null}
           onClose={() => setSelectedCard(null)}
-          onSell={activeTab === 'collection' ? handleQuicksell : undefined}
-          onList={activeTab === 'collection' ? (card) => {
+          onSell={(activeTab === 'collection' && selectedCard.user_card_id) ? handleQuicksell : undefined}
+          onList={(activeTab === 'collection' && selectedCard.user_card_id) ? (card) => {
             setSelectedCard(null);
             setCardToList(card);
             setIsListingModalOpen(true);

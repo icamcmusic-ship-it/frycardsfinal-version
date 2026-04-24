@@ -192,7 +192,7 @@ export function CardDisplay({
 
         {/* Action Buttons */}
         <div className="absolute top-[28cqw] right-[4cqw] flex flex-col gap-[2cqw] pointer-events-auto">
-          {onToggleLock && (
+          {onToggleLock && (card.user_card_id || card.id.length > 10) && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleLock(); }}
               className={cn(

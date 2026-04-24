@@ -794,16 +794,28 @@ export function Store() {
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
                 <button 
+                  onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost)}
+                  disabled={opening || balance < cost}
+                  className={cn(
+                    "flex-1 font-black py-3 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2",
+                    useGems ? "bg-emerald-500 hover:bg-emerald-600 text-black" : "bg-blue-500 hover:bg-blue-600 text-white",
+                    balance < cost && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <Zap className="w-5 h-5" />
+                  Open Now
+                </button>
+                <button 
                   onClick={() => handleBuyToInventory(pack.id, useGems, pack.name, cost)}
                   disabled={opening || balance < cost}
                   className={cn(
                     "flex-1 font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2",
-                    useGems ? "bg-emerald-400 hover:bg-emerald-500 text-black" : "bg-yellow-400 hover:bg-yellow-500 text-black",
+                    useGems ? "bg-emerald-100 hover:bg-emerald-200 text-emerald-800" : "bg-slate-100 hover:bg-slate-200 text-slate-800",
                     balance < cost && "opacity-50 cursor-not-allowed"
                   )}
                 >
                   <PackageOpen className="w-5 h-5" />
-                  Stash ({cost?.toLocaleString()})
+                  Stash
                 </button>
               </div>
 

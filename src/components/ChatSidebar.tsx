@@ -1,29 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Send, X, MessageSquare, Loader2, User as UserIcon } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { MessageSquare, Send, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-interface Message {
-  id: string;
-  user_id: string;
-  content: string | null;
-  body: string | null;
-  username: string;
-  avatar_url: string;
-  created_at: string;
-  profiles?: {
-    username: string;
-    avatar_url: string;
-  };
-}
+import { cn } from '../lib/utils';
+import { ClickableUsername } from './ClickableUsername';
+import toast from 'react-hot-toast';
 
 export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { profile } = useProfileStore();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,19 +20,19 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
       fetchMessages();
       
       const channel = supabase
-        .channel('public-chat')
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
+        .channel('global_chat_sidebar')
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
           table: 'messages_history',
           filter: "room_id=eq.global"
         }, (payload) => {
-          setMessages(prev => [...prev, payload.new as Message]);
+          setMessages(prev => [...prev, payload.new].slice(-50));
         })
         .subscribe();
 
       return () => {
-        channel.unsubscribe();
+        supabase.removeChannel(channel);
       };
     }
   }, [isOpen]);
@@ -55,18 +44,18 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
   }, [messages]);
 
   const fetchMessages = async () => {
+    setLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('messages_history')
-        .select('*, profiles(username, avatar_url)')
+        .select('*')
         .eq('room_id', 'global')
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(50);
-
-      if (error) throw error;
-      setMessages(data || []);
-    } catch (err) {
-      console.error('Error fetching messages:', err);
+      
+      if (data) {
+        setMessages(data.reverse());
+      }
     } finally {
       setLoading(false);
     }
@@ -74,25 +63,23 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !profile) return;
+    if (!newMessage.trim() || !profile || sending) return;
 
-    const msgContent = newMessage.trim();
-    setNewMessage('');
-
+    setSending(true);
     try {
-      const { error } = await supabase
-        .from('messages_history')
-        .insert({
-          room_id: 'global',
-          user_id: profile.id,
-          body: msgContent,
-          username: profile.username || 'Anonymous',
-          avatar_url: profile.avatar_url
-        });
+      const { error } = await supabase.from('messages_history').insert({
+        user_id: profile.id,
+        username: profile.username,
+        body: newMessage.trim(),
+        room_id: 'global'
+      });
 
       if (error) throw error;
-    } catch (err) {
-      console.error('Error sending message:', err);
+      setNewMessage('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to send');
+    } finally {
+      setSending(false);
     }
   };
 
@@ -100,123 +87,96 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop for mobile */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60] md:hidden"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
           />
-          
           <motion.aside
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 bottom-0 w-80 bg-[var(--surface)] border-l-4 border-[var(--border)] z-[70] flex flex-col shadow-[-8px_0px_0px_0px_rgba(0,0,0,0.1)]"
+            className="fixed top-0 right-0 bottom-0 w-80 bg-slate-50 border-l-4 border-black z-[70] flex flex-col shadow-[-8px_0px_0px_0px_rgba(0,0,0,0.2)]"
           >
             {/* Header */}
-            <div className="p-4 border-b-4 border-[var(--border)] flex items-center justify-between bg-blue-400">
-              <div className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-black" />
-                <h2 className="font-black text-black uppercase tracking-tight">Global Chat</h2>
+            <div className="bg-blue-500 p-4 border-b-4 border-black flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white">
+                <MessageSquare className="w-5 h-5 fill-current" />
+                <h2 className="font-black uppercase tracking-tight">Global Chat</h2>
               </div>
               <button 
                 onClick={onClose}
-                className="p-1 hover:bg-black/10 rounded-lg transition-colors"
+                className="p-1 hover:bg-white/20 rounded-lg text-white"
               >
-                <X className="w-6 h-6 text-black" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
             {/* Messages Area */}
             <div 
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-hide"
+              className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
             >
               {loading ? (
                 <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 </div>
               ) : messages.length === 0 ? (
-                <div className="text-center py-8 text-slate-400 font-bold text-sm">
-                  No messages yet. Be the first to say hi!
+                <div className="text-center py-12 text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                  No messages yet.
                 </div>
               ) : (
-                messages.map((msg) => {
-                  const displayName = msg.profiles?.username || msg.username;
-                  const displayAvatar = msg.profiles?.avatar_url || msg.avatar_url;
-                  
-                  return (
-                    <div 
-                      key={msg.id} 
-                      className={cn(
-                        "flex flex-col gap-1",
-                        msg.user_id === profile?.id ? "items-end" : "items-start"
-                      )}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        {msg.user_id !== profile?.id && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 rounded-full overflow-hidden border border-slate-200">
-                              {displayAvatar ? (
-                                <img src={displayAvatar} className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-slate-100">
-                                  <UserIcon className="w-2 h-2 text-slate-400" />
-                                </div>
-                              )}
-                            </div>
-                            <span className="text-[10px] font-black text-slate-500 uppercase">{displayName}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className={cn(
-                        "flex items-end gap-2",
-                        msg.user_id === profile?.id ? "flex-row-reverse" : "flex-row"
-                      )}>
-                        <div className={cn(
-                          "max-w-[85%] px-3 py-2 rounded-xl border-2 text-sm font-bold shadow-[2px_2px_0px_0px_var(--border)]",
-                          msg.user_id === profile?.id 
-                            ? "bg-blue-100 border-blue-400 text-blue-900" 
-                            : "bg-white border-[var(--border)] text-[var(--text)]"
-                        )}>
-                          {msg.body || msg.content}
-                        </div>
-                        <span className="text-[8px] font-bold text-slate-400 whitespace-nowrap mb-1">
-                          {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
+                messages.map((msg, i) => (
+                  <div 
+                    key={msg.id || i}
+                    className={cn(
+                      "flex flex-col",
+                      msg.user_id === profile?.id ? "items-end" : "items-start"
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <ClickableUsername 
+                        userId={msg.user_id} 
+                        username={msg.username} 
+                        className="text-[10px] font-black text-blue-600 uppercase" 
+                      />
+                      <span className="text-[8px] font-bold text-slate-400">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
-                  );
-                })
+                    <div className={cn(
+                      "px-3 py-2 rounded-2xl border-2 border-black text-xs font-bold break-words max-w-[90%] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]",
+                      msg.user_id === profile?.id 
+                        ? "bg-blue-400 text-black rounded-tr-none" 
+                        : "bg-white text-black rounded-tl-none"
+                    )}>
+                      {msg.body || msg.content}
+                    </div>
+                  </div>
+                ))
               )}
             </div>
 
             {/* Input Area */}
-            <form 
-              onSubmit={handleSendMessage}
-              className="p-4 border-t-4 border-[var(--border)] bg-slate-50"
-            >
-              <div className="relative">
+            <form onSubmit={handleSendMessage} className="p-4 bg-white border-t-4 border-black">
+              <div className="flex gap-2">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
+                  placeholder="Type message..."
                   maxLength={500}
-                  className="w-full pl-4 pr-12 py-3 bg-white border-4 border-[var(--border)] rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-[4px_4px_0px_0px_var(--border)]"
+                  className="flex-1 bg-slate-100 border-2 border-black rounded-xl px-4 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <div className="absolute -top-6 right-0 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  {newMessage.length}/500
-                </div>
                 <button
                   type="submit"
-                  disabled={!newMessage.trim()}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-500 text-white rounded-lg border-2 border-black disabled:opacity-50 disabled:grayscale transition-transform active:scale-95"
+                  disabled={!newMessage.trim() || sending || !profile}
+                  className="bg-blue-500 text-white p-2.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50"
                 >
-                  <Send className="w-4 h-4" />
+                  {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
               </div>
             </form>

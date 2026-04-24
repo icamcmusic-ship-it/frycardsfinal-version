@@ -206,7 +206,6 @@ export function Layout() {
     { name: 'Changelog', path: '/changelog', icon: History, category: 'Help' },
     
     { name: 'Settings', path: '/settings', icon: SettingsIcon, category: 'System' },
-    ...(profile?.is_admin ? [{ name: 'Admin', path: '/admin', icon: ShieldAlert, category: 'System' }] : []),
   ];
 
   const primaryNav = navItems.slice(0, 5);
