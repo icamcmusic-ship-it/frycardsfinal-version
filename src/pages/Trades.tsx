@@ -218,8 +218,7 @@ export function Trades() {
             className="w-full border-4 border-[var(--border)] p-3 rounded-xl font-bold bg-[var(--bg)] text-[var(--text)]">
             <option value="">— Select a friend —</option>
             {friends
-              .filter(f => f.id !== profile?.id)
-              .map(f => <option key={f.id} value={f.id}>{f.username}</option>)
+              .map(f => <option key={f.friend_id} value={f.friend_id}>{f.username}</option>)
             }
           </select>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -230,7 +229,7 @@ export function Trades() {
               </h3>
               <div>
                 <p className="font-black mb-2 text-sm text-slate-600">Cards to offer:</p>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-lg border-2 border-blue-100">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1 bg-white rounded-lg border-2 border-blue-100">
                   {myCards.map(c => (
                     <button key={c.user_card_id} onClick={() => toggleCard(c.user_card_id, offeredIds, setOfferedIds)}
                       className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", offeredIds.includes(c.user_card_id) ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" : "border-[var(--border)]")}>
@@ -278,7 +277,7 @@ export function Trades() {
                         This user has no public cards.
                       </p>
                     ) : (
-                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1 bg-white rounded-lg border-2 border-emerald-100">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1 bg-white rounded-lg border-2 border-emerald-100">
                         {receiverCards.map(c => (
                           <button key={c.user_card_id} onClick={() => toggleCard(c.user_card_id, requestedIds, setRequestedIds)}
                             className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", requestedIds.includes(c.user_card_id) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>

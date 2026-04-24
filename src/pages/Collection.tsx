@@ -172,6 +172,7 @@ export function Collection() {
         if (error) throw error;
         
         toast.success(`Sold ${card.name} for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
+        supabase.rpc('increment_mission_progress', { p_mission_type: 'quicksell_card', p_amount: 1 });
         fetchCollection();
         fetchStats();
         useProfileStore.getState().refreshProfile();

@@ -5,6 +5,23 @@ import { cn } from '../lib/utils';
 
 const UPDATES = [
   {
+    version: '1.2.5',
+    date: '2026-04-24',
+    title: 'The Stability Patch',
+    icon: Star,
+    color: 'text-yellow-500',
+    changes: [
+      'Implemented "Clear All" for notifications.',
+      'Enabled real-time mission and quest progress for pack openings, marketplace listings, and purchases.',
+      'Fixed a critical bug in Trading where friends\' collections were not appearing.',
+      'Corrected market price lookup in the Card Detail modal.',
+      'Improved Marketplace performance with a fix for stale scroll state during infinite scrolling.',
+      'Refined Profile UI to better handle small screens with wrapping action buttons.',
+      'Optimized card selection grid in trade view for better visibility.',
+      'Removed unused server-side dependencies from the frontend bundle.'
+    ]
+  },
+  {
     version: '1.2.0',
     date: '2026-04-17',
     title: 'Visual Flair & Polished Unboxing',

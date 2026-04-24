@@ -262,6 +262,10 @@ export function Store() {
             results.push(data);
             setBulkProgress({ current: i + 1, total: count });
             
+            // Update missions & quests
+            supabase.rpc('increment_mission_progress', { p_mission_type: 'open_pack', p_amount: 1 });
+            supabase.rpc('update_quest_progress');
+            
             // ✨ Show god pack immediately on detection
             if (data.is_god_pack && !hasGodPack) {
               hasGodPack = true;
@@ -352,6 +356,7 @@ export function Store() {
           }
           
           toast.success(`${count > 1 ? `${count}x ` : ''}Pack${count > 1 ? 's' : ''} added to inventory!`, { id: toastId, icon: '📦' });
+          supabase.rpc('update_quest_progress');
           fetchInventory();
           useProfileStore.getState().refreshProfile();
         } catch (err: any) {
@@ -377,6 +382,10 @@ export function Store() {
       
       setOpenedCards(data.cards);
       
+      // Update missions & quests
+      supabase.rpc('increment_mission_progress', { p_mission_type: 'open_pack', p_amount: 1 });
+      supabase.rpc('update_quest_progress');
+
       if (data.is_god_pack) {
         setShowGodPackCinematic(true);
         audioService.play('god_pack_alarm');
@@ -445,6 +454,10 @@ export function Store() {
         totalNew += data.new_card_count;
         totalPoints += data.pack_points_earned || 0;
 
+        // Update missions & quests
+        supabase.rpc('increment_mission_progress', { p_mission_type: 'open_pack', p_amount: 1 });
+        supabase.rpc('update_quest_progress');
+
         if (data.is_god_pack && !hasGodPack) {
           hasGodPack = true;
           setShowGodPackCinematic(true);
@@ -512,6 +525,10 @@ export function Store() {
           totalXp += data.xp_gained;
           totalNew += data.new_card_count;
           totalPoints += data.pack_points_earned || 0;
+
+          // Update missions & quests
+          supabase.rpc('increment_mission_progress', { p_mission_type: 'open_pack', p_amount: 1 });
+          supabase.rpc('update_quest_progress');
 
           if (data.is_god_pack && !hasGodPack) {
             hasGodPack = true;
@@ -592,6 +609,7 @@ export function Store() {
           }
           
           toast.success(`${item.name} purchased!`, { icon: '🛍️' });
+          supabase.rpc('update_quest_progress');
           useProfileStore.getState().refreshProfile();
           fetchUserCosmetics();
         } catch (err: any) {
@@ -650,6 +668,8 @@ export function Store() {
           setOpenedCards([{ ...data.card }]);
           setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
           
+          supabase.rpc('update_quest_progress');
+
           setTimeout(() => {
             setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
             audioService.play('pack_open');

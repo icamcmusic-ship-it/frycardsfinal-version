@@ -114,6 +114,11 @@ export function Marketplace() {
   const [watchlistedIds, setWatchlistedIds] = useState<Set<string>>(new Set());
   const watchlistedIdsRef = React.useRef<Set<string>>(new Set());
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
+  const listingsLengthRef = useRef(0);
+
+  useEffect(() => {
+    listingsLengthRef.current = listings.length;
+  }, [listings.length]);
 
   useEffect(() => {
     watchlistedIdsRef.current = watchlistedIds;
@@ -364,7 +369,7 @@ export function Marketplace() {
 
   const performFetch = async (isLoadMore: boolean) => {
     try {
-      const nextOffset = isLoadMore ? listings.length : 0;
+      const nextOffset = isLoadMore ? listingsLengthRef.current : 0;
       if (!isLoadMore) {
         setListings([]);
         setHasMore(true);
@@ -573,6 +578,8 @@ export function Marketplace() {
           if (error) throw error;
           
           toast.success(`Successfully bought ${listing.card_name}!`, { id: `buy-${listing.id}`, icon: '✨' });
+          supabase.rpc('increment_mission_progress', { p_mission_type: 'buy_card', p_amount: 1 });
+          supabase.rpc('update_quest_progress');
           fetchListings();
           
           // Refresh profile to update gold balance

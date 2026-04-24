@@ -30,6 +30,19 @@ export function Notifications() {
   const [offset, setOffset] = useState(0);
   const PAGE_SIZE = 20;
 
+  const deleteAllNotifications = async () => {
+    try {
+      const { error } = await supabase.rpc('delete_all_notifications');
+      if (error) throw error;
+      setNotifications([]);
+      setHasMore(false);
+      toast.success('All notifications cleared');
+    } catch (err) {
+      console.error('Error deleting all notifications:', err);
+      toast.error('Failed to clear notifications');
+    }
+  };
+
   useEffect(() => {
     fetchNotifications();
 
@@ -125,15 +138,27 @@ export function Notifications() {
           <Bell className="w-8 h-8 text-blue-500" />
           Notifications
         </h1>
-        {notifications.some(n => !n.is_read) && (
-          <button 
-            onClick={markAllAsRead}
-            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-black rounded-xl border-4 border-black transition-all active:translate-y-1 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 group"
-          >
-            <Check className="w-6 h-6 group-hover:scale-125 transition-transform" />
-            <span className="uppercase tracking-tight text-lg">Mark All Read</span>
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {notifications.length > 0 && (
+            <button 
+              onClick={deleteAllNotifications}
+              className="px-4 py-3 bg-red-100 hover:bg-red-200 text-red-600 font-black rounded-xl border-4 border-black transition-all active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+              title="Clear all notifications"
+            >
+              <Trash2 className="w-5 h-5" />
+              <span className="uppercase tracking-tight text-sm hidden sm:inline">Clear All</span>
+            </button>
+          )}
+          {notifications.some(n => !n.is_read) && (
+            <button 
+              onClick={markAllAsRead}
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-black rounded-xl border-4 border-black transition-all active:translate-y-1 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 group"
+            >
+              <Check className="w-6 h-6 group-hover:scale-125 transition-transform" />
+              <span className="uppercase tracking-tight text-lg">Mark All Read</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {notifications.length === 0 ? (

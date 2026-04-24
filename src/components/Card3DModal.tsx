@@ -36,8 +36,8 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onTogg
           p_offset: 0,
           p_sort_by: 'price_asc'
         });
-        if (!error && data && data.length > 0) {
-          setMarketPrice({ gold: data[0].price_gold, gems: data[0].price_gems });
+        if (!error && data?.listings && data.listings.length > 0) {
+          setMarketPrice({ gold: data.listings[0].price_gold, gems: data.listings[0].price_gems });
         }
       } catch (err) {
         console.error('Error fetching market price:', err);
