@@ -126,7 +126,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
       });
       if (error) throw error;
       toast.success('Listing created!');
-      supabase.rpc('increment_mission_progress', { p_mission_type: 'list_card', p_amount: 1 });
+      supabase.rpc('increment_mission_progress', { p_mission_type: 'list_marketplace', p_amount: 1 });
       onSuccess();
       onClose();
     } catch (err: any) {

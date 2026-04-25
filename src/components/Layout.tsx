@@ -191,9 +191,9 @@ export function Layout() {
     { name: 'Collection', path: '/collection', icon: LayoutGrid, category: 'Main' },
     { name: 'Store', path: '/store', icon: Store, category: 'Main' },
     { name: 'Market', path: '/marketplace', icon: ShoppingBag, category: 'Main' },
-    { name: 'Notifications', path: '/notifications', icon: Bell, category: 'Main' },
     { name: 'Profile', path: '/profile', icon: UserIcon, category: 'Main' },
     
+    { name: 'Notifications', path: '/notifications', icon: Bell, category: 'Social' },
     { name: 'Social', path: '/social', icon: Users, category: 'Social' },
     { name: 'Trades', path: '/trades', icon: ArrowRightLeft, category: 'Social' },
     

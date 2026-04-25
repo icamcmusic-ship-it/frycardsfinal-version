@@ -69,13 +69,15 @@ export function Trades() {
   const fetchMyCards = async () => {
     const { data } = await supabase.rpc('get_user_collection', {
       p_user_id: null, // Uses auth.uid() in the function
+      p_set_id: null,
       p_rarity: null,
       p_sort_by: 'name',
       p_limit: 500,
       p_card_type_filter: null,
       p_is_foil: null,
       p_search: null,
-      p_offset: 0
+      p_offset: 0,
+      p_wishlist_only: false,
     });
     setMyCards(data || []);
   };

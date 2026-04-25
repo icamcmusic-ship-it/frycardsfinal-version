@@ -6,6 +6,7 @@ import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Tro
 import { cn, getAvatarUrl, getBannerUrl, getCardBackUrl } from '../lib/utils';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 export function Profile() {
   const { profile, setProfile } = useProfileStore();
@@ -80,6 +81,18 @@ export function Profile() {
 
   const [userCosmetics, setUserCosmetics] = useState<any[]>([]);
   const [loadingCosmetics, setLoadingCosmetics] = useState(true);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'primary' | 'danger' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   const fetchUserCosmetics = async () => {
     if (!user) return;
@@ -470,7 +483,19 @@ export function Profile() {
                           <p className="text-[10px] font-bold text-slate-500 truncate">{item.description}</p>
                         </div>
                         <button
-                          onClick={() => item.is_equipped ? handleUnequip(type) : handleEquip(item.user_item_id)}
+                          onClick={() => {
+                            if (item.is_equipped) {
+                              handleUnequip(type);
+                            } else {
+                              setConfirmConfig({
+                                isOpen: true,
+                                title: `Equip ${item.name}`,
+                                message: `Do you want to equip this ${type.replace('profile_', '').replace('_', ' ')}?`,
+                                variant: 'primary',
+                                onConfirm: () => handleEquip(item.user_item_id)
+                              });
+                            }
+                          }}
                           className={cn(
                             "px-3 py-1.5 rounded-lg font-black text-[10px] uppercase border-2 transition-all",
                             item.is_equipped
@@ -494,6 +519,18 @@ export function Profile() {
           </div>
         )}
       </div>
+
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        variant={confirmConfig.variant}
+        onConfirm={() => {
+          confirmConfig.onConfirm();
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }}
+        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      />
 
       {/* Achievements / Showcase */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

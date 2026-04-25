@@ -5,6 +5,22 @@ import { cn } from '../lib/utils';
 
 const UPDATES = [
   {
+    version: '1.2.6',
+    date: '2026-04-24',
+    title: 'The Polish & Fix Update',
+    icon: Star,
+    color: 'text-blue-500',
+    changes: [
+      'Fixed Marketplace listing visibility and type-filtering issues.',
+      'Corrected several Daily Mission progress triggers (Marketplace listings, Quicksells, Pack openings).',
+      'Refined Card Detail modal market price lookup for improved accuracy.',
+      'Fixed missing toast notifications in certain areas.',
+      'Addressed Store tab initialization bug.',
+      'Cleaned up Trade RPC calls with missing parameters.',
+      'Improved Collection UI to correctly handle hidden actions on cards.'
+    ]
+  },
+  {
     version: '1.2.5',
     date: '2026-04-24',
     title: 'The Stability Patch',

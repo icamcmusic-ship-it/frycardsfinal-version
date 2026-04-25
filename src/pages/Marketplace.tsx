@@ -206,7 +206,7 @@ export function Marketplace() {
         filter: 'status=eq.active'
       }, () => {
         if (activeTab === 'all') {
-          setHasNewListings(true);
+          fetchListings();
         }
       })
       .on('postgres_changes', {
@@ -602,7 +602,7 @@ export function Marketplace() {
 
   function timeLeft(expiresAt: string): string {
     const diff = new Date(expiresAt).getTime() - now;
-    if (diff <= 0) return 'Expired';
+    if (diff <= 1000) return 'Expired';
     
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
@@ -616,7 +616,7 @@ export function Marketplace() {
   const filteredListings = (activeTab === 'all' ? listings : activeTab === 'watchlist' ? watchlist : myListings)
     .filter(listing => {
       if (activeTab === 'my_listings' && listing.status !== 'active') return false;
-      if (filter !== 'all' && listing.type !== filter) return false;
+      if (filter !== 'all' && listing.listing_type !== filter) return false;
       // Client-side search for watchlist/my_listings since they don't use the search RPC param.
       // This is intentional: "All" tab uses server-side search via p_search, 
       // while other tabs use client-side filtering on the fetched results.

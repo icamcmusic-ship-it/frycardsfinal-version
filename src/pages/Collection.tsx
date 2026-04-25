@@ -172,7 +172,7 @@ export function Collection() {
         if (error) throw error;
         
         toast.success(`Sold ${card.name} for ${(data as any).gold_earned} Gold!`, { icon: '🪙' });
-        supabase.rpc('increment_mission_progress', { p_mission_type: 'quicksell_card', p_amount: 1 });
+        supabase.rpc('increment_mission_progress', { p_mission_type: 'quicksell_cards', p_amount: 1 });
         fetchCollection();
         fetchStats();
         useProfileStore.getState().refreshProfile();
@@ -370,72 +370,91 @@ export function Collection() {
             </div>
           )}
 
-          {activeTab === 'collection' && isBatchMode && selectedCardIds.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  setConfirmConfig({
-                    isOpen: true,
-                    title: 'Mill Selected Cards',
-                    message: `Are you sure you want to mill ${selectedCardIds.length} selected cards? This cannot be undone. You will receive Gold based on the card rarities.`,
-                    variant: 'danger',
-                    onConfirm: async () => {
-                      try {
-                        const { data, error } = await supabase.rpc('mill_selected_cards', {
-                          p_card_ids: selectedCardIds
-                        });
-                        if (error) throw error;
-                        
-                        toast.success(`Milled ${selectedCardIds.length} cards for ${data.gold_earned} Gold!`, { icon: '🪙' });
-                        setSelectedCardIds([]);
-                        setIsBatchMode(false);
-                        fetchCollection();
-                        fetchStats();
-                        useProfileStore.getState().refreshProfile();
-                      } catch (err: any) {
-                        toast.error(err.message || 'Failed to mill selected cards');
+          {activeTab === 'collection' && isBatchMode && (
+            <div className="flex flex-wrap items-center gap-4 bg-blue-50 border-4 border-blue-200 p-4 rounded-2xl shadow-[4px_4px_0px_0px_rgba(59,130,246,0.2)]">
+              <div className="flex flex-col">
+                <p className="text-xs font-black uppercase text-blue-600">Batch Selection</p>
+                <p className="text-sm font-black text-blue-900">{selectedCardIds.length} cards selected</p>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <button
+                  disabled={selectedCardIds.length === 0}
+                  onClick={() => {
+                    setConfirmConfig({
+                      isOpen: true,
+                      title: 'Mill Selected Cards',
+                      message: `Are you sure you want to mill ${selectedCardIds.length} selected cards? This cannot be undone. You will receive Gold based on the card rarities.`,
+                      variant: 'danger',
+                      onConfirm: async () => {
+                        try {
+                          const { data, error } = await supabase.rpc('mill_selected_cards', {
+                            p_card_ids: selectedCardIds
+                          });
+                          if (error) throw error;
+                          
+                          toast.success(`Milled ${selectedCardIds.length} cards for ${data.gold_earned} Gold!`, { icon: '🪙' });
+                          setSelectedCardIds([]);
+                          setIsBatchMode(false);
+                          fetchCollection();
+                          fetchStats();
+                          useProfileStore.getState().refreshProfile();
+                        } catch (err: any) {
+                          toast.error(err.message || 'Failed to mill selected cards');
+                        }
                       }
-                    }
-                  });
-                }}
-                className="px-4 py-2 bg-red-400 hover:bg-red-500 text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
-              >
-                <Trash2 className="w-5 h-5" />
-                Mill ({selectedCardIds.length})
-              </button>
+                    });
+                  }}
+                  className="px-4 py-2 bg-red-400 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Mill {selectedCardIds.length > 0 && `(${selectedCardIds.length})`}
+                </button>
 
-              <button
-                onClick={() => {
-                  setConfirmConfig({
-                    isOpen: true,
-                    title: 'Quicksell Selected Cards',
-                    message: `Are you sure you want to quicksell ${selectedCardIds.length} selected cards? This cannot be undone. You will receive immediate Gold.`,
-                    variant: 'warning',
-                    onConfirm: async () => {
-                      try {
-                        const { data, error } = await supabase.rpc('bulk_quicksell_user_cards', {
-                          p_user_card_ids: selectedCardIds
-                        });
-                        if (error) throw error;
-                        const totalGold = data?.gold_earned ?? 0;
-                        
-                        toast.success(`Quicksold ${selectedCardIds.length} cards for ${totalGold} Gold!`, { icon: '💰' });
-                        setSelectedCardIds([]);
-                        setIsBatchMode(false);
-                        fetchCollection();
-                        fetchStats();
-                        useProfileStore.getState().refreshProfile();
-                      } catch (err: any) {
-                        toast.error(err.message || 'Failed to quicksell selected cards');
+                <button
+                  disabled={selectedCardIds.length === 0}
+                  onClick={() => {
+                    setConfirmConfig({
+                      isOpen: true,
+                      title: 'Quicksell Selected Cards',
+                      message: `Are you sure you want to quicksell ${selectedCardIds.length} selected cards? This cannot be undone. You will receive immediate Gold.`,
+                      variant: 'warning',
+                      onConfirm: async () => {
+                        try {
+                          const { data, error } = await supabase.rpc('bulk_quicksell_user_cards', {
+                            p_user_card_ids: selectedCardIds
+                          });
+                          if (error) throw error;
+                          const totalGold = data?.gold_earned ?? 0;
+                          
+                          toast.success(`Quicksold ${selectedCardIds.length} cards for ${totalGold} Gold!`, { icon: '💰' });
+                          setSelectedCardIds([]);
+                          setIsBatchMode(false);
+                          fetchCollection();
+                          fetchStats();
+                          useProfileStore.getState().refreshProfile();
+                        } catch (err: any) {
+                          toast.error(err.message || 'Failed to quicksell selected cards');
+                        }
                       }
-                    }
-                  });
-                }}
-                className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
-              >
-                <Coins className="w-5 h-5" />
-                Quicksell ({selectedCardIds.length})
-              </button>
+                    });
+                  }}
+                  className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+                >
+                  <Coins className="w-5 h-5" />
+                  Quicksell {selectedCardIds.length > 0 && `(${selectedCardIds.length})`}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setSelectedCardIds([]);
+                    setIsBatchMode(false);
+                  }}
+                  className="px-4 py-2 bg-white text-slate-500 font-bold rounded-xl border-4 border-slate-200"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -516,14 +535,15 @@ export function Collection() {
               </select>
 
               <button
-                onClick={() => setFoilFilter(prev => prev === 'foil' ? 'all' : 'foil')}
+                onClick={() => setFoilFilter(prev => prev === 'all' ? 'foil' : prev === 'foil' ? 'non-foil' : 'all')}
                 className={cn(
                   "px-4 py-2 font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-all flex items-center gap-2",
-                  foilFilter === 'foil' ? "bg-yellow-400 text-black border-yellow-500" : "bg-[var(--surface)]"
+                  foilFilter === 'foil' ? "bg-yellow-400 text-black border-yellow-500" : 
+                  foilFilter === 'non-foil' ? "bg-slate-200 text-black border-slate-300" : "bg-[var(--surface)]"
                 )}
               >
                 <Sparkles className={cn("w-4 h-4", foilFilter === 'foil' && "fill-current")} />
-                Foils Only
+                {foilFilter === 'foil' ? 'Foils Only' : foilFilter === 'non-foil' ? 'Non-Foils' : 'All Cards'}
               </button>
 
               <button

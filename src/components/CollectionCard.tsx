@@ -33,7 +33,7 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, activ
       style={{ perspective: 1000, containerType: 'inline-size' }}
       className={cn(
         "relative group cursor-pointer transition-all duration-300 [container-type:inline-size]",
-        isSelected ? "ring-4 ring-blue-500/50 rounded-3xl" : "",
+        isSelected ? "ring-4 ring-blue-600 rounded-3xl shadow-lg brightness-105" : "",
         className
       )}
     >
@@ -50,8 +50,8 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, activ
         card={card} 
         showNewBadge={true} 
         showQuantity={showQuantity && ((card.quantity || 0) + (card.foil_quantity || 0) > 1)}
-        onToggleLock={() => onToggleLock && onToggleLock()}
-        onToggleWishlist={() => onToggleWishlist && onToggleWishlist()}
+        onToggleLock={!hideActions && onToggleLock ? () => onToggleLock() : undefined}
+        onToggleWishlist={!hideActions && onToggleWishlist ? () => onToggleWishlist() : undefined}
         isWishlisted={isWishlisted}
       />
     </motion.div>

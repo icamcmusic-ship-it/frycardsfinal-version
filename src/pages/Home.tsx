@@ -131,10 +131,6 @@ export function Home() {
 
   const handleOpenSpinner = () => {
     setShowSpinner(true);
-  };
-
-  const handleSpin = async () => {
-    setShowSpinner(true);
     setShowDailyPreview(false);
   };
 
@@ -218,7 +214,7 @@ export function Home() {
                     className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
                   >
                     <Trophy className="w-6 h-6" />
-                    Spin for Reward
+                    Reveal Reward
                   </button>
                   
                   {profile.last_reward_type && (
@@ -549,7 +545,7 @@ export function Home() {
             
             <div className="space-y-3">
               <button 
-                onClick={handleSpin}
+                onClick={handleOpenSpinner}
                 disabled={claimingDaily}
                 className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-y-1 active:shadow-none flex items-center justify-center gap-3"
               >

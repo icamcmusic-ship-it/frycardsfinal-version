@@ -56,8 +56,11 @@ export function Store() {
   const [searchParams] = useSearchParams();
   const { profile } = useProfileStore();
   
+  const tabFromUrl = searchParams.get('tab') as any;
   const openPackId = searchParams.get('open');
-  const initialTab = searchParams.get('tab') === 'inventory' ? 'inventory' : 'packs';
+  const initialTab = ['packs', 'inventory', 'shop', 'spark'].includes(tabFromUrl) 
+    ? tabFromUrl 
+    : 'packs';
   
   const [activeTab, setActiveTab] = useState<'packs' | 'inventory' | 'shop' | 'spark'>(initialTab);
   const [packs, setPacks] = useState<any[]>([]);
@@ -263,7 +266,7 @@ export function Store() {
             setBulkProgress({ current: i + 1, total: count });
             
             // Update missions & quests
-            supabase.rpc('increment_mission_progress', { p_mission_type: 'open_pack', p_amount: 1 });
+            supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
             supabase.rpc('update_quest_progress');
             
             // ✨ Show god pack immediately on detection
@@ -383,7 +386,7 @@ export function Store() {
       setOpenedCards(data.cards);
       
       // Update missions & quests
-      supabase.rpc('increment_mission_progress', { p_mission_type: 'open_pack', p_amount: 1 });
+      supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
       supabase.rpc('update_quest_progress');
 
       if (data.is_god_pack) {
@@ -455,7 +458,7 @@ export function Store() {
         totalPoints += data.pack_points_earned || 0;
 
         // Update missions & quests
-        supabase.rpc('increment_mission_progress', { p_mission_type: 'open_pack', p_amount: 1 });
+        supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
         supabase.rpc('update_quest_progress');
 
         if (data.is_god_pack && !hasGodPack) {
@@ -527,7 +530,7 @@ export function Store() {
           totalPoints += data.pack_points_earned || 0;
 
           // Update missions & quests
-          supabase.rpc('increment_mission_progress', { p_mission_type: 'open_pack', p_amount: 1 });
+          supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
           supabase.rpc('update_quest_progress');
 
           if (data.is_god_pack && !hasGodPack) {
@@ -1022,43 +1025,46 @@ export function Store() {
              </div>
           </div>
 
-          {lastPackResults && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-black uppercase text-[var(--text)] flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-yellow-500" />
-                  Last Pack Results
-                </h2>
-                <button 
-                  onClick={() => setLastPackResults(null)}
-                  className="text-xs font-bold text-slate-400 hover:text-red-500 uppercase"
-                >
-                  Dismiss
-                </button>
-              </div>
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 mb-4">
-                {lastPackResults.cards.map((card, i) => (
-                  <div key={i} className="aspect-[5/7] relative group cursor-pointer" onClick={() => setSelectedCard(card)}>
-                    <CardDisplay card={card} showQuantity={false} showNewBadge={false} />
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-4 text-xs font-black uppercase">
-                <span className="text-blue-500">+{lastPackResults.summary.xp_gained} XP</span>
-                <span className="text-yellow-500">{lastPackResults.summary.new_card_count} New Cards</span>
-                {lastPackResults.summary.pack_points_earned !== undefined && (
-                  <span className="text-indigo-500 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    +{lastPackResults.summary.pack_points_earned} Pts
-                  </span>
-                )}
-              </div>
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {lastPackResults && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-black uppercase text-[var(--text)] flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-yellow-500" />
+                    Last Pack Results
+                  </h2>
+                  <button 
+                    onClick={() => setLastPackResults(null)}
+                    className="text-xs font-bold text-slate-400 hover:text-red-500 uppercase"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 mb-4">
+                  {lastPackResults.cards.map((card, i) => (
+                    <div key={i} className="aspect-[5/7] relative group cursor-pointer" onClick={() => setSelectedCard(card)}>
+                      <CardDisplay card={card} showQuantity={false} showNewBadge={false} />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-4 text-xs font-black uppercase">
+                  <span className="text-blue-500">+{lastPackResults.summary.xp_gained} XP</span>
+                  <span className="text-yellow-500">{lastPackResults.summary.new_card_count} New Cards</span>
+                  {lastPackResults.summary.pack_points_earned !== undefined && (
+                    <span className="text-indigo-500 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      +{lastPackResults.summary.pack_points_earned} Pts
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {packs.length === 0 ? (
             <div className="col-span-full">
