@@ -378,14 +378,18 @@ export function Marketplace() {
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchListings = async (isLoadMore = false) => {
+    if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
+    
     if (!isLoadMore) {
-      if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
       fetchTimeoutRef.current = setTimeout(() => {
         performFetch(false);
       }, 100);
       return;
     }
-    performFetch(true);
+    
+    fetchTimeoutRef.current = setTimeout(() => {
+      performFetch(true);
+    }, 100);
   };
 
   const performFetch = async (isLoadMore: boolean) => {

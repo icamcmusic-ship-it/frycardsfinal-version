@@ -27,8 +27,16 @@ export function Trades() {
   const [requestedGems, setRequestedGems] = useState(0);
   const [tradeMessage, setTradeMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [mySearch, setMySearch] = useState('');
+  const [myDebouncedSearch, setMyDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMyDebouncedSearch(mySearch), 350);
+    return () => clearTimeout(timer);
+  }, [mySearch]);
 
   useEffect(() => { fetchTrades(); fetchFriends(); fetchMyCards(); }, []);
+  useEffect(() => { fetchMyCards(); }, [myDebouncedSearch]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -88,7 +96,7 @@ export function Trades() {
       p_limit: 500,
       p_card_type_filter: null,
       p_is_foil: null,
-      p_search: null,
+      p_search: myDebouncedSearch || null,
       p_offset: 0,
       p_wishlist_only: false,
     });
@@ -205,10 +213,10 @@ export function Trades() {
         </div>
         <div className="grid gap-6">
           {[1, 2].map(i => (
-            <div key={i} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] h-40 animate-pulse">
-              <div className="h-6 bg-slate-200 rounded w-1/3 mb-4"></div>
-              <div className="h-4 bg-slate-200 rounded w-1/4 mb-2"></div>
-              <div className="h-4 bg-slate-200 rounded w-1/5"></div>
+            <div key={i} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] h-40">
+              <div className="flex gap-4">
+                <CardSkeleton count={3} />
+              </div>
             </div>
           ))}
         </div>
@@ -238,10 +246,21 @@ export function Trades() {
           </select>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4 p-4 bg-blue-50/50 border-2 border-blue-200 rounded-xl">
-              <h3 className="font-black uppercase text-blue-700 flex items-center gap-2">
-                <ArrowRightLeft className="w-4 h-4 rotate-180" />
-                You Send
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-black uppercase text-blue-700 flex items-center gap-2">
+                  <ArrowRightLeft className="w-4 h-4 rotate-180" />
+                  You Send
+                </h3>
+                <div className="relative w-32 min-[400px]:w-48">
+                  <input 
+                    type="text" 
+                    placeholder="Search..." 
+                    value={mySearch}
+                    onChange={e => setMySearch(e.target.value)}
+                    className="w-full text-[10px] p-1 border-2 border-blue-200 rounded font-bold"
+                  />
+                </div>
+              </div>
               <div>
                 <p className="font-black mb-2 text-sm text-slate-600">Cards to offer:</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1 bg-white rounded-lg border-2 border-blue-100">

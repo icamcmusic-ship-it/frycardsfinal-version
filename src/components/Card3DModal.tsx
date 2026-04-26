@@ -29,9 +29,10 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onTogg
     const fetchMarketPrice = async () => {
       setLoadingPrice(true);
       try {
+        const isSerializedRarity = card.rarity === 'Mythic' || card.rarity === 'Divine';
         const { data, error } = await supabase.rpc('get_market_listings', {
           p_card_id: card.id,
-          p_is_foil: card.is_foil || (card.foil_quantity ?? 0) > 0,
+          p_is_foil: !isSerializedRarity && (card.is_foil || (card.foil_quantity ?? 0) > 0),
           p_limit: 1,
           p_offset: 0,
           p_sort_by: 'price_asc'
@@ -161,9 +162,14 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onTogg
             </div>
             <div className="flex flex-wrap gap-2 mb-4">
               <span className={cn("text-xs font-black px-3 py-1.5 rounded-full border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]",
-                getRarityStyles(card.rarity, card.is_foil || (card.foil_quantity ?? 0) > 0))}>
-                {(card.is_foil || (card.foil_quantity ?? 0) > 0) ? `✨ Foil ${card.rarity}` : card.rarity}
+                getRarityStyles(card.rarity, (card.rarity !== 'Mythic' && card.rarity !== 'Divine') && (card.is_foil || (card.foil_quantity ?? 0) > 0)))}>
+                {((card.rarity !== 'Mythic' && card.rarity !== 'Divine') && (card.is_foil || (card.foil_quantity ?? 0) > 0)) ? `✨ Foil ${card.rarity}` : card.rarity}
               </span>
+              {card.serial_number && card.serial_number > 0 && (
+                <span className="text-xs font-black px-3 py-1.5 rounded-xl border-2 border-black bg-black text-yellow-300 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                  🔢 #{card.serial_number} / {card.max_serial_supply ?? 200}
+                </span>
+              )}
               <span className="text-xs font-bold px-3 py-1.5 rounded-xl border-2 border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]">
                 {card.card_type}
               </span>

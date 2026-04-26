@@ -5,6 +5,22 @@ import { cn } from '../lib/utils';
 
 const UPDATES = [
   {
+    version: '1.2.8',
+    date: '2026-04-26',
+    title: 'The Social & Rare Feed Update',
+    icon: Sparkles,
+    color: 'text-yellow-500',
+    changes: [
+      'Introduced the "Rare Pulls" feed — see live Mythic and Divine pulls from the community!',
+      'Implemented real-time rare pull notifications for your own account.',
+      'Refactored the Global Chat system for improved performance and unread message tracking.',
+      'Added Serial Number sorting and "Low Serial" filtering to the Collection page.',
+      'Improved account stability by ensuring settings are consistently re-applied on login.',
+      'Optimized Marketplace performance with better fetch debouncing and race condition prevention.',
+      'Added offline detection banner and accessibility improvements (ARIA labels) across the UI.',
+    ]
+  },
+  {
     version: '1.2.6',
     date: '2026-04-24',
     title: 'The Polish & Fix Update',

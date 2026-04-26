@@ -295,6 +295,16 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
                              ⚡ God Pack
                           </div>
                         )}
+                        {card.serial_number && (
+                          <motion.div 
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.5, type: 'spring' }}
+                            className="bg-black text-yellow-300 text-[10px] font-black px-2 py-1 rounded border-2 border-yellow-300 uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-12 mt-2"
+                          >
+                             MINT #{card.serial_number}
+                          </motion.div>
+                        )}
                      </div>
                    )}
                 </div>

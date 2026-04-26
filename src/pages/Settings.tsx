@@ -161,6 +161,11 @@ export function Settings() {
       message: 'Are you sure you want to reset your account? This action is permanent.',
       variant: 'danger',
       onConfirm: async () => {
+        const input = prompt(`TYPE YOUR USERNAME "${profile?.username}" TO CONFIRM RESET:`);
+        if (input !== profile?.username) {
+          toast.error('Incorrect username. Reset cancelled.');
+          return;
+        }
         setResetting(true);
         try {
           const { error } = await supabase.rpc('reset_account');

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { Loader2, Search, Filter, LayoutGrid, Coins, Star, PackageOpen, Check, Trophy, Trash2, Sparkles } from 'lucide-react';
+import { Loader2, Search, Filter, LayoutGrid, Coins, Star, PackageOpen, Check, Trophy, Trash2, Sparkles, Award } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -25,7 +25,7 @@ export function Collection() {
   const [filter, setFilter] = useState(() => sessionStorage.getItem('col_filter') || 'all');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price' | 'name'>(() =>
+  const [sortBy, setSortBy] = useState<'rarity' | 'newest' | 'price' | 'name' | 'serial'>(() =>
     (sessionStorage.getItem('col_sort') as any) || 'rarity'
   );
   const [cardType, setCardType] = useState<string>(() => sessionStorage.getItem('col_card_type') || 'all');
@@ -33,6 +33,7 @@ export function Collection() {
   const [foilFilter, setFoilFilter] = useState<'all' | 'foil' | 'non-foil'>(() => 
     (sessionStorage.getItem('col_foil_filter') as any) || 'all'
   );
+  const [lowSerialOnly, setLowSerialOnly] = useState(false);
   const [viewSize, setViewSize] = useState<'normal' | 'large'>(() => 
     (localStorage.getItem('col_view_size') as any) || 'normal'
   );
@@ -76,7 +77,8 @@ export function Collection() {
     cardType,
     setId: selectedSetId,
     search: debouncedSearch,
-    foilFilter
+    foilFilter,
+    lowSerialOnly
   });
 
   // Effects
@@ -509,6 +511,7 @@ export function Collection() {
                 <option value="rarity">By Rarity</option>
                 <option value="name">By Name</option>
                 <option value="newest">By Newest</option>
+                <option value="serial">By Serial #</option>
                 <option value="price">By Value</option>
               </select>
 
@@ -544,6 +547,17 @@ export function Collection() {
               >
                 <Sparkles className={cn("w-4 h-4", foilFilter === 'foil' && "fill-current")} />
                 {foilFilter === 'foil' ? 'Foils Only' : foilFilter === 'non-foil' ? 'Non-Foils' : 'All Cards'}
+              </button>
+
+              <button
+                onClick={() => setLowSerialOnly(!lowSerialOnly)}
+                className={cn(
+                  "px-4 py-2 font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-all flex items-center gap-2",
+                  lowSerialOnly ? "bg-black text-yellow-300 border-black" : "bg-[var(--surface)] text-slate-600"
+                )}
+              >
+                <Award className={cn("w-4 h-4", lowSerialOnly && "text-yellow-300")} />
+                Low Serials (#1-10)
               </button>
 
               <button

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Trophy, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift, Package, ShieldAlert, Target } from 'lucide-react';
+import { Trophy, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift, Package, ShieldAlert, Target, Crown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -24,13 +24,28 @@ export function Home() {
   const [userPacks, setUserPacks] = useState<any[]>([]);
   const [userQuests, setUserQuests] = useState<any[]>([]);
   const [loadingQuestsNew, setLoadingQuestsNew] = useState(true);
+  const [topPulls, setTopPulls] = useState<any[]>([]);
 
   useEffect(() => {
     if (profile) {
       fetchUserPacks();
       fetchUserQuests();
+      fetchTopPulls();
     }
   }, [profile]);
+
+  const fetchTopPulls = async () => {
+    try {
+      const { data } = await supabase.rpc('get_rare_pulls_feed', {
+        p_limit: 3,
+        p_offset: 0,
+        p_min_rarity: 'Mythic'
+      });
+      if (data?.pulls) setTopPulls(data.pulls);
+    } catch (err) {
+      console.error('Error fetching top pulls:', err);
+    }
+  };
 
   const fetchUserPacks = async () => {
     try {
@@ -260,6 +275,35 @@ export function Home() {
           </div>
         </div>
       </div>
+
+      {/* Top Pulls Feed Widget */}
+      {topPulls.length > 0 && (
+        <div className="bg-[var(--surface)] border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-black uppercase flex items-center gap-2">
+              <Crown className="w-6 h-6 text-yellow-500" />
+              Recent Rare Pulls
+            </h2>
+            <Link to="/rare-pulls" className="text-blue-600 font-black uppercase text-xs hover:underline">View Feed</Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {topPulls.map(pull => (
+              <div key={pull.id} className="flex items-center gap-3 p-3 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+                <img src={pull.card_image_url} alt={pull.card_name} className="w-10 h-14 object-cover rounded border-2 border-black shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-blue-600 truncate">{pull.username}</p>
+                  <p className="text-sm font-black uppercase truncate text-black leading-tight">{pull.card_name}</p>
+                  <span className={cn("text-[8px] font-black px-1.5 py-0.5 rounded border-2 leading-none inline-block mt-1",
+                    pull.card_rarity === 'Divine' ? "bg-red-100 text-red-700 border-red-200" : "bg-yellow-100 text-yellow-700 border-yellow-200"
+                  )}>
+                    {pull.card_rarity}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Season Pass Progress Widget */}
       {passData && passTiers.length > 0 && (

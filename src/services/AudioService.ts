@@ -1,5 +1,12 @@
 import { useAudioStore } from '../stores/audioStore';
 
+/**
+ * AudioService manages preloading and playing game sound effects.
+ * NOTE: Sounds are currently loaded from assets.mixkit.co. If production 
+ * Content Security Policy (CSP) or egress rules are restricted, 
+ * these may fail to load. In such cases, whitelist mixkit or host 
+ * the assets locally.
+ */
 const SOUNDS = {
   click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
   hover: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',

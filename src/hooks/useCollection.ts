@@ -76,7 +76,8 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
         p_limit: PAGE_SIZE,
         p_offset: targetOffset,
         p_search: filters.search || null,
-        p_wishlist_only: activeTab === 'wishlist'
+        p_wishlist_only: activeTab === 'wishlist',
+        p_low_serial_only: filters.lowSerialOnly || false
       }).abortSignal(controller.signal);
       
       if (error) throw error;
@@ -125,7 +126,8 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
     filters.cardType, 
     filters.setId, 
     filters.search, 
-    filters.foilFilter
+    filters.foilFilter,
+    filters.lowSerialOnly
   ]);
 
   useEffect(() => {

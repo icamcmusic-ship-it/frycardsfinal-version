@@ -4,13 +4,14 @@ import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
 import { useChatStore } from '../stores/chatStore';
 import { supabase } from '../lib/supabase';
-import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History, Sword } from 'lucide-react';
+import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History, Sword, Crown } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { ChatSidebar } from './ChatSidebar';
 import toast from 'react-hot-toast';
 
 export function Layout() {
   const { user, signOut } = useAuthStore();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const { profile, fetchProfile, setProfile, loading: profileLoading } = useProfileStore();
   const { unreadCount: unreadChatCount, setUnreadCount: setUnreadChatCountZustand, addMessage } = useChatStore();
   const location = useLocation();
@@ -77,6 +78,17 @@ export function Layout() {
   };
 
   useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
     if (user) {
       fetchProfile();
       fetchUnreadCount();
@@ -106,7 +118,7 @@ export function Layout() {
           fetchUnreadCount();
           const notif = payload.new;
           if (notif.type === 'achievement') {
-            toast.success(notif.message || 'New Achievement Unlocked!', {
+            toast.success(notif.body || notif.title || 'New Achievement Unlocked!', {
               icon: '🏆',
               duration: 5000,
               position: 'top-center',
@@ -160,6 +172,17 @@ export function Layout() {
         })
         .subscribe();
 
+      const rarePullChannel = supabase
+        .channel('my-rare-pulls')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'rare_pull_announcements', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            const p = payload.new as any;
+            toast.success(`${p.card_rarity} pulled: ${p.card_name}${p.serial_number ? ` #${p.serial_number}/200` : ''}!`,
+              { icon: '🌟', duration: 6000 });
+          }
+        ).subscribe();
+
       const chatChannel = supabase
         .channel('chat-updates')
         .on('postgres_changes', {
@@ -182,6 +205,7 @@ export function Layout() {
         cardsChannel.unsubscribe();
         tradesChannel.unsubscribe();
         socialChannel.unsubscribe();
+        rarePullChannel.unsubscribe();
         chatChannel.unsubscribe();
       };
     }
@@ -199,6 +223,7 @@ export function Layout() {
     { name: 'Profile', path: '/profile', icon: UserIcon, category: 'Main' },
     
     { name: 'Notifications', path: '/notifications', icon: Bell, category: 'Social' },
+    { name: 'Rare Pulls', path: '/rare-pulls', icon: Crown, category: 'Social' },
     { name: 'Global Chat', path: '#chat', icon: MessageSquare, category: 'Social', onClick: (e: any) => { e.preventDefault(); setIsChatOpen(true); } },
     { name: 'Social', path: '/social', icon: Users, category: 'Social' },
     { name: 'Trades', path: '/trades', icon: ArrowRightLeft, category: 'Social' },
@@ -251,6 +276,11 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-red-400/30">
+      {!isOnline && (
+        <div className="bg-yellow-400 text-black px-4 py-2 text-center font-black uppercase text-xs border-b-4 border-black z-[100] sticky top-0">
+          ⚠️ You are currently offline. Some features may be unavailable.
+        </div>
+      )}
       {/* Top Bar */}
       <header className="sticky top-0 z-50 border-b-4 border-[var(--border)] bg-[var(--surface)]">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -284,6 +314,7 @@ export function Layout() {
               <Link 
                 to="/notifications"
                 className="relative p-2 hover:bg-blue-100 rounded-full transition-colors text-[var(--text)] border-2 border-transparent hover:border-[var(--border)] hover:shadow-[2px_2px_0px_0px_var(--border)]"
+                aria-label="Notifications"
                 title="Notifications"
               >
                 <Bell className="w-4 h-4" />
@@ -301,6 +332,7 @@ export function Layout() {
                     ? "bg-blue-400 text-black border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]" 
                     : "hover:bg-blue-100 text-[var(--text)] border-transparent hover:border-[var(--border)] hover:shadow-[2px_2px_0px_0px_var(--border)]"
                 )}
+                aria-label="Global Chat"
                 title="Global Chat"
               >
                 <MessageSquare className="w-4 h-4" />
@@ -313,6 +345,7 @@ export function Layout() {
               <button 
                 onClick={handleSignOut}
                 className="p-2 hover:bg-red-100 rounded-full transition-colors text-[var(--text)] border-2 border-transparent hover:border-[var(--border)] hover:shadow-[2px_2px_0px_0px_var(--border)]"
+                aria-label="Sign Out"
                 title="Sign Out"
               >
                 <LogOut className="w-4 h-4" />

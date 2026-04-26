@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
+import { useChatStore } from '../stores/chatStore';
 import { ClickableUsername } from '../components/ClickableUsername';
 import { Loader2, Search, UserPlus, UserMinus, Check, X, Users, UserCheck, Send, MessageSquare, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -11,22 +12,22 @@ import { ConfirmModal } from '../components/ConfirmModal';
 
 export function Social() {
   const { profile } = useProfileStore();
+  const { messages, loading: chatLoading, sending: sendingMessage, fetchMessages, sendMessage, resetUnread } = useChatStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [friends, setFriends] = useState<any[]>([]);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [socialCounts, setSocialCounts] = useState({ followers: 0, following: 0 });
-  const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
+
   const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -42,57 +43,30 @@ export function Social() {
 
   useEffect(() => {
     fetchSocialData();
-    fetchMessages();
+    if (searchQuery) {
+      const timer = setTimeout(() => handleSearch(searchQuery), 350);
+      return () => clearTimeout(timer);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery]);
 
-    const channel = supabase
-      .channel('global')
-      .on('broadcast', { event: 'new_message' }, (payload) => {
-        setMessages(prev => {
-          const msg = payload.payload;
-          if (prev.some(m => (m.id && m.id === msg.id) || (m.body === msg.body && m.user_id === msg.user_id && Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 1000))) {
-            return prev;
-          }
-          return [...prev, msg].slice(-50);
-        });
-      })
-      .subscribe();
+  useEffect(() => {
+    if (messages.length === 0) {
+      fetchMessages();
+    }
+    resetUnread();
+  }, [messages.length, fetchMessages, resetUnread]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchMessages = async () => {
-    const { data } = await supabase
-      .from('messages_history')
-      .select('*')
-      .order('created_at', { ascending: true })
-      .limit(50);
-    setMessages(data || []);
-  };
-
-  const sendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || sendingMessage) return;
+    if (!newMessage.trim() || sendingMessage || !profile) return;
 
-    setSendingMessage(true);
     try {
-      const messageData = {
-        user_id: profile?.id,
-        username: profile?.username,
-        content: newMessage.trim(),
-        body: newMessage.trim(),
-        created_at: new Date().toISOString()
-      };
-
-      const { error } = await supabase.from('messages_history').insert(messageData);
-      if (error) throw error;
-
+      await sendMessage(newMessage.trim(), profile.id, profile.username);
       setNewMessage('');
     } catch (err: any) {
       toast.error(err.message || 'Failed to send message');
-    } finally {
-      setSendingMessage(false);
     }
   };
 
@@ -245,7 +219,7 @@ export function Social() {
               </AnimatePresence>
             </div>
 
-            <form onSubmit={sendMessage} className="flex gap-2">
+            <form onSubmit={handleSendMessage} className="flex gap-2">
               <input
                 type="text"
                 value={newMessage}

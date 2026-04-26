@@ -48,7 +48,8 @@ export function CardDisplay({
     'divine':     'red',
   };
   const colorKey = RARITY_COLOR_MAP[rarityKey] ?? 'gray';
-  const isFoil = card.is_foil || (card.foil_quantity ?? 0) > 0;
+  const isSerializedRarity = card.rarity === 'Mythic' || card.rarity === 'Divine';
+  const isFoil = !isSerializedRarity && (card.is_foil || (card.foil_quantity ?? 0) > 0);
 
   return (
     <div 
@@ -120,6 +121,14 @@ export function CardDisplay({
               {card.rarity}
             </span>
           </div>
+
+          {card.serial_number && card.serial_number > 0 && (
+            <div className="absolute top-[6cqw] right-[6cqw] mt-[14cqw] sticker px-[2cqw] py-[1cqw] rounded-[2cqw] brut-border bg-black text-yellow-300 z-30 -rotate-3 shadow-gold shadow-sm">
+              <span className="text-[3cqw] font-black uppercase tracking-tighter">
+                #{card.serial_number}/{card.max_serial_supply ?? 200}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Bottom Section: Title & Flavor Text */}

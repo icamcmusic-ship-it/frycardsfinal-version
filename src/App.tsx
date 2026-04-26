@@ -26,6 +26,7 @@ import { Quests } from './pages/Quests';
 import { Achievements } from './pages/Achievements';
 import { Changelog } from './pages/Changelog';
 import { HowToPlay } from './pages/HowToPlay';
+import { RarePulls } from './pages/RarePulls';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -44,8 +45,18 @@ export default function App() {
       setSession(session);
       setUser(session?.user ?? null);
       setInitialized(true);
+    });
 
-      if (session) {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        useProfileStore.getState().fetchProfile();
+        
+        // Load settings on login/refresh
         const saved = localStorage.getItem('frycards_settings');
         if (saved) {
           try {
@@ -60,17 +71,6 @@ export default function App() {
             console.error('Error parsing saved settings:', e);
           }
         }
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        useProfileStore.getState().fetchProfile();
       }
     });
 
@@ -124,6 +124,7 @@ export default function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:userId" element={<PublicProfile />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/rare-pulls" element={<RarePulls />} />
               <Route path="/changelog" element={<Changelog />} />
               <Route path="/how-to-play" element={<HowToPlay />} />
               <Route path="*" element={<Navigate to="/" replace />} />
