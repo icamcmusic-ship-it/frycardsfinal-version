@@ -31,6 +31,19 @@ export function Trades() {
   useEffect(() => { fetchTrades(); fetchFriends(); fetchMyCards(); }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const friendId = params.get('friend_id');
+    const cardId = params.get('card_id');
+    if (friendId) {
+      setReceiverId(friendId);
+      setShowCreate(true);
+      if (cardId) {
+        setRequestedIds([cardId]);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (receiverId) {
       fetchReceiverCards(receiverId);
     } else {
@@ -85,7 +98,7 @@ export function Trades() {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => setNow(Date.now()), 10000); // Throttled to 10s as requested
     return () => clearInterval(timer);
   }, []);
 

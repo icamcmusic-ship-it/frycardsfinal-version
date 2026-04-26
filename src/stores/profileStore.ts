@@ -20,6 +20,7 @@ export interface Profile {
   total_quicksells: number;
   card_back_url: string | null;
   is_public: boolean;
+  show_online_status: boolean;
   is_admin: boolean;
   last_reward_type: string | null;
   pack_points: number;

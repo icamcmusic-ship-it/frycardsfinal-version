@@ -153,7 +153,6 @@ export function Profile() {
     setSaving(true);
     try {
       const { error } = await supabase.rpc('update_user_profile', {
-        p_user_id: profile.id,
         p_username: username,
         p_avatar_url: avatarUrl,
         p_banner_url: bannerUrl,

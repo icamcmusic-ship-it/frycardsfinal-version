@@ -195,7 +195,7 @@ export function DailySpinner({ isOpen, onClose }: DailySpinnerProps) {
                           className="text-[10px] font-black uppercase fill-black"
                           transform={`rotate(90, 100, 35)`}
                         >
-                          {segment.label}
+                          {segment.label.length > 8 ? segment.label.substring(0, 8) + '..' : segment.label}
                         </text>
                       </g>
                     </g>

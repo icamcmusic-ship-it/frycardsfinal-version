@@ -9,6 +9,8 @@ import { CreateListingModal } from '../components/CreateListingModal';
 import { CardSkeleton } from '../components/CardSkeleton';
 import { CardDisplay } from '../components/CardDisplay';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { Link } from 'react-router-dom';
+import { ArrowRightLeft } from 'lucide-react';
 
 interface BidHistoryModalProps {
   isOpen: boolean;
@@ -108,7 +110,10 @@ export function Marketplace() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasNewListings, setHasNewListings] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'all' | 'watchlist' | 'my_listings'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'watchlist' | 'my_listings'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get('tab') as any) || 'all';
+  });
   const [offset, setOffset] = useState(0);
   const [watchlist, setWatchlist] = useState<any[]>([]);
   const [watchlistedIds, setWatchlistedIds] = useState<Set<string>>(new Set());
@@ -123,12 +128,38 @@ export function Marketplace() {
   useEffect(() => {
     watchlistedIdsRef.current = watchlistedIds;
   }, [watchlistedIds]);
+
   const [myListings, setMyListings] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [rarityFilter, setRarityFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc' | 'ending_soon'>('newest');
+  const [search, setSearch] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('q') || '';
+  });
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [filter, setFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('type') || 'all';
+  });
+  const [rarityFilter, setRarityFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('rarity') || 'all';
+  });
+  const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc' | 'ending_soon'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return (params.get('sort') as any) || 'newest';
+  });
+
+  // Sync state to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeTab !== 'all') params.set('tab', activeTab);
+    if (debouncedSearch) params.set('q', debouncedSearch);
+    if (filter !== 'all') params.set('type', filter);
+    if (rarityFilter !== 'all') params.set('rarity', rarityFilter);
+    if (sortBy !== 'newest') params.set('sort', sortBy);
+    
+    const newRelativePathQuery = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    window.history.replaceState(null, '', newRelativePathQuery);
+  }, [activeTab, debouncedSearch, filter, rarityFilter, sortBy]);
   const [hoveredListing, setHoveredListing] = useState<string | null>(null);
   const [showBidHistoryModal, setShowBidHistoryModal] = useState(false);
   const [selectedListingForBids, setSelectedListingForBids] = useState<any>(null);
@@ -196,7 +227,7 @@ export function Marketplace() {
     };
     expireAuctions();
 
-    // Real-time subscription for new listings
+    // Real-time subscription for marketplace updates
     const channel = supabase
       .channel('marketplace-updates')
       .on('postgres_changes', {
@@ -212,7 +243,8 @@ export function Marketplace() {
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
-        table: 'market_listings'
+        table: 'market_listings',
+        filter: 'status=eq.active'
       }, (payload) => {
         const updated = payload.new;
         const old = payload.old;
@@ -221,7 +253,11 @@ export function Marketplace() {
         const listing = [...listings, ...watchlist, ...myListings].find(l => l.id === updated.id);
         const cardName = listing?.card_name || 'card';
         
-        // Check if this listing is in our watchlist
+        // Trigger fetch for bids/status changes if on relevant tabs
+        if (activeTab === 'all') fetchListings();
+        else if (activeTab === 'watchlist') fetchWatchlist();
+
+        // Check if this listing is in our watchlist for notifications
         if (watchlistedIdsRef.current.has(updated.id)) {
           const updatedBid = (updated.current_bid_gold ?? 0) + (updated.current_bid_gems ?? 0);
           const oldBid = (old.current_bid_gold ?? 0) + (old.current_bid_gems ?? 0);
@@ -255,21 +291,6 @@ export function Marketplace() {
       channel.unsubscribe();
     };
   }, [activeTab, profile?.id]);
-
-  useEffect(() => {
-    const ch = supabase.channel('auction-bids')
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'market_listings'
-      }, () => {
-        // Only refresh if we're on the "All" tab or "Watchlist"
-        if (activeTab === 'all') fetchListings();
-        else if (activeTab === 'watchlist') fetchWatchlist();
-      })
-      .subscribe();
-    return () => {
-      ch.unsubscribe();
-    };
-  }, [activeTab]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -579,7 +600,6 @@ export function Marketplace() {
           
           toast.success(`Successfully bought ${listing.card_name}!`, { id: `buy-${listing.id}`, icon: '✨' });
           supabase.rpc('increment_mission_progress', { p_mission_type: 'buy_card', p_amount: 1 });
-          supabase.rpc('update_quest_progress');
           fetchListings();
           
           // Refresh profile to update gold balance
@@ -596,7 +616,7 @@ export function Marketplace() {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    const timer = setInterval(() => setNow(Date.now()), 10000); // Throttled to 10s as requested
     return () => clearInterval(timer);
   }, []);
 
@@ -930,7 +950,7 @@ export function Marketplace() {
                       <Coins className="w-4 h-4 text-yellow-500" />
                     )}
                     {listing.type === 'auction' 
-                      ? (listing.current_bid_gold || listing.current_bid_gems || listing.price) 
+                      ? (listing.current_bid_gold ?? listing.current_bid_gems ?? listing.price) 
                       : listing.price}
                   </div>
                   {listing.type === 'auction' && !listing.highest_bidder_name && (
@@ -982,7 +1002,7 @@ export function Marketplace() {
                         handleBuy(listing);
                       } else {
                         setSelectedListingForBid(listing);
-                        setBidAmount(Math.ceil((listing.current_bid || listing.price) * 1.05));
+                        setBidAmount(Math.ceil((listing.current_bid_gold ?? listing.current_bid_gems ?? listing.price) * 1.05));
                         setIsBidModalOpen(true);
                       }
                     }}
@@ -998,6 +1018,15 @@ export function Marketplace() {
                       </>
                     )}
                   </button>
+                  {listing.listing_type === 'fixed_price' && (
+                    <Link
+                      to={`/trades?friend_id=${listing.seller_id}&card_id=${listing.card_id}`}
+                      className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2"
+                    >
+                      <ArrowRightLeft className="w-5 h-5" />
+                      Make Offer
+                    </Link>
+                  )}
                   {listing.listing_type === 'auction' && (
                     <>
                       <button 
@@ -1074,18 +1103,18 @@ export function Marketplace() {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-1 font-black text-xl text-[var(--text)]">
                       {selectedListingForBid.currency === 'gold' ? <Coins className="w-5 h-5 text-yellow-500" /> : <Gem className="w-5 h-5 text-emerald-500" />}
-                      {selectedListingForBid.current_bid || selectedListingForBid.price}
+                      {selectedListingForBid.current_bid_gold ?? selectedListingForBid.current_bid_gems ?? selectedListingForBid.price}
                     </div>
                     <div className="flex items-center gap-1 font-black text-sm text-blue-500">
-                      {Math.ceil((selectedListingForBid.current_bid || selectedListingForBid.price) * 1.05)}
+                      {Math.ceil((selectedListingForBid.current_bid_gold ?? selectedListingForBid.current_bid_gems ?? selectedListingForBid.price) * 1.05)}
                     </div>
                   </div>
                 </div>
-
+ 
                 <div className="relative">
                   <input 
                     type="number" 
-                    min={Math.ceil((selectedListingForBid.current_bid || selectedListingForBid.price) * 1.05)}
+                    min={Math.ceil((selectedListingForBid.current_bid_gold ?? selectedListingForBid.current_bid_gems ?? selectedListingForBid.price) * 1.05)}
                     value={bidAmount}
                     onChange={e => setBidAmount(parseInt(e.target.value))}
                     className="w-full pl-4 pr-12 py-4 border-4 border-[var(--border)] rounded-2xl font-black text-2xl bg-[var(--bg)] text-[var(--text)] focus:outline-none focus:border-blue-500 shadow-[4px_4px_0px_0px_var(--border)]"
@@ -1120,7 +1149,7 @@ export function Marketplace() {
                   <button 
                     onClick={async () => {
                       if (!bidAmount) return;
-                      const minBid = Math.ceil((selectedListingForBid.current_bid || selectedListingForBid.price) * 1.05);
+                      const minBid = Math.ceil((selectedListingForBid.current_bid_gold ?? selectedListingForBid.current_bid_gems ?? selectedListingForBid.price) * 1.05);
                       if (bidAmount < minBid) {
                         toast.error(`Minimum bid is ${minBid}`);
                         return;

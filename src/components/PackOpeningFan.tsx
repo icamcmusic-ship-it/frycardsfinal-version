@@ -208,7 +208,7 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
 
       {/* Auto Reveal Button */}
       {!showSummary && flippedCount < cards.length - 1 && (
-        <div className="fixed bottom-8 right-8 z-[110]">
+        <div className="absolute top-28 right-8 z-[110]">
           <button 
             onClick={autoFlipAll}
             disabled={isAutoRunning}

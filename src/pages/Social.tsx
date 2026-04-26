@@ -47,7 +47,13 @@ export function Social() {
     const channel = supabase
       .channel('global')
       .on('broadcast', { event: 'new_message' }, (payload) => {
-        setMessages(prev => [...prev, payload.payload].slice(-50));
+        setMessages(prev => {
+          const msg = payload.payload;
+          if (prev.some(m => (m.id && m.id === msg.id) || (m.body === msg.body && m.user_id === msg.user_id && Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 1000))) {
+            return prev;
+          }
+          return [...prev, msg].slice(-50);
+        });
       })
       .subscribe();
 
@@ -81,12 +87,6 @@ export function Social() {
 
       const { error } = await supabase.from('messages_history').insert(messageData);
       if (error) throw error;
-
-      await supabase.channel('global').send({
-        type: 'broadcast',
-        event: 'new_message',
-        payload: messageData
-      });
 
       setNewMessage('');
     } catch (err: any) {

@@ -8,6 +8,7 @@ import { useAudioStore } from './stores/audioStore';
 import { Toaster } from 'react-hot-toast';
 import { audioService } from './services/AudioService';
 import { Layout } from './components/Layout';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Auth } from './pages/Auth';
 import { Home } from './pages/Home';
 import { Store } from './pages/Store';
@@ -99,35 +100,37 @@ export default function App() {
           },
         }}
       />
-      <Routes>
-        {!user ? (
-          <>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="*" element={<Navigate to="/auth" replace />} />
-          </>
-        ) : (
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/store" element={<Store />} />
-            <Route path="/inventory" element={<Navigate to="/store?tab=inventory" replace />} />
-            <Route path="/collection" element={<Collection />} />
-            <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/social" element={<Social />} />
-            <Route path="/trades" element={<Trades />} />
-            <Route path="/quests" element={<Quests />} />
-            <Route path="/achievements" element={<Achievements />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
-            <Route path="/season-pass" element={<SeasonPass />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/profile/:userId" element={<PublicProfile />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/changelog" element={<Changelog />} />
-            <Route path="/how-to-play" element={<HowToPlay />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        )}
-      </Routes>
+      <ErrorBoundary>
+        <Routes>
+          {!user ? (
+            <>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="*" element={<Navigate to="/auth" replace />} />
+            </>
+          ) : (
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/store" element={<Store />} />
+              <Route path="/inventory" element={<Navigate to="/store?tab=inventory" replace />} />
+              <Route path="/collection" element={<Collection />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/social" element={<Social />} />
+              <Route path="/trades" element={<Trades />} />
+              <Route path="/quests" element={<Quests />} />
+              <Route path="/achievements" element={<Achievements />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/season-pass" element={<SeasonPass />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:userId" element={<PublicProfile />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/changelog" element={<Changelog />} />
+              <Route path="/how-to-play" element={<HowToPlay />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          )}
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

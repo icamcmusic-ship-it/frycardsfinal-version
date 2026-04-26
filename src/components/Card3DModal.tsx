@@ -38,7 +38,15 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onTogg
         });
 
         if (!error && data?.listings?.length > 0) {
-          setMarketPrice({ gold: data.listings[0].price_gold, gems: data.listings[0].price_gems });
+          const l = data.listings[0];
+          // For auctions, prefer the live current bid; fall back to the listed price.
+          const amount = l.listing_type === 'auction'
+            ? (l.current_bid_gold ?? l.current_bid_gems ?? l.price ?? 0)
+            : (l.price ?? 0);
+          setMarketPrice({
+            gold:  l.currency === 'gold'  ? amount : 0,
+            gems:  l.currency === 'gems'  ? amount : 0,
+          });
         }
       } catch (err) {
         console.error('Error fetching market price:', err);

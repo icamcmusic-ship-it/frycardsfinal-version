@@ -11,6 +11,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
   const [hasMore, setHasMore] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
+  const abortControllerRef = useRef<AbortController | null>(null);
   const offsetRef = useRef(0);
   const PAGE_SIZE = 20;
 
@@ -41,6 +42,14 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
       return;
     }
     
+    // Abort previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const targetOffset = isLoadMore ? offsetRef.current : 0;
       
@@ -68,7 +77,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
         p_offset: targetOffset,
         p_search: filters.search || null,
         p_wishlist_only: activeTab === 'wishlist'
-      });
+      }).abortSignal(controller.signal);
       
       if (error) throw error;
       
@@ -98,12 +107,15 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
           }
         }, 5000);
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === 'AbortError') return;
       console.error('Error fetching collection:', err);
       toast.error('Failed to load collection. Please refresh.');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (abortControllerRef.current === controller) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   }, [
     profile?.id, 
@@ -122,6 +134,12 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
       fetchStats();
       fetchWishlistCardIds();
     }
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [
     profile?.id, 
     activeTab, 

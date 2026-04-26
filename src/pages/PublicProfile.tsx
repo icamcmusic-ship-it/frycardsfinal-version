@@ -190,7 +190,7 @@ export function PublicProfile() {
                         try {
                           const { error } = await supabase.rpc('block_user', { p_blocked_user_id: userId });
                           if (error) throw error;
-                          toast.success(`${profile.username} has been blocked.`);
+                          toast.success(`${profile.username} has been blocked.`, { id: `block-${userId}` });
                           navigate('/social');
                         } catch (err: any) {
                           toast.error(err.message || 'Failed to block user');

@@ -388,12 +388,6 @@ export function Home() {
               <Link to="/store" className="px-6 py-2 bg-indigo-500 text-white font-black rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_black] hover:translate-y-[-2px] transition-all">
                 Go to Store
               </Link>
-              {profile?.is_admin && (
-                <Link to="/admin" className="px-6 py-2 bg-white text-black font-black rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_black] hover:translate-y-[-2px] transition-all flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4" />
-                  Grant Packs
-                </Link>
-              )}
             </div>
           </div>
         )}

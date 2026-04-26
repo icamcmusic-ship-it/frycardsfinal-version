@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
+import { useChatStore } from '../stores/chatStore';
 import { MessageSquare, Send, X, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -9,77 +10,34 @@ import toast from 'react-hot-toast';
 
 export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { profile } = useProfileStore();
-  const [messages, setMessages] = useState<any[]>([]);
+  const { messages, loading, sending, fetchMessages, sendMessage, resetUnread } = useChatStore();
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
-      fetchMessages();
-      
-      const channel = supabase
-        .channel('global_chat_sidebar')
-        .on('postgres_changes', { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages_history',
-          filter: "room_id=eq.global"
-        }, (payload) => {
-          setMessages(prev => [...prev, payload.new].slice(-50));
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
+      if (messages.length === 0) {
+        fetchMessages();
+      }
+      resetUnread();
     }
-  }, [isOpen]);
+  }, [isOpen, messages.length, fetchMessages, resetUnread]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
-
-  const fetchMessages = async () => {
-    setLoading(true);
-    try {
-      const { data } = await supabase
-        .from('messages_history')
-        .select('*')
-        .eq('room_id', 'global')
-        .order('created_at', { ascending: false })
-        .limit(50);
-      
-      if (data) {
-        setMessages(data.reverse());
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [messages, isOpen]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !profile || sending) return;
 
-    setSending(true);
     try {
-      const { error } = await supabase.from('messages_history').insert({
-        user_id: profile.id,
-        username: profile.username,
-        body: newMessage.trim(),
-        room_id: 'global'
-      });
-
-      if (error) throw error;
+      await sendMessage(newMessage.trim(), profile.id, profile.username);
       setNewMessage('');
     } catch (err: any) {
       toast.error(err.message || 'Failed to send');
-    } finally {
-      setSending(false);
     }
   };
 

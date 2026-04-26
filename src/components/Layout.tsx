@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useProfileStore } from '../stores/profileStore';
+import { useChatStore } from '../stores/chatStore';
 import { supabase } from '../lib/supabase';
 import { Coins, Gem, Home, PackageOpen, LayoutGrid, Store, ShoppingBag, Users, ArrowRightLeft, Trophy, Gift, User as UserIcon, LogOut, Bell, Settings as SettingsIcon, Menu, X, Target, MessageSquare, Award, ShieldAlert, Sparkles, BookOpen, History, Sword } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -11,9 +12,10 @@ import toast from 'react-hot-toast';
 export function Layout() {
   const { user, signOut } = useAuthStore();
   const { profile, fetchProfile, setProfile, loading: profileLoading } = useProfileStore();
+  const { unreadCount: unreadChatCount, setUnreadCount: setUnreadChatCountZustand, addMessage } = useChatStore();
   const location = useLocation();
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [newCardCount, setNewCardCount] = useState(0);
   const [pendingTradeCount, setPendingTradeCount] = useState(0);
   const [pendingSocialCount, setPendingSocialCount] = useState(0);
@@ -165,8 +167,11 @@ export function Layout() {
           schema: 'public',
           table: 'messages_history',
         }, (payload) => {
-          if (payload.new && payload.new.user_id !== user.id && !isChatOpen) {
-            setUnreadChatCount(prev => prev + 1);
+          if (payload.new) {
+            addMessage(payload.new as any);
+            if (payload.new.user_id !== user.id && !isChatOpen) {
+              setUnreadChatCountZustand((prev: number) => prev + 1);
+            }
           }
         })
         .subscribe();
@@ -194,6 +199,7 @@ export function Layout() {
     { name: 'Profile', path: '/profile', icon: UserIcon, category: 'Main' },
     
     { name: 'Notifications', path: '/notifications', icon: Bell, category: 'Social' },
+    { name: 'Global Chat', path: '#chat', icon: MessageSquare, category: 'Social', onClick: (e: any) => { e.preventDefault(); setIsChatOpen(true); } },
     { name: 'Social', path: '/social', icon: Users, category: 'Social' },
     { name: 'Trades', path: '/trades', icon: ArrowRightLeft, category: 'Social' },
     
@@ -217,28 +223,7 @@ export function Layout() {
     return acc;
   }, {} as Record<string, typeof navItems>);
 
-  if (user && !profile) {
-    if (profileLoading) {
-      return (
-        <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-8">
-          <div className="max-w-7xl w-full space-y-8">
-            <div className="h-16 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              <div className="h-[600px] bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse hidden md:block shadow-[4px_4px_0px_0px_var(--border)]"></div>
-              <div className="md:col-span-3 space-y-8">
-                <div className="h-64 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[8px_8px_0px_0px_var(--border)]"></div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
-                  <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
-                  <div className="h-32 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl animate-pulse shadow-[4px_4px_0px_0px_var(--border)]"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
+  if (user && !profile && !profileLoading) {
     return (
       <div className="min-h-screen bg-[var(--bg)] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-8 shadow-[8px_8px_0px_0px_var(--border)] text-center">
@@ -276,24 +261,26 @@ export function Layout() {
             <span className="font-black text-xl tracking-tight hidden sm:block uppercase">Frycards</span>
           </div>
 
-          {profile && (
-            <div className="flex items-center gap-4">
+          {user && (
+            <div className="flex items-center gap-2 sm:gap-4">
               <div className="flex items-center gap-1.5 bg-yellow-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]">
                 <Coins className="w-4 h-4 text-yellow-600" />
-                <span className="text-sm font-bold font-mono text-black">{profile.gold_balance?.toLocaleString() || 0}</span>
+                <span className="text-sm font-bold font-mono text-black">{profileLoading ? '...' : (profile?.gold_balance?.toLocaleString() || 0)}</span>
               </div>
               <div className="flex items-center gap-1.5 bg-emerald-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)]">
                 <Gem className="w-4 h-4 text-emerald-600" />
-                <span className="text-sm font-bold font-mono text-black">{profile.gem_balance?.toLocaleString() || 0}</span>
+                <span className="text-sm font-bold font-mono text-black">{profileLoading ? '...' : (profile?.gem_balance?.toLocaleString() || 0)}</span>
               </div>
-              <Link 
-                to="/store?tab=spark"
-                className="flex items-center gap-1.5 bg-indigo-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] hover:bg-indigo-200 transition-colors"
-                title="Pack Points / Spark"
-              >
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                <span className="text-sm font-bold font-mono text-black">{profile.pack_points?.toLocaleString() || 0}</span>
-              </Link>
+              <div className="hidden min-[400px]:flex">
+                <Link 
+                  to="/store?tab=spark"
+                  className="flex items-center gap-1.5 bg-indigo-100 px-3 py-1.5 rounded-full border-2 border-[var(--border)] shadow-[2px_2px_0px_0px_var(--border)] hover:bg-indigo-200 transition-colors"
+                  title="Pack Points / Spark"
+                >
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span className="text-sm font-bold font-mono text-black">{profileLoading ? '...' : (profile?.pack_points?.toLocaleString() || 0)}</span>
+                </Link>
+              </div>
               <Link 
                 to="/notifications"
                 className="relative p-2 hover:bg-blue-100 rounded-full transition-colors text-[var(--text)] border-2 border-transparent hover:border-[var(--border)] hover:shadow-[2px_2px_0px_0px_var(--border)]"
@@ -307,7 +294,7 @@ export function Layout() {
                 )}
               </Link>
               <button 
-                onClick={() => { setIsChatOpen(!isChatOpen); if(!isChatOpen) setUnreadChatCount(0); }}
+                onClick={() => { setIsChatOpen(!isChatOpen); if(!isChatOpen) useChatStore.getState().resetUnread(); }}
                 className={cn(
                   "p-2 rounded-full transition-all border-2 relative",
                   isChatOpen 
@@ -317,7 +304,7 @@ export function Layout() {
                 title="Global Chat"
               >
                 <MessageSquare className="w-4 h-4" />
-                {unreadChatCount > 0 && (
+                {unreadChatCount > 0 && !isChatOpen && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-[var(--border)]">
                     {unreadChatCount > 9 ? '!' : unreadChatCount}
                   </span>
@@ -420,23 +407,8 @@ export function Layout() {
               );
             })}
             
-            {/* Added Chat to Bottom Nav */}
-            <button
-              onClick={() => { setIsChatOpen(!isChatOpen); if(!isChatOpen) setUnreadChatCount(0); setIsMobileMenuOpen(false); }}
-              className={cn(
-                "flex flex-col items-center justify-center w-full h-full gap-1 transition-colors relative",
-                isChatOpen ? "text-blue-600 font-bold" : "text-[var(--text)] opacity-70 hover:opacity-100"
-              )}
-            >
-              <MessageSquare className={cn("w-5 h-5", isChatOpen && "text-blue-600")} />
-              <span className="text-[10px]">Chat</span>
-              {unreadChatCount > 0 && (
-                <span className="absolute top-2 right-4 bg-red-500 text-white text-[8px] font-black w-3 h-3 rounded-full flex items-center justify-center border border-[var(--border)]">
-                  {unreadChatCount > 9 ? '!' : unreadChatCount}
-                </span>
-              )}
-            </button>
-
+            {/* Folded Chat into More drawer, removed specific Chat icon from bottom nav if needed, but let's just make sure More is clear */}
+            
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={cn(
@@ -446,9 +418,9 @@ export function Layout() {
             >
               {isMobileMenuOpen ? <X className="w-5 h-5 text-blue-600" /> : <Menu className="w-5 h-5" />}
               <span className="text-[10px]">More</span>
-              {!isMobileMenuOpen && unreadCount > 0 && (
+              {!isMobileMenuOpen && (unreadCount > 0 || unreadChatCount > 0) && (
                 <span className="absolute top-2 right-4 bg-red-500 text-white text-[8px] font-black w-3 h-3 rounded-full flex items-center justify-center border border-[var(--border)]">
-                  {unreadCount > 9 ? '!' : unreadCount}
+                  !
                 </span>
               )}
             </button>
@@ -469,21 +441,37 @@ export function Layout() {
                     {items.map((item) => {
                       const Icon = item.icon;
                       const isActive = location.pathname === item.path;
+                      const isChat = item.path === '#chat';
+                      
                       return (
-                        <Link
+                        <button
                           key={item.path}
-                          to={item.path}
-                          onClick={() => setIsMobileMenuOpen(false)}
+                          onClick={(e) => {
+                            if (isChat) {
+                              setIsChatOpen(true);
+                              setUnreadChatCountZustand(0);
+                            } else {
+                              navigate(item.path);
+                            }
+                            setIsMobileMenuOpen(false);
+                          }}
                           className={cn(
-                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2",
+                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 border-2 w-full text-left",
                             isActive 
                               ? "bg-blue-400 text-black border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] font-bold border-l-8" 
                               : "text-[var(--text)] hover:text-black hover:bg-blue-50 border-transparent hover:border-[var(--border)] font-medium"
                           )}
                         >
-                          <Icon className={cn("w-5 h-5", isActive && "text-black")} />
+                          <div className="relative">
+                            <Icon className={cn("w-5 h-5", isActive && "text-black")} />
+                            {isChat && unreadChatCount > 0 && (
+                               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-black w-3 h-3 rounded-full flex items-center justify-center border border-[var(--border)]">
+                                 !
+                               </span>
+                            )}
+                          </div>
                           <span className="text-sm">{item.name}</span>
-                        </Link>
+                        </button>
                       );
                     })}
                   </div>

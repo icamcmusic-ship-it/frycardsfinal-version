@@ -8,6 +8,7 @@ import { cn, getRarityStyles } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { CardDisplay } from '../components/CardDisplay';
 import { CollectionCard } from '../components/CollectionCard';
+import { ConfirmModal } from '../components/ConfirmModal';
 import { Card3DModal } from '../components/Card3DModal';
 import { FlipCard } from '../components/FlipCard';
 import { EmptyState } from '../components/EmptyState';
@@ -85,11 +86,12 @@ export function Store() {
   const [inventory, setInventory] = useState<any[]>([]);
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
   const [lastPackResults, setLastPackResults] = useState<{ cards: any[], summary: any } | null>(null);
-  const [confirmModal, setConfirmModal] = useState<{
+  const [confirmConfig, setConfirmConfig] = useState<{
     isOpen: boolean;
     title: string;
     message: string;
     onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   useEffect(() => {
@@ -239,10 +241,11 @@ export function Store() {
     if (opening || !profile) return;
     audioService.play('click');
     
-    setConfirmModal({
+    setConfirmConfig({
       isOpen: true,
       title: count > 1 ? `Open ${count} Packs` : 'Open Pack',
       message: `Are you sure you want to open ${count > 1 ? `${count}x ` : ''}${packName} for ${cost * count} ${useGems ? 'Gems' : 'Gold'}?`,
+      variant: 'info',
       onConfirm: async () => {
         setOpening(true);
         setOpeningPackImageUrl(packImageUrl);
@@ -267,7 +270,6 @@ export function Store() {
             
             // Update missions & quests
             supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
-            supabase.rpc('update_quest_progress');
             
             // ✨ Show god pack immediately on detection
             if (data.is_god_pack && !hasGodPack) {
@@ -327,7 +329,7 @@ export function Store() {
         } catch (err: any) {
           toast.error(err.message || 'Failed to open pack');
           setPackOpeningStep('idle');
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
           audioService.play('error');
         } finally {
           setOpening(false);
@@ -342,10 +344,11 @@ export function Store() {
   const handleBuyToInventory = async (packId: string, useGems: boolean, packName: string, cost: number, count: number = 1) => {
     if (!profile) return;
     
-    setConfirmModal({
+    setConfirmConfig({
       isOpen: true,
       title: count > 1 ? `Stash ${count} Packs` : 'Stash Pack',
       message: `Are you sure you want to stash ${count > 1 ? `${count}x ` : ''}${packName} for ${cost * count} ${useGems ? 'Gems' : 'Gold'}?`,
+      variant: 'info',
       onConfirm: async () => {
         const toastId = toast.loading(`Stashing ${count > 1 ? `${count}x ` : ''}${packName}...`);
         try {
@@ -359,7 +362,6 @@ export function Store() {
           }
           
           toast.success(`${count > 1 ? `${count}x ` : ''}Pack${count > 1 ? 's' : ''} added to inventory!`, { id: toastId, icon: '📦' });
-          supabase.rpc('update_quest_progress');
           fetchInventory();
           useProfileStore.getState().refreshProfile();
         } catch (err: any) {
@@ -387,7 +389,6 @@ export function Store() {
       
       // Update missions & quests
       supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
-      supabase.rpc('update_quest_progress');
 
       if (data.is_god_pack) {
         setShowGodPackCinematic(true);
@@ -459,7 +460,6 @@ export function Store() {
 
         // Update missions & quests
         supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
-        supabase.rpc('update_quest_progress');
 
         if (data.is_god_pack && !hasGodPack) {
           hasGodPack = true;
@@ -531,7 +531,6 @@ export function Store() {
 
           // Update missions & quests
           supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
-          supabase.rpc('update_quest_progress');
 
           if (data.is_god_pack && !hasGodPack) {
             hasGodPack = true;
@@ -596,10 +595,11 @@ export function Store() {
                     && (item.cost_gems === 0 || item.cost_gems === null);
     const useGems = !isFreeItem && (item.cost_gems ?? 0) > 0 && (item.cost_gold ?? 0) === 0;
 
-    setConfirmModal({
+    setConfirmConfig({
       isOpen: true,
       title: 'Buy Item',
       message: `Are you sure you want to buy ${item.name} for ${isFreeItem ? 'Free' : (item.cost_gold ?? 0) > 0 ? `${item.cost_gold} Gold` : `${item.cost_gems ?? 0} Gems`}?`,
+      variant: 'info',
       onConfirm: async () => {
         try {
           const { data, error } = await supabase.rpc('buy_shop_item', {
@@ -612,7 +612,6 @@ export function Store() {
           }
           
           toast.success(`${item.name} purchased!`, { icon: '🛍️' });
-          supabase.rpc('update_quest_progress');
           useProfileStore.getState().refreshProfile();
           fetchUserCosmetics();
         } catch (err: any) {
@@ -649,10 +648,11 @@ export function Store() {
       return;
     }
 
-    setConfirmModal({
+    setConfirmConfig({
       isOpen: true,
       title: 'Spark Card',
       message: `Spark a random ${rarity} card for ${cost} pts?`,
+      variant: 'info',
       onConfirm: async () => {
         setOpening(true);
         setPackOpeningStep('shaking');
@@ -671,8 +671,6 @@ export function Store() {
           setOpenedCards([{ ...data.card }]);
           setOpeningSummary({ xp_gained: data.xp_gained, new_card_count: data.new_card_count });
           
-          supabase.rpc('update_quest_progress');
-
           setTimeout(() => {
             setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
             audioService.play('pack_open');
@@ -939,32 +937,6 @@ export function Store() {
       </div>
 
       {/* Content based on activeTab */}
-      {confirmModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 max-w-sm w-full shadow-[8px_8px_0px_0px_var(--border)]">
-            <h3 className="text-2xl font-black uppercase text-[var(--text)] mb-2">{confirmModal.title}</h3>
-            <p className="text-slate-600 font-bold mb-6">{confirmModal.message}</p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-                className="flex-1 py-3 bg-slate-200 hover:bg-slate-300 text-slate-600 font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                  confirmModal.onConfirm();
-                }}
-                className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)]"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {activeTab === 'packs' && (
         <div className="space-y-12">
           {/* Global Pity Progress Section */}
@@ -1075,18 +1047,6 @@ export function Store() {
                 ctaText="Back to Home"
                 ctaPath="/"
               />
-              {profile?.is_admin && (
-                <div className="mt-8 text-center bg-blue-50 border-4 border-blue-200 rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(59,130,246,0.2)]">
-                  <p className="text-lg font-black text-blue-900 mb-2 uppercase">Admin: Game is Empty?</p>
-                  <p className="text-sm text-blue-700 font-bold mb-4">If you see no cards or packs, you need to seed the initial data in the Admin panel.</p>
-                  <Link 
-                    to="/admin" 
-                    className="inline-block px-6 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                  >
-                    Go to Admin Panel
-                  </Link>
-                </div>
-              )}
             </div>
           ) : (
             <div className="space-y-12">
@@ -1590,6 +1550,23 @@ export function Store() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {selectedCard && (
+        <Card3DModal 
+          card={selectedCard} 
+          cardBackUrl={null}
+          onClose={() => setSelectedCard(null)} 
+        />
+      )}
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        variant={confirmConfig.variant}
+      />
     </div>
   );
 }

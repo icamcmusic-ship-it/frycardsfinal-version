@@ -89,28 +89,29 @@ export function Settings() {
 
   const fetchSettings = async () => {
     try {
+      const { data: prof } = await supabase.rpc('get_my_profile');
       const saved = localStorage.getItem('frycards_settings');
-      if (saved) {
-        const data = JSON.parse(saved);
-        setSettings({
-          low_perf_mode: data.low_perf_mode ?? false,
-          notifications_enabled: data.notifications_enabled ?? true,
-          trade_notifications: data.trade_notifications ?? true,
-          auction_notifications: data.auction_notifications ?? true,
-          friend_notifications: data.friend_notifications ?? true,
-          show_online_status: data.show_online_status ?? true,
-          is_public: data.is_public ?? true,
-        });
-        if (data.game_style) setGameStyle(data.game_style as any);
-        
-        // Sync audio settings
-        if (data.master_volume !== undefined) setMasterVolume(data.master_volume);
-        if (data.music_volume !== undefined) setMusicVolume(data.music_volume);
-        if (data.sfx_volume !== undefined) setSfxVolume(data.sfx_volume);
-        if (data.audio_enabled !== undefined) setAudioEnabled(data.audio_enabled);
-        if (data.music_enabled !== undefined) setMusicEnabled(data.music_enabled);
-        if (data.sfx_enabled !== undefined) setSfxEnabled(data.sfx_enabled);
-      }
+      const localData = saved ? JSON.parse(saved) : {};
+
+      setSettings({
+        low_perf_mode: localData.low_perf_mode ?? false,
+        notifications_enabled: localData.notifications_enabled ?? true,
+        trade_notifications: localData.trade_notifications ?? true,
+        auction_notifications: localData.auction_notifications ?? true,
+        friend_notifications: localData.friend_notifications ?? true,
+        show_online_status: prof?.show_online_status ?? localData.show_online_status ?? true,
+        is_public: prof?.is_public ?? localData.is_public ?? true,
+      });
+
+      if (localData.game_style) setGameStyle(localData.game_style as any);
+      
+      // Sync audio settings
+      if (localData.master_volume !== undefined) setMasterVolume(localData.master_volume);
+      if (localData.music_volume !== undefined) setMusicVolume(localData.music_volume);
+      if (localData.sfx_volume !== undefined) setSfxVolume(localData.sfx_volume);
+      if (localData.audio_enabled !== undefined) setAudioEnabled(localData.audio_enabled);
+      if (localData.music_enabled !== undefined) setMusicEnabled(localData.music_enabled);
+      if (localData.sfx_enabled !== undefined) setSfxEnabled(localData.sfx_enabled);
     } catch (err) {
       console.error('Error fetching settings:', err);
     }
@@ -142,7 +143,6 @@ export function Settings() {
     if (key === 'is_public' || key === 'show_online_status') {
       try {
         const { error } = await supabase.rpc('update_user_profile', {
-          p_user_id: profile?.id,
           p_is_public: key === 'is_public' ? value : settings.is_public,
           p_show_online_status: key === 'show_online_status' ? value : settings.show_online_status
         });
@@ -299,8 +299,6 @@ export function Settings() {
         </h2>
         <div className="space-y-4">
           {[
-            { key: 'sfx_enabled', label: 'SFX Enabled', value: sfxEnabled },
-            { key: 'music_enabled', label: 'Music Enabled', value: musicEnabled },
             { key: 'low_perf_mode', label: 'Low Performance Mode', value: settings.low_perf_mode },
             { key: 'notifications_enabled', label: 'Enable Notifications', value: settings.notifications_enabled },
             { key: 'trade_notifications', label: 'Trade Notifications', value: settings.trade_notifications },
