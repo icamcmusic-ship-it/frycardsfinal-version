@@ -161,7 +161,11 @@ export function Trades() {
       const { data: tradeId, error } = await supabase.rpc('create_trade_rpc', {
         p_receiver_id: receiverId,
         p_offered_card_ids: offeredIds.map(id => myCards.find(c => c.user_card_id === id)?.id).filter(Boolean),
-        p_requested_card_ids: requestedIds.map(id => receiverCards.find(c => c.user_card_id === id)?.id).filter(Boolean),
+        p_requested_card_ids: requestedIds.map(id => {
+          // id could be instance ID (user_card_id/id) or template ID (card_id)
+          const found = receiverCards.find(c => c.user_card_id === id || c.id === id || c.card_id === id);
+          return found?.id;
+        }).filter(Boolean),
         p_offered_gold: offeredGold,
         p_offered_gems: offeredGems,
         p_requested_gold: requestedGold,
@@ -215,7 +219,9 @@ export function Trades() {
           {[1, 2].map(i => (
             <div key={i} className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)] h-40">
               <div className="flex gap-4">
-                <CardSkeleton count={3} />
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
               </div>
             </div>
           ))}
@@ -314,7 +320,7 @@ export function Trades() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1 bg-white rounded-lg border-2 border-emerald-100">
                         {receiverCards.map(c => (
                           <button key={c.user_card_id} onClick={() => toggleCard(c.user_card_id, requestedIds, setRequestedIds)}
-                            className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", requestedIds.includes(c.user_card_id) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>
+                            className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", (requestedIds.includes(c.user_card_id) || requestedIds.includes(c.id) || requestedIds.includes(c.card_id)) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>
                             <CardDisplay card={cardDataToDisplay(c)} showQuantity={false} showNewBadge={false} />
                             <p className="text-[8px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
                           </button>

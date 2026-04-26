@@ -4,7 +4,7 @@ import { cn } from '../lib/utils';
 import { CardDisplay } from './CardDisplay';
 import { Check, Lock, Unlock, ShoppingCart, Plus, Star, Heart } from 'lucide-react';
 
-export function CollectionCard({ card, className, isBatchMode, isSelected, activeTab, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist, isWishlisted, hideActions = false, showQuantity = false }: any) {
+export function CollectionCard({ card, className, isBatchMode, isSelected, onSelect, onToggleLock, onQuicksell, onList, onToggleWishlist, isWishlisted, hideActions = false, showQuantity = false }: any) {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {

@@ -93,8 +93,9 @@ export function Home() {
         if (data) setPassTiers(data);
       });
       
-      if (isDailyClaimable()) {
+      if (isDailyClaimable() && !sessionStorage.getItem('daily_spinner_auto_shown')) {
         setShowDailyPreview(true);
+        sessionStorage.setItem('daily_spinner_auto_shown', 'true');
       }
     }
   }, [profile]);

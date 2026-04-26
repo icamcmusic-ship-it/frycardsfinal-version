@@ -66,7 +66,10 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   addMessage: (msg) => {
     set(state => {
-      if (state.messages.some(m => m.id === msg.id)) return state;
+      if (state.messages.some(m => 
+        (m.id && m.id === msg.id) || 
+        (m.user_id === msg.user_id && m.body === msg.body && Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 2000)
+      )) return state;
       return { messages: [...state.messages, msg].slice(-50) };
     });
   },

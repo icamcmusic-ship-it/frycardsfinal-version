@@ -561,6 +561,22 @@ export function Collection() {
               </button>
 
               <button
+                onClick={() => {
+                  setSearch('');
+                  setSelectedSetId('all');
+                  setSortBy('rarity');
+                  setFilter('all');
+                  setCardType('all');
+                  setFoilFilter('all');
+                  setLowSerialOnly(false);
+                }}
+                className="px-4 py-2 bg-white text-slate-500 font-bold rounded-xl border-4 border-slate-200 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors"
+                title="Clear all filters"
+              >
+                Clear Filters
+              </button>
+
+              <button
                 onClick={() => setIsBatchMode(!isBatchMode)}
                 className={cn(
                   "px-4 py-2 font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-all",

@@ -192,7 +192,7 @@ export function DailySpinner({ isOpen, onClose }: DailySpinnerProps) {
                           x="100"
                           y="35"
                           textAnchor="middle"
-                          className="text-[10px] font-black uppercase fill-black"
+                          style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', fill: 'black' }}
                           transform={`rotate(90, 100, 35)`}
                         >
                           {segment.label.length > 8 ? segment.label.substring(0, 8) + '..' : segment.label}

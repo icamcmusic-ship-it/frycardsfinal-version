@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
-import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings as SettingsIcon, Plus, ExternalLink, ShoppingBag, Shirt, Sparkles } from 'lucide-react';
+import { LogOut, Save, User as UserIcon, Image as ImageIcon, Edit2, Loader2, Trophy, Zap, LayoutGrid, Settings as SettingsIcon, Plus, ExternalLink, ShoppingBag, Shirt, Sparkles, Star } from 'lucide-react';
 import { cn, getAvatarUrl, getBannerUrl, getCardBackUrl } from '../lib/utils';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -402,17 +402,17 @@ export function Profile() {
                   <p className="text-2xl font-black text-purple-600">{ownStats?.total_cards || 0}</p>
                 </div>
                 <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)] group relative cursor-help">
-                  <p className="text-xs text-slate-500 font-bold uppercase mb-1 flex items-center gap-1">Pity <Trophy className="w-3 h-3" /></p>
-                  <p className="text-2xl font-black text-blue-500">{profile.pity_counter}/50</p>
-                  <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-black text-white text-[10px] rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                    Guaranteed mythic at 50 packs. Reset upon pulling any mythic or divine.
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1 flex items-center gap-1">SR+ Pity <Star className="w-3 h-3 text-purple-600" /></p>
+                  <p className="text-2xl font-black text-purple-600">{profile.pity_counter}/100</p>
+                  <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-black text-white text-[10px] rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl border border-white/20">
+                    Guaranteed Super-Rare or better at 100 packs. Progress shared across all standard packs.
                   </div>
                 </div>
                 <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)] group relative cursor-help">
-                  <p className="text-xs text-slate-500 font-bold uppercase mb-1 flex items-center gap-1">Soft Pity <Sparkles className="w-3 h-3" /></p>
-                  <p className="text-2xl font-black text-purple-500">{profile.soft_pity_counter}/10</p>
-                  <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-black text-white text-[10px] rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                    Guaranteed Rare or higher at 10 packs.
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1 flex items-center gap-1">Mythic Pity <Zap className="w-3 h-3 text-orange-600" /></p>
+                  <p className="text-2xl font-black text-orange-600">{profile.soft_pity_counter}/50</p>
+                  <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-black text-white text-[10px] rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl border border-white/20">
+                    Guaranteed Mythic at 50 packs. This boost increases your chances significantly as you approach 50.
                   </div>
                 </div>
               </div>

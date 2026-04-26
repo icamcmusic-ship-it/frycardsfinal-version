@@ -44,7 +44,7 @@ export function Social() {
   useEffect(() => {
     fetchSocialData();
     if (searchQuery) {
-      const timer = setTimeout(() => handleSearch(searchQuery), 350);
+      const timer = setTimeout(() => doSearch(searchQuery), 350);
       return () => clearTimeout(timer);
     } else {
       setSearchResults([]);
@@ -121,11 +121,14 @@ export function Social() {
     setPendingRequests(data || []);
   };
 
+  const doSearch = async (query: string) => {
+    const { data } = await supabase.rpc('search_users', { p_query: query });
+    setSearchResults(data || []);
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery) return;
-    const { data } = await supabase.rpc('search_users', { p_query: searchQuery });
-    setSearchResults(data || []);
+    doSearch(searchQuery);
   };
 
   const sendRequest = async (userId: string) => {
