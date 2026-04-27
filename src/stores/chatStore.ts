@@ -18,6 +18,7 @@ interface ChatStore {
   unreadCount: number;
   
   fetchMessages: () => Promise<void>;
+  loadOlderMessages: () => Promise<void>;
   sendMessage: (body: string, userId: string, username: string) => Promise<void>;
   addMessage: (message: Message) => void;
   resetUnread: () => void;
@@ -48,6 +49,28 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
+  loadOlderMessages: async () => {
+    const state = get();
+    if (state.messages.length === 0 || state.loading) return;
+    set({ loading: true });
+    try {
+      const oldestMessage = state.messages[0];
+      const { data } = await supabase
+        .from('messages_history')
+        .select('*')
+        .eq('room_id', 'global')
+        .lt('created_at', oldestMessage.created_at)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (data && data.length > 0) {
+        set({ messages: [...data.reverse(), ...state.messages] });
+      }
+    } finally {
+      set({ loading: false });
+    }
+  },
+
   sendMessage: async (body: string, userId: string, username: string) => {
     set({ sending: true });
     try {
@@ -70,7 +93,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         (m.id && m.id === msg.id) || 
         (m.user_id === msg.user_id && m.body === msg.body && Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 2000)
       )) return state;
-      return { messages: [...state.messages, msg].slice(-50) };
+      return { messages: [...state.messages, msg] };
     });
   },
 

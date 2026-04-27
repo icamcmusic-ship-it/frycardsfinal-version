@@ -28,18 +28,39 @@ export interface Profile {
   foil_cards?: number;
 }
 
+interface CollectionStats {
+  unique_cards: number;
+  total_cards: number;
+}
+
 interface ProfileState {
   profile: Profile | null;
+  collectionStats: CollectionStats | null;
   loading: boolean;
   setProfile: (profile: Profile | null) => void;
   fetchProfile: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  fetchCollectionStats: () => Promise<CollectionStats | null>;
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
   profile: null,
+  collectionStats: null,
   loading: true,
   setProfile: (profile) => set({ profile, loading: false }),
+  fetchCollectionStats: async () => {
+    try {
+      const { data } = await supabase.rpc('get_my_collection_stats');
+      if (data) {
+        set({ collectionStats: data });
+        return data;
+      }
+      return null;
+    } catch (err) {
+      console.error('Error fetching collection stats:', err);
+      return null;
+    }
+  },
   fetchProfile: async () => {
     set({ loading: true });
     try {
@@ -47,6 +68,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       if (error) throw error;
       if (data) {
         set({ profile: data as Profile, loading: false });
+        get().fetchCollectionStats();
       } else {
         // Retry once after delay — profile may be mid-creation
         const currentProfile = get().profile;

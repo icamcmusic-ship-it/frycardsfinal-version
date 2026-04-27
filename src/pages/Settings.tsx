@@ -102,43 +102,24 @@ export function Settings() {
         show_online_status: prof?.show_online_status ?? localData.show_online_status ?? true,
         is_public: prof?.is_public ?? localData.is_public ?? true,
       });
-
-      if (localData.game_style) setGameStyle(localData.game_style as any);
-      
-      // Sync audio settings
-      if (localData.master_volume !== undefined) setMasterVolume(localData.master_volume);
-      if (localData.music_volume !== undefined) setMusicVolume(localData.music_volume);
-      if (localData.sfx_volume !== undefined) setSfxVolume(localData.sfx_volume);
-      if (localData.audio_enabled !== undefined) setAudioEnabled(localData.audio_enabled);
-      if (localData.music_enabled !== undefined) setMusicEnabled(localData.music_enabled);
-      if (localData.sfx_enabled !== undefined) setSfxEnabled(localData.sfx_enabled);
     } catch (err) {
       console.error('Error fetching settings:', err);
     }
   };
 
   const updateSetting = async (key: string, value: any) => {
-    const newSettings = { 
-      ...settings, 
-      master_volume: masterVolume,
-      music_volume: musicVolume,
-      sfx_volume: sfxVolume,
-      audio_enabled: audioEnabled,
-      music_enabled: musicEnabled,
-      sfx_enabled: sfxEnabled,
-      game_style: gameStyle,
-      [key]: value 
-    };
-    
     if (key === 'master_volume') setMasterVolume(value);
     else if (key === 'music_volume') setMusicVolume(value);
     else if (key === 'sfx_volume') setSfxVolume(value);
     else if (key === 'audio_enabled') setAudioEnabled(value);
     else if (key === 'music_enabled') setMusicEnabled(value);
     else if (key === 'sfx_enabled') setSfxEnabled(value);
-    else setSettings(prev => ({ ...prev, [key]: value }));
-
-    saveToLocalStorage(newSettings);
+    else if (key === 'game_style') setGameStyle(value);
+    else {
+      const newSettings = { ...settings, [key]: value };
+      setSettings(newSettings);
+      saveToLocalStorage(newSettings);
+    }
 
     if (key === 'is_public' || key === 'show_online_status') {
       try {

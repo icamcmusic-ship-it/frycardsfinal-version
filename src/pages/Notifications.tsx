@@ -30,9 +30,11 @@ export function Notifications() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const PAGE_SIZE = 20;
 
   const filteredNotifications = notifications.filter(n => {
+    if (unreadOnly && n.is_read) return false;
     if (activeFilter === 'all') return true;
     if (activeFilter === 'trade') return n.type?.includes('trade');
     if (activeFilter === 'auction') return n.type?.includes('auction') || n.type?.includes('marketplace');
@@ -184,7 +186,7 @@ export function Notifications() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {[
           { id: 'all', label: 'All', icon: Bell },
           { id: 'trade', label: 'Trades', icon: ArrowRightLeft },
@@ -209,6 +211,20 @@ export function Notifications() {
             </button>
           );
         })}
+        
+        <div className="flex-1" />
+        <button
+          onClick={() => setUnreadOnly(!unreadOnly)}
+          className={cn(
+            "px-4 py-2 rounded-xl font-black uppercase text-sm border-4 transition-all flex items-center gap-2",
+            unreadOnly 
+              ? "bg-blue-500 text-white border-black shadow-[3px_3px_0px_0px_black]" 
+              : "bg-white text-slate-500 border-slate-200 hover:border-black"
+          )}
+        >
+          <Bell className="w-4 h-4" />
+          Unread Only
+        </button>
       </div>
 
       {notifications.length === 0 ? (

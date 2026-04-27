@@ -376,6 +376,7 @@ export function Marketplace() {
 
   const [totalCount, setTotalCount] = useState(0);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const activeRequestIdRef = useRef<number>(0);
 
   const fetchListings = async (isLoadMore = false) => {
     if (fetchTimeoutRef.current) clearTimeout(fetchTimeoutRef.current);
@@ -393,6 +394,8 @@ export function Marketplace() {
   };
 
   const performFetch = async (isLoadMore: boolean) => {
+    const requestId = ++activeRequestIdRef.current;
+    
     try {
       const nextOffset = isLoadMore ? listingsLengthRef.current : 0;
       if (!isLoadMore) {
@@ -412,7 +415,8 @@ export function Marketplace() {
         p_sort_by: sortBy
       });
       if (error) throw error;
-      
+      if (activeRequestIdRef.current !== requestId) return; // ignore stale response
+
       const fetchedListings = (data?.listings || []).map((item: any) => ({
         ...item,
         card: {
@@ -421,7 +425,6 @@ export function Marketplace() {
         }
       }));
 
-      const currentListingsCount = isLoadMore ? listings.length : 0;
       const newTotalCount = data?.total_count || 0;
       setTotalCount(newTotalCount);
 
@@ -439,10 +442,14 @@ export function Marketplace() {
         setHasMore(fetchedListings.length < newTotalCount);
       }
     } catch (err) {
-      console.error('Error fetching listings:', err);
+      if (activeRequestIdRef.current === requestId) {
+        console.error('Error fetching listings:', err);
+      }
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      if (activeRequestIdRef.current === requestId) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   };
 

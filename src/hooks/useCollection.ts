@@ -4,27 +4,17 @@ import { useProfileStore } from '../stores/profileStore';
 import toast from 'react-hot-toast';
 
 export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', filters: any) {
-  const { profile } = useProfileStore();
+  const { profile, collectionStats: stats, fetchCollectionStats } = useProfileStore();
   const [cards, setCards] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [stats, setStats] = useState<any>(null);
   const [wishlistCardIds, setWishlistCardIds] = useState<Set<string>>(new Set());
   const abortControllerRef = useRef<AbortController | null>(null);
   const offsetRef = useRef(0);
   const PAGE_SIZE = 20;
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const { data } = await supabase.rpc('get_my_collection_stats');
-      if (data) setStats(data);
-      return data;
-    } catch (err) {
-      console.error('Error fetching stats:', err);
-      return null;
-    }
-  }, []);
+  const fetchStats = fetchCollectionStats;
 
   const fetchWishlistCardIds = useCallback(async () => {
     try {
@@ -71,7 +61,6 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
         p_rarity: rarityForApi,
         p_sort_by: filters.sortBy,
         p_card_type_filter: capitalizedCardType,
-        p_set_id: filters.setId === 'all' ? null : filters.setId,
         p_is_foil: filters.foilFilter === 'all' ? null : filters.foilFilter === 'foil',
         p_limit: PAGE_SIZE,
         p_offset: targetOffset,
@@ -148,7 +137,6 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
     filters.sortBy, 
     filters.rarity, 
     filters.cardType, 
-    filters.setId, 
     filters.search, 
     filters.foilFilter, 
     fetchCollection, 

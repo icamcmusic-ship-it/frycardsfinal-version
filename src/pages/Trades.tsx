@@ -162,9 +162,8 @@ export function Trades() {
         p_receiver_id: receiverId,
         p_offered_card_ids: offeredIds.map(id => myCards.find(c => c.user_card_id === id)?.id).filter(Boolean),
         p_requested_card_ids: requestedIds.map(id => {
-          // id could be instance ID (user_card_id/id) or template ID (card_id)
-          const found = receiverCards.find(c => c.user_card_id === id || c.id === id || c.card_id === id);
-          return found?.id;
+          const found = receiverCards.find(c => c.user_card_id === id);
+          return found?.user_card_id; // Provide the instance ID
         }).filter(Boolean),
         p_offered_gold: offeredGold,
         p_offered_gems: offeredGems,
@@ -320,7 +319,7 @@ export function Trades() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1 bg-white rounded-lg border-2 border-emerald-100">
                         {receiverCards.map(c => (
                           <button key={c.user_card_id} onClick={() => toggleCard(c.user_card_id, requestedIds, setRequestedIds)}
-                            className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", (requestedIds.includes(c.user_card_id) || requestedIds.includes(c.id) || requestedIds.includes(c.card_id)) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>
+                            className={cn("border-2 rounded-lg p-1 text-left bg-[var(--bg)] transition-all", requestedIds.includes(c.user_card_id) ? "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200" : "border-[var(--border)]")}>
                             <CardDisplay card={cardDataToDisplay(c)} showQuantity={false} showNewBadge={false} />
                             <p className="text-[8px] font-bold truncate mt-1 text-[var(--text)]">{c.name}</p>
                           </button>

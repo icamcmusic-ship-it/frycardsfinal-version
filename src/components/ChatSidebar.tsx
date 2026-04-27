@@ -10,9 +10,10 @@ import toast from 'react-hot-toast';
 
 export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { profile } = useProfileStore();
-  const { messages, loading, sending, fetchMessages, sendMessage, resetUnread } = useChatStore();
+  const { messages, loading, sending, fetchMessages, loadOlderMessages, sendMessage, resetUnread } = useChatStore();
   const [newMessage, setNewMessage] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const loadingOlderRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -25,9 +26,14 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Only scroll to bottom on initial load or if we were already at the bottom
+      const el = scrollRef.current;
+      const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+      if (isAtBottom) {
+        el.scrollTop = el.scrollHeight;
+      }
     }
-  }, [messages, isOpen]);
+  }, [messages.length, isOpen]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,8 +83,15 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
             <div 
               ref={scrollRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar"
+              onScroll={(e) => {
+                const target = e.target as HTMLDivElement;
+                if (target.scrollTop === 0 && !loading && !loadingOlderRef.current) {
+                  loadingOlderRef.current = true;
+                  loadOlderMessages().finally(() => { loadingOlderRef.current = false; });
+                }
+              }}
             >
-              {loading ? (
+              {loading && messages.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                 </div>
@@ -87,7 +100,24 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                   No messages yet.
                 </div>
               ) : (
-                messages.map((msg, i) => (
+                <>
+                  {messages.length >= 50 && (
+                    <div className="flex justify-center mb-4">
+                      <button 
+                        onClick={() => {
+                          if (!loading && !loadingOlderRef.current) {
+                            loadingOlderRef.current = true;
+                            loadOlderMessages().finally(() => { loadingOlderRef.current = false; });
+                          }
+                        }}
+                        disabled={loading}
+                        className="px-4 py-2 bg-slate-200 text-slate-600 font-black text-xs uppercase rounded-lg border-2 border-slate-300 hover:bg-slate-300 transition-colors disabled:opacity-50"
+                      >
+                        {loading ? 'Loading...' : 'Load earlier'}
+                      </button>
+                    </div>
+                  )}
+                  {messages.map((msg, i) => (
                   <div 
                     key={msg.id || i}
                     className={cn(
@@ -114,7 +144,8 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                       {msg.body || msg.content}
                     </div>
                   </div>
-                ))
+                  ))}
+                </>
               )}
             </div>
 

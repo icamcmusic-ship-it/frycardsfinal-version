@@ -63,22 +63,26 @@ class AudioService {
   }
 
   play(soundName: keyof typeof SOUNDS) {
-    const { audioEnabled, sfxEnabled, masterVolume, sfxVolume } = useAudioStore.getState();
-    if (!audioEnabled || !sfxEnabled) return;
+    try {
+      const { audioEnabled, sfxEnabled, masterVolume, sfxVolume } = useAudioStore.getState();
+      if (!audioEnabled || !sfxEnabled) return;
 
-    this.initContext();
-    const buffer = this.buffers.get(soundName);
-    if (!buffer || !this.audioContext) return;
+      this.initContext().catch(() => {});
+      const buffer = this.buffers.get(soundName);
+      if (!buffer || !this.audioContext) return;
 
-    const source = this.audioContext.createBufferSource();
-    source.buffer = buffer;
+      const source = this.audioContext.createBufferSource();
+      source.buffer = buffer;
 
-    const gainNode = this.audioContext.createGain();
-    gainNode.gain.value = (masterVolume / 100) * (sfxVolume / 100);
+      const gainNode = this.audioContext.createGain();
+      gainNode.gain.value = (masterVolume / 100) * (sfxVolume / 100);
 
-    source.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-    source.start(0);
+      source.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+      source.start(0);
+    } catch (e) {
+      // Silently no-op if something goes wrong
+    }
   }
 }
 

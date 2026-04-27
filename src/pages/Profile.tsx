@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { ConfirmModal } from '../components/ConfirmModal';
 
 export function Profile() {
-  const { profile, setProfile } = useProfileStore();
+  const { profile, setProfile, collectionStats: ownStats } = useProfileStore();
   const { user, signOut: authSignOut } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -22,7 +22,6 @@ export function Profile() {
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
   const [achievements, setAchievements] = useState<any[]>([]);
-  const [ownStats, setOwnStats] = useState<{ unique_cards: number; total_cards: number } | null>(null);
 
   const discordAvatar = user?.user_metadata?.avatar_url;
 
@@ -32,11 +31,6 @@ export function Profile() {
       setAvatarUrl(profile.avatar_url || '');
       setBannerUrl(profile.banner_url || '');
       setBio(profile.bio || '');
-
-      // Fetch dedicated collection stats
-      supabase.rpc('get_my_collection_stats').then(({ data }) => {
-        if (data) setOwnStats(data);
-      });
     }
   }, [profile]);
 
@@ -154,15 +148,15 @@ export function Profile() {
     try {
       const { error } = await supabase.rpc('update_user_profile', {
         p_username: username,
-        p_avatar_url: avatarUrl,
-        p_banner_url: bannerUrl,
+        p_avatar_url: profile.avatar_url,
+        p_banner_url: profile.banner_url,
         p_bio: bio
       });
 
       if (error) throw error;
       
       // Update local state
-      setProfile({ ...profile, username, avatar_url: avatarUrl, banner_url: bannerUrl, bio });
+      setProfile({ ...profile, username, bio });
       setEditing(false);
       toast.success('Profile updated successfully!');
     } catch (err: any) {
@@ -339,38 +333,6 @@ export function Profile() {
                       className="text-lg font-bold text-[var(--text)] bg-[var(--bg)] border-4 border-[var(--border)] rounded-xl px-4 py-2 w-full focus:outline-none focus:ring-4 focus:ring-blue-500/50 shadow-[4px_4px_0px_0px_var(--border)] resize-none h-24"
                       placeholder="Tell us about yourself..."
                     />
-                  </div>
-                  <div>
-                    <p className="font-black mb-2 text-[var(--text)]">Select Avatar:</p>
-                    <div className="flex gap-3 flex-wrap">
-                      {ownedBanners.filter(b => b.item_type === 'profile_avatar').length === 0
-                        ? <p className="text-sm text-slate-500 font-bold">No avatars owned. Earn them via Season Pass!</p>
-                        : ownedBanners.filter(b => b.item_type === 'profile_avatar').map(b => (
-                            <button key={b.item_id}
-                              onClick={() => setAvatarUrl(b.image_url)}
-                              className={cn("w-16 h-16 rounded-xl border-4 overflow-hidden",
-                                avatarUrl === b.image_url ? "border-blue-500" : "border-[var(--border)]")}>
-                              <img src={b.image_url} className="w-full h-full object-cover" />
-                            </button>
-                          ))
-                      }
-                    </div>
-                  </div>
-                  <div>
-                    <p className="font-black mb-2 text-[var(--text)]">Select Banner:</p>
-                    <div className="flex gap-3 flex-wrap">
-                      {ownedBanners.filter(b => b.item_type === 'profile_banner').length === 0
-                        ? <p className="text-sm text-slate-500 font-bold">No banners owned. Earn them via Season Pass!</p>
-                        : ownedBanners.filter(b => b.item_type === 'profile_banner').map(b => (
-                            <button key={b.item_id}
-                              onClick={() => setBannerUrl(b.image_url)}
-                              className={cn("w-24 h-14 rounded-lg border-4 overflow-hidden",
-                                bannerUrl === b.image_url ? "border-blue-500" : "border-[var(--border)]")}>
-                              <img src={b.image_url} className="w-full h-full object-cover" />
-                            </button>
-                          ))
-                      }
-                    </div>
                   </div>
                 </div>
               )}

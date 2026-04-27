@@ -37,6 +37,11 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
         bestIndex = i;
       }
     }
+
+    if (bestRarityIdx >= rarityOrder.indexOf('Rare')) {
+      return -1;
+    }
+
     return bestIndex;
   }, [cards]);
 

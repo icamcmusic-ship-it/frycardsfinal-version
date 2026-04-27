@@ -29,7 +29,6 @@ export function Collection() {
     (sessionStorage.getItem('col_sort') as any) || 'rarity'
   );
   const [cardType, setCardType] = useState<string>(() => sessionStorage.getItem('col_card_type') || 'all');
-  const [selectedSetId, setSelectedSetId] = useState<string>(() => sessionStorage.getItem('col_set_id') || 'all');
   const [foilFilter, setFoilFilter] = useState<'all' | 'foil' | 'non-foil'>(() => 
     (sessionStorage.getItem('col_foil_filter') as any) || 'all'
   );
@@ -75,7 +74,7 @@ export function Collection() {
     rarity: filter,
     sortBy,
     cardType,
-    setId: selectedSetId,
+    setId: 'all',
     search: debouncedSearch,
     foilFilter,
     lowSerialOnly
@@ -96,16 +95,15 @@ export function Collection() {
     sessionStorage.setItem('col_filter', filter);
     sessionStorage.setItem('col_sort', sortBy);
     sessionStorage.setItem('col_card_type', cardType);
-    sessionStorage.setItem('col_set_id', selectedSetId);
     sessionStorage.setItem('col_foil_filter', foilFilter);
     localStorage.setItem('col_view_size', viewSize);
-  }, [activeTab, filter, sortBy, cardType, selectedSetId, foilFilter, viewSize]);
+  }, [activeTab, filter, sortBy, cardType, foilFilter, viewSize]);
 
   useEffect(() => {
-    if (profile && activeTab === 'sets') {
+    if (profile) {
       fetchSets();
     }
-  }, [profile, activeTab]);
+  }, [profile]);
 
   const fetchSets = async () => {
     setLoadingSets(true);
@@ -346,7 +344,7 @@ export function Collection() {
         
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl p-1 shadow-[4px_4px_0px_0px_var(--border)]">
-            {(['collection', 'wishlist', 'sets'] as const).map(tab => (
+            {(sets.length > 1 ? ['collection', 'wishlist', 'sets'] : ['collection', 'wishlist'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -462,7 +460,13 @@ export function Collection() {
         </div>
       </div>
 
-      {activeTab === 'sets' ? (
+      {activeTab === 'collection' && sets.length === 1 && (
+        <div className="mb-8">
+          <SetProgress set={sets[0]} onClaimed={() => { fetchSets(); }} />
+        </div>
+      )}
+
+      {activeTab === 'sets' && sets.length > 1 ? (
         <div className="grid gap-6">
           {loadingSets ? (
             <div className="flex justify-center py-12"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>
@@ -476,7 +480,7 @@ export function Collection() {
             ))
           )}
         </div>
-      ) : (
+      ) : activeTab === 'sets' ? null : (
         <>
           {/* Filters Bar */}
           <div className="sticky top-16 z-30 bg-[var(--bg)]/90 backdrop-blur-sm py-4 border-b-2 border-[var(--border)] -mx-4 px-4 md:-mx-8 md:px-8">
@@ -492,16 +496,18 @@ export function Collection() {
                 />
               </div>
 
-              <select
-                value={selectedSetId}
-                onChange={(e) => setSelectedSetId(e.target.value)}
-                className="px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)]"
-              >
-                <option value="all">All Sets</option>
-                {sets.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+              {sets.length > 1 && (
+                <select
+                  value="all"
+                  onChange={() => {}}
+                  className="px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)] hidden"
+                >
+                  <option value="all">All Sets</option>
+                  {sets.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              )}
 
               <select
                 value={sortBy}
@@ -563,7 +569,6 @@ export function Collection() {
               <button
                 onClick={() => {
                   setSearch('');
-                  setSelectedSetId('all');
                   setSortBy('rarity');
                   setFilter('all');
                   setCardType('all');
@@ -604,10 +609,18 @@ export function Collection() {
               <div className="col-span-full">
                 <EmptyState 
                   icon={PackageOpen} 
-                  title="No Cards Found" 
-                  description="Try adjusting your filters or open some packs!" 
-                  ctaText="Go to Store" 
-                  ctaPath="/store" 
+                  title={(!stats || stats.total_cards === 0) ? "No Cards Owned" : "No Cards Found"} 
+                  description={(!stats || stats.total_cards === 0) ? "Open some packs to start your collection!" : "No cards match these filters. Try clearing them."} 
+                  ctaText={(!stats || stats.total_cards === 0) ? "Go to Store" : "Clear Filters"} 
+                  ctaAction={(!stats || stats.total_cards === 0) ? undefined : () => {
+                    setSearch('');
+                    setSortBy('rarity');
+                    setFilter('all');
+                    setCardType('all');
+                    setFoilFilter('all');
+                    setLowSerialOnly(false);
+                  }}
+                  ctaPath={(!stats || stats.total_cards === 0) ? "/store" : undefined} 
                 />
               </div>
             ) : (
