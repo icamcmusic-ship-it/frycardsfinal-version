@@ -122,10 +122,10 @@ export function CardDisplay({
             </span>
           </div>
 
-          {card.serial_number && card.serial_number > 0 && (
+          { (card.serial_number || card.serial_no || card.serial || card.serial_id) && (card.serial_number || card.serial_no || card.serial || card.serial_id) > 0 && (
             <div className="absolute top-[6cqw] right-[6cqw] mt-[14cqw] sticker px-[2cqw] py-[1cqw] rounded-[2cqw] brut-border bg-black text-yellow-300 z-30 -rotate-3 shadow-gold shadow-sm">
               <span className="text-[3cqw] font-black uppercase tracking-tighter">
-                #{card.serial_number}/{card.max_serial_supply ?? 200}
+                #{card.serial_number || card.serial_no || card.serial || card.serial_id}/{card.max_serial_supply ?? 200}
               </span>
             </div>
           )}
@@ -225,32 +225,6 @@ export function CardDisplay({
           )}
         </div>
 
-        {/* Hover Info Tooltip */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 scale-90 group-hover:scale-110">
-           <div className="bg-black/90 text-white px-[4cqw] py-[3cqw] rounded-[4cqw] border-[0.6cqw] border-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-[2cqw] min-w-[35cqw]">
-              <div className="flex flex-col">
-                 <span className="text-[2.5cqw] font-black uppercase text-slate-400 tracking-widest leading-none mb-[1cqw]">Yield</span>
-                 <span className="text-[4cqw] font-black leading-none flex items-center gap-[1.5cqw]">
-                    <Coins className="w-[3.5cqw] h-[3.5cqw] text-yellow-400" />
-                    {(() => {
-                      const baseValue = { common: 10, uncommon: 25, rare: 100, 'super-rare': 250, mythic: 500, divine: 1000 }[rarityKey] ?? 10;
-                      return (isFoil ? baseValue * 3 : baseValue).toLocaleString();
-                    })()}
-                 </span>
-              </div>
-              <div className="h-[0.4cqw] bg-white/20 rounded-full" />
-              <div className="flex flex-col">
-                 <span className="text-[2.5cqw] font-black uppercase text-slate-400 tracking-widest leading-none mb-[1cqw]">Value</span>
-                 <span className="text-[4cqw] font-black leading-none flex items-center gap-[1.5cqw]">
-                    <Star className="w-[3.5cqw] h-[3.5cqw] text-purple-400" />
-                    {(() => {
-                      const xpValue = { common: 5, uncommon: 15, rare: 50, 'super-rare': 150, mythic: 500, divine: 2500 }[rarityKey] ?? 5;
-                      return (isFoil ? xpValue * 5 : xpValue).toLocaleString();
-                    })()} XP
-                 </span>
-              </div>
-           </div>
-        </div>
       </div>
     </div>
   );

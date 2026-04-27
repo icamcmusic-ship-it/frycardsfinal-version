@@ -169,9 +169,9 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onTogg
                 getRarityStyles(card.rarity, (card.rarity !== 'Mythic' && card.rarity !== 'Divine') && (card.is_foil || (card.foil_quantity ?? 0) > 0)))}>
                 {((card.rarity !== 'Mythic' && card.rarity !== 'Divine') && (card.is_foil || (card.foil_quantity ?? 0) > 0)) ? `✨ Foil ${card.rarity}` : card.rarity}
               </span>
-              {card.serial_number && card.serial_number > 0 && (
+              { (card.serial_number || card.serial_no || card.serial || card.serial_id) && (card.serial_number || card.serial_no || card.serial || card.serial_id) > 0 && (
                 <span className="text-xs font-black px-3 py-1.5 rounded-xl border-2 border-black bg-black text-yellow-300 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
-                  🔢 #{card.serial_number} / {card.max_serial_supply ?? 200}
+                  🔢 #{card.serial_number || card.serial_no || card.serial || card.serial_id} / {card.max_serial_supply ?? 200}
                 </span>
               )}
               <span className="text-xs font-bold px-3 py-1.5 rounded-xl border-2 border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]">
