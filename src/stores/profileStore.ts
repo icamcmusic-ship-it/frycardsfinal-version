@@ -31,6 +31,9 @@ export interface Profile {
 interface CollectionStats {
   unique_cards: number;
   total_cards: number;
+  total_possible: number;
+  foil_cards: number;
+  completion_pct: number;
 }
 
 interface ProfileState {

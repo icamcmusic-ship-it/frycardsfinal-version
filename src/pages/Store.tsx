@@ -766,6 +766,17 @@ export function Store() {
           )}
         </div>
 
+        {/* Price Tag Sticker */}
+        <div className="absolute top-[30cqw] right-[-2cqw] flex flex-col items-end gap-1 z-[35]">
+          <div className={cn(
+            "sticker px-[2.5cqw] py-[1.5cqw] rounded-l-[2.5cqw] border-l-[0.6cqw] border-t-[0.6cqw] border-b-[0.6cqw] border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center gap-[1.5cqw] rotate-1",
+            useGems ? "bg-emerald-500 text-white" : "bg-yellow-400 text-black"
+          )}>
+            {useGems ? <Gem className="w-[4cqw] h-[4cqw]" /> : <Coins className="w-[4cqw] h-[4cqw]" />}
+            <span className="text-[4.5cqw] font-black leading-none">{cost?.toLocaleString()}</span>
+          </div>
+        </div>
+
         <div className="p-6 flex flex-col flex-1">
           <div className="flex items-start justify-between mb-2">
             <h3 className="text-2xl font-black text-[var(--text)] uppercase">{pack.name}</h3>
@@ -782,7 +793,9 @@ export function Store() {
              </div>
           </div>
           
-          <p className="text-sm text-slate-600 font-bold mb-4 line-clamp-2 mt-4">{pack.description}</p>
+          <p className="text-sm text-slate-600 font-bold mb-4 line-clamp-2 mt-4">
+             {pack.description?.replace(/Only 200 copies available per Mythic\/Divine card\.?/i, 'Serialized Edition: 1-in-500 chance per pull.')}
+          </p>
           
           <button onClick={() => setShowOdds(prev => ({...prev, [pack.id]: !prev[pack.id]}))}
             className="text-xs text-slate-500 font-bold underline mb-2 w-fit">

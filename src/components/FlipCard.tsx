@@ -37,7 +37,11 @@ export const FlipCard: React.FC<FlipCardProps> = ({
 }) => {
   const [internalFlipped, setInternalFlipped] = useState(false);
   const flipped = isFlipped !== undefined ? isFlipped : internalFlipped;
-  const glowClass = RARITY_GLOW[card.rarity] ?? '';
+  const isFoil = (card.is_foil || (card.foil_quantity ?? 0) > 0);
+  let glowClass = RARITY_GLOW[card.rarity] ?? '';
+  if (isFoil && (card.rarity === 'Mythic' || card.rarity === 'Divine')) {
+    glowClass = 'shadow-[0_0_80px_rgba(255,215,0,1),_0_0_120px_rgba(255,255,255,0.8)]';
+  }
   
   const randomRotation = useMemo(() => (Math.random() - 0.5) * 15, []);
 

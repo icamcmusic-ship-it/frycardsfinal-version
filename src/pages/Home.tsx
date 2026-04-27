@@ -376,6 +376,16 @@ export function Home() {
             <p className="text-3xl font-black text-[var(--text)] font-mono">{stats?.unique_cards ?? 0} / {stats?.total_possible ?? '?'}</p>
           </div>
         </div>
+        
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
+          <div className="w-14 h-14 rounded-xl bg-orange-400 flex items-center justify-center border-4 border-[var(--border)] transform -rotate-3">
+            <Sparkles className="w-7 h-7 text-white" />
+          </div>
+          <div>
+            <p className="text-sm text-slate-600 font-bold uppercase">Daily Streak</p>
+            <p className="text-3xl font-black text-[var(--text)] font-mono">{profile.daily_streak || 0}</p>
+          </div>
+        </div>
       </div>
 
       {/* My Packs Section */}

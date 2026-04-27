@@ -163,7 +163,7 @@ export function Trades() {
         p_offered_card_ids: offeredIds.map(id => myCards.find(c => c.user_card_id === id)?.id).filter(Boolean),
         p_requested_card_ids: requestedIds.map(id => {
           const found = receiverCards.find(c => c.user_card_id === id);
-          return found?.user_card_id; // Provide the instance ID
+          return found?.id; // Provide the template ID
         }).filter(Boolean),
         p_offered_gold: offeredGold,
         p_offered_gems: offeredGems,

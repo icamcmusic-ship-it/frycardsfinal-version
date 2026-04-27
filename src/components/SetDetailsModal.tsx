@@ -49,7 +49,8 @@ export function SetDetailsModal({ isOpen, onClose, set, userId }: SetDetailsModa
             p_limit: 1000,
             p_offset: 0,
             p_search: null,
-            p_wishlist_only: false
+            p_wishlist_only: false,
+            p_low_serial_only: false
           });
 
         if (userCardsError) throw userCardsError;

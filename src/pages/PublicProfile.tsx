@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Loader2, Trophy, UserPlus, UserCheck, UserMinus, Users } from 'lucide-react';
 import { CardDisplay } from '../components/CardDisplay';
-import { cn, getAvatarUrl, getBannerUrl } from '../lib/utils';
+import { cn, getAvatarUrl, getBannerUrl, getCardBackUrl } from '../lib/utils';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from '../components/ConfirmModal';
 
@@ -128,158 +128,183 @@ export function PublicProfile() {
   if (!profile) return <div className="text-center py-20 font-black text-2xl">Profile not found or private.</div>;
 
   return (
-    <div className="space-y-8 max-w-2xl mx-auto">
+    <div className="max-w-4xl mx-auto space-y-8">
       {/* Banner */}
-      {getBannerUrl(profile.banner_url) && (
-        <div className="w-full h-40 rounded-2xl border-4 border-black overflow-hidden">
-          <img src={getBannerUrl(profile.banner_url)!} className="w-full h-full object-cover" />
+      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl overflow-hidden shadow-[8px_8px_0px_0px_var(--border)]">
+        <div className="h-48 bg-blue-400 relative border-b-4 border-[var(--border)]">
+          <img src={getBannerUrl(profile.banner_url) || ''} alt="Banner" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent" />
         </div>
-      )}
-      <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-8 shadow-[8px_8px_0px_0px_var(--border)]">
-        <div className="flex items-start gap-6">
-          {getAvatarUrl(profile.avatar_url)
-            ? <img src={getAvatarUrl(profile.avatar_url)!} className="w-24 h-24 rounded-full border-4 border-[var(--border)]" />
-            : <div className="w-24 h-24 rounded-full bg-blue-400 border-4 border-[var(--border)] flex items-center justify-center text-3xl font-black text-white">
-                {profile.username?.[0]?.toUpperCase()}
-              </div>
-          }
-          <div className="flex-1">
-            <h1 className="text-3xl font-black uppercase text-[var(--text)]">{profile.username}</h1>
-            {profile.bio && <p className="text-slate-600 mt-1 font-bold">{profile.bio}</p>}
-            <p className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-wider">Level {profile.level}</p>
-            {userId !== undefined && (
-              <div className="flex items-center gap-3 mt-3">
-                {profile.friendship_status === 'accepted' ? (
-                  <button onClick={removeFriend} className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 hover:bg-red-100 border-2 border-green-500 hover:border-red-500 rounded-xl font-bold text-green-700 hover:text-red-700 uppercase text-sm group transition-colors">
-                    <UserCheck className="w-4 h-4 group-hover:hidden" />
-                    <UserMinus className="w-4 h-4 hidden group-hover:block" />
-                    <span className="group-hover:hidden">Friends</span>
-                    <span className="hidden group-hover:inline">Remove</span>
-                  </button>
-                ) : profile.friendship_status === 'pending' ? (
-                  <span className="inline-flex px-4 py-2 bg-yellow-100 border-2 border-yellow-400 rounded-xl font-bold text-yellow-700 uppercase text-sm">
-                    Request Pending
-                  </span>
-                ) : profile.friendship_status === 'incoming' ? (
-                  <div className="flex flex-col gap-2">
-                    <span className="inline-flex px-4 py-2 bg-blue-100 border-2 border-blue-400 rounded-xl font-bold text-blue-700 uppercase text-sm">
-                      Sent you a request
-                    </span>
-                    <button 
-                      onClick={() => navigate('/social')}
-                      className="text-[10px] font-black uppercase text-blue-600 hover:underline"
-                    >
-                      Go to Social to Accept
-                    </button>
-                  </div>
+
+        {/* Profile Info */}
+        <div className="px-8 pb-8 relative">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            {/* Avatar */}
+            <div className="-mt-16 relative">
+              <div className="w-32 h-32 bg-yellow-300 rounded-2xl border-4 border-[var(--border)] flex items-center justify-center shadow-[4px_4px_0px_0px_var(--border)] transform -rotate-3 overflow-hidden">
+                {getAvatarUrl(profile.avatar_url) ? (
+                  <img src={getAvatarUrl(profile.avatar_url)!} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
-                  <button onClick={sendRequest}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-transform active:translate-y-1 uppercase text-sm">
-                    <UserPlus className="w-4 h-4" /> Add Friend
-                  </button>
+                  <div className="text-4xl font-black text-black">
+                    {profile.username?.[0]?.toUpperCase()}
+                  </div>
                 )}
-                
-                <button 
-                  onClick={() => {
-                    setConfirmConfig({
-                      isOpen: true,
-                      title: 'Block User',
-                      message: `Are you sure you want to block ${profile.username}?`,
-                      variant: 'danger',
-                      onConfirm: async () => {
-                        try {
-                          const { error } = await supabase.rpc('block_user', { p_blocked_user_id: userId });
-                          if (error) throw error;
-                          toast.success(`${profile.username} has been blocked.`, { id: `block-${userId}` });
-                          navigate('/social');
-                        } catch (err: any) {
-                          toast.error(err.message || 'Failed to block user');
-                        }
-                      }
-                    });
-                  }}
-                  className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 font-black text-sm uppercase rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
-                >
-                  Block
-                </button>
-
-                <button 
-                  onClick={() => {
-                    setConfirmConfig({
-                      isOpen: true,
-                      title: 'Report User',
-                      message: `Are you sure you want to report ${profile.username} for inappropriate behavior?`,
-                      variant: 'warning',
-                      onConfirm: async () => {
-                        try {
-                          const { error } = await supabase.from('reports').insert({
-                            target_user_id: userId,
-                            reporter_id: (await supabase.auth.getUser()).data.user?.id,
-                            reason: 'Inappropriate behavior'
-                          });
-                          if (error) throw error;
-                          toast.success('User reported. Thank you for keeping the community safe!');
-                        } catch (err: any) {
-                          toast.error(err.message || 'Failed to report user');
-                        }
-                      }
-                    });
-                  }}
-                  className="px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-black text-sm uppercase rounded-xl border-2 border-yellow-200 hover:border-yellow-300 transition-colors"
-                >
-                  Report
-                </button>
-                
-                <button
-                  onClick={toggleFollow}
-                  className={cn(
-                    "px-4 py-2 font-black text-sm uppercase rounded-xl border-2 transition-colors flex items-center gap-2",
-                    isFollowing 
-                      ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300" 
-                      : "bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-300"
-                  )}
-                >
-                  <Users className="w-4 h-4" />
-                  {isFollowing ? 'Following' : 'Follow'}
-                </button>
               </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="flex gap-6 mt-4 px-2">
-          <div className="flex items-center gap-2">
-            <span className="font-black text-lg text-[var(--text)]">{followersCount}</span>
-            <span className="text-xs font-bold text-slate-500 uppercase">Followers</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="font-black text-lg text-[var(--text)]">{followingCount}</span>
-            <span className="text-xs font-bold text-slate-500 uppercase">Following</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4 mt-6">
-          {[
-            { label: 'Unique Cards', value: profile.unique_cards },
-            { label: 'Packs Opened', value: profile.packs_opened },
-            { label: 'Total Trades', value: profile.total_trades ?? 0 },
-          ].map(s => (
-            <div key={s.label} className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 text-center">
-              <p className="text-2xl font-black text-[var(--text)]">{(s.value ?? 0).toLocaleString()}</p>
-              <p className="text-xs text-slate-500 font-bold uppercase mt-1">{s.label}</p>
             </div>
-          ))}
-        </div>
-        
-        <button
-          onClick={() => setShowCollection(!showCollection)}
-          className="mt-6 w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 transition-colors text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] uppercase tracking-wider active:translate-y-1 transition-transform"
-        >
-          {showCollection ? 'Hide Collection' : 'View Collection'}
-        </button>
 
-        {showCollection && userId && <OtherUserCollection userId={userId} />}
+            {/* Details */}
+            <div className="flex-1 pt-4 w-full">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div className="flex-1">
+                  <div className="space-y-2">
+                    <h2 className="text-4xl font-black text-[var(--text)] uppercase">{profile.username || 'Duelist'}</h2>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5 bg-blue-100 px-3 py-1 rounded-full border-2 border-blue-200">
+                        <Trophy className="w-4 h-4 text-blue-600" />
+                        <span className="text-sm font-black text-blue-700 uppercase">Level {profile.level || 1}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-slate-500 font-bold mt-1">Joined {new Date(profile.created_at).toLocaleDateString()}</p>
+                  {profile.bio && (
+                    <p className="text-slate-600 font-medium mt-2 max-w-md">{profile.bio}</p>
+                  )}
+                </div>
+
+                {/* Social Buttons */}
+                <div className="flex flex-wrap gap-3">
+                  {userId !== undefined && (
+                    <>
+                      {profile.friendship_status === 'accepted' ? (
+                        <button onClick={removeFriend} className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 hover:bg-red-100 border-2 border-green-500 hover:border-red-500 rounded-xl font-bold text-green-700 hover:text-red-700 uppercase text-sm group transition-colors">
+                          <UserCheck className="w-4 h-4 group-hover:hidden" />
+                          <UserMinus className="w-4 h-4 hidden group-hover:block" />
+                          <span className="group-hover:hidden">Friends</span>
+                          <span className="hidden group-hover:inline">Remove</span>
+                        </button>
+                      ) : profile.friendship_status === 'pending' ? (
+                        <span className="inline-flex px-4 py-2 bg-yellow-100 border-2 border-yellow-400 rounded-xl font-bold text-yellow-700 uppercase text-sm">
+                          Request Pending
+                        </span>
+                      ) : (
+                        <button onClick={sendRequest}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] transition-transform active:translate-y-1 uppercase text-sm">
+                          <UserPlus className="w-4 h-4" /> Add Friend
+                        </button>
+                      )}
+                      <button 
+                        onClick={toggleFollow}
+                        className={cn(
+                          "px-4 py-2 font-black text-sm uppercase rounded-xl border-2 transition-colors flex items-center gap-2",
+                          isFollowing 
+                            ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300" 
+                            : "bg-purple-100 hover:bg-purple-200 text-purple-700 border-purple-300"
+                        )}
+                      >
+                        <Users className="w-4 h-4" />
+                        {isFollowing ? 'Following' : 'Follow'}
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setConfirmConfig({
+                            isOpen: true,
+                            title: 'Block User',
+                            message: `Are you sure you want to block ${profile.username}?`,
+                            variant: 'danger',
+                            onConfirm: async () => {
+                              try {
+                                const { error } = await supabase.rpc('block_user', { p_blocked_user_id: userId });
+                                if (error) throw error;
+                                toast.success(`${profile.username} has been blocked.`, { id: `block-${userId}` });
+                                navigate('/social');
+                              } catch (err: any) {
+                                toast.error(err.message || 'Failed to block user');
+                              }
+                            }
+                          });
+                        }}
+                        className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 font-black text-sm uppercase rounded-xl border-2 border-red-200 hover:border-red-300 transition-colors"
+                      >
+                        Block
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                          setConfirmConfig({
+                            isOpen: true,
+                            title: 'Report User',
+                            message: `Are you sure you want to report ${profile.username} for inappropriate behavior?`,
+                            variant: 'warning',
+                            onConfirm: async () => {
+                              try {
+                                const { error } = await supabase.from('reports').insert({
+                                  target_user_id: userId,
+                                  reporter_id: (await supabase.auth.getUser()).data.user?.id,
+                                  reason: 'Inappropriate behavior'
+                                });
+                                if (error) throw error;
+                                toast.success('User reported. Thank you for keeping the community safe!');
+                              } catch (err: any) {
+                                toast.error(err.message || 'Failed to report user');
+                              }
+                            }
+                          });
+                        }}
+                        className="px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 font-black text-sm uppercase rounded-xl border-2 border-yellow-200 hover:border-yellow-300 transition-colors"
+                      >
+                        Report
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Unique Cards</p>
+                  <p className="text-2xl font-black text-blue-600">{profile.unique_cards || 0}</p>
+                </div>
+                <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Packs Opened</p>
+                  <p className="text-2xl font-black text-purple-600">{profile.packs_opened || 0}</p>
+                </div>
+                <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Total Trades</p>
+                  <p className="text-2xl font-black text-[var(--text)]">{profile.total_trades ?? 0}</p>
+                </div>
+                <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)]">
+                  <p className="text-xs text-slate-500 font-bold uppercase mb-1">Followers</p>
+                  <p className="text-2xl font-black text-emerald-600">{followersCount}</p>
+                </div>
+              </div>
+
+              {/* Card Back Preview */}
+              <div className="mt-6">
+                <p className="text-xs text-slate-500 font-bold uppercase mb-2">Equipped Card Back</p>
+                <div className="w-24 aspect-[3/4] rounded-xl border-4 border-[var(--border)] bg-gray-200 overflow-hidden shadow-[4px_4px_0px_0px_var(--border)]">
+                  <img 
+                    src={getCardBackUrl(profile.card_back_url)} 
+                    alt="Card Back" 
+                    className="w-full h-full object-cover" 
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowCollection(!showCollection)}
+                className="mt-6 w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 transition-colors text-white font-black rounded-xl border-4 border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)] uppercase tracking-wider active:translate-y-1 transition-transform"
+              >
+                {showCollection ? 'Hide Collection' : 'View Collection'}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {showCollection && userId && <OtherUserCollection userId={userId} />}
+
       <ConfirmModal
         isOpen={confirmConfig.isOpen}
         onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}

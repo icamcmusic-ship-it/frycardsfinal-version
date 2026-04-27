@@ -78,6 +78,8 @@ export function RarePulls() {
                   p.card_rarity === 'Divine' ? "bg-red-100 text-red-700 border-red-300" : "bg-yellow-100 text-yellow-700 border-yellow-300"
                 )}>
                   {p.card_rarity}
+                  {p.is_foil && !p.serial_number && ' ✨ Foil'}
+                  {p.serial_number && ' #' + p.serial_number}
                 </span>
               </div>
               <p className="text-lg font-black uppercase text-[var(--text)]">{p.card_name}</p>

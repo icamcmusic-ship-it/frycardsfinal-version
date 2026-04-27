@@ -220,6 +220,11 @@ export function Collection() {
     // Re-fetch stats first to ensure accurate count
     const freshStats = await fetchStats();
     
+    if (!freshStats && !stats) {
+      toast.error('Failed to load collection stats');
+      return;
+    }
+    
     // Calculate duplicates after refresh
     const duplicateCount = freshStats ? freshStats.total_cards - freshStats.unique_cards : 
                          stats ? stats.total_cards - stats.unique_cards : 0;

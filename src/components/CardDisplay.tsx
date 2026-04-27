@@ -48,8 +48,7 @@ export function CardDisplay({
     'divine':     'red',
   };
   const colorKey = RARITY_COLOR_MAP[rarityKey] ?? 'gray';
-  const isSerializedRarity = card.rarity === 'Mythic' || card.rarity === 'Divine';
-  const isFoil = !isSerializedRarity && (card.is_foil || (card.foil_quantity ?? 0) > 0);
+  const isFoil = (card.is_foil || (card.foil_quantity ?? 0) > 0);
 
   return (
     <div 
@@ -122,11 +121,16 @@ export function CardDisplay({
             </span>
           </div>
 
-          { (card.serial_number || card.serial_no || card.serial || card.serial_id) && (card.serial_number || card.serial_no || card.serial || card.serial_id) > 0 && (
-            <div className="absolute top-[6cqw] right-[6cqw] mt-[14cqw] sticker px-[2cqw] py-[1cqw] rounded-[2cqw] brut-border bg-black text-yellow-300 z-30 -rotate-3 shadow-gold shadow-sm">
-              <span className="text-[3cqw] font-black uppercase tracking-tighter">
-                #{card.serial_number || card.serial_no || card.serial || card.serial_id}/{card.max_serial_supply ?? 200}
-              </span>
+          { (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) != null && (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) > 0 && (
+            <div className="absolute top-[6cqw] right-[6cqw] mt-[14cqw] flex flex-col items-end gap-[1cqw] z-30">
+              <div className="sticker px-[2cqw] py-[1cqw] rounded-[2cqw] brut-border bg-yellow-300 text-black rotate-2 shadow-sm whitespace-nowrap">
+                <span className="text-[2.5cqw] font-black uppercase tracking-tighter">🔢 Serialized Edition</span>
+              </div>
+              <div className="sticker px-[2cqw] py-[1cqw] rounded-[2cqw] brut-border bg-black text-yellow-300 -rotate-3 shadow-gold shadow-sm whitespace-nowrap">
+                <span className="text-[3cqw] font-black uppercase tracking-tighter">
+                  #{card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id}/{card.max_serial_supply ?? 200}
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -186,15 +190,24 @@ export function CardDisplay({
         )}
 
         {/* Quantity Badge */}
-        {showQuantity && ((card.quantity != null && card.quantity > 0) || (card.foil_quantity != null && card.foil_quantity > 0)) && (
-          <div className="sticker absolute bottom-[4cqw] left-[-2cqw] bg-black text-white px-[3cqw] py-[1.5cqw] rounded-[2.5cqw] border-[0.6cqw] border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center gap-[1.5cqw] z-30">
-            {card.quantity != null && card.quantity > 0 && (
-              <span className="text-[4.5cqw] font-black leading-none">×{card.quantity}</span>
-            )}
-            {card.foil_quantity != null && card.foil_quantity > 0 && (
-              <span className="text-[4.5cqw] font-black leading-none text-yellow-400 flex items-center">
-                {card.quantity != null && card.quantity > 0 && <span className="mr-[0.5cqw]">+</span>}✨×{card.foil_quantity}
+        {showQuantity && ((card.quantity != null && card.quantity > 0) || (card.foil_quantity != null && card.foil_quantity > 0) || (card.is_serialized && card.quantity > 0)) && (
+          <div className="sticker absolute bottom-[4cqw] left-[-2cqw] bg-black text-white px-[3cqw] py-[1.5cqw] rounded-[2.5cqw] border-[0.6cqw] border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex flex-wrap items-center gap-[1.5cqw] z-30 max-w-[90%]">
+            {card.is_serialized ? (
+              <span className="text-[4.5cqw] font-black leading-none text-yellow-300 flex items-center">
+                🔢×{card.quantity || 1}
               </span>
+            ) : (
+              <>
+                {card.quantity != null && card.quantity > 0 && (
+                  <span className="text-[4.5cqw] font-black leading-none">×{card.quantity}</span>
+                )}
+                {card.foil_quantity != null && card.foil_quantity > 0 && (
+                  <span className="text-[4.5cqw] font-black leading-none text-yellow-400 flex items-center">
+                    {card.quantity != null && card.quantity > 0 && <span className="mx-[0.5cqw] text-white/50 text-[3cqw]">+</span>}
+                    ✨×{card.foil_quantity}
+                  </span>
+                )}
+              </>
             )}
           </div>
         )}

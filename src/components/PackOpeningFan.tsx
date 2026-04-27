@@ -282,36 +282,31 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
                 <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white border-2 border-black rounded-xl overflow-hidden">
                    <CardDisplay card={card} showQuantity={false} showNewBadge={true} />
                    
-                   {/* Slot Type Label */}
-                   {state === 'chase' && (
-                     <div className="absolute top-2 right-2 z-20">
-                        {card.slot_type === 'variance' && card.rarity !== 'Common' && (
-                          <div className="bg-orange-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded border border-black uppercase animate-bounce shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                             🎲 Variance Hit!
-                          </div>
-                        )}
-                        {card.slot_type === 'foil_chase_sr_plus' && (
-                          <div className="bg-purple-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded border border-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                             ✨ Chase Slot
-                          </div>
-                        )}
+                    {/* Slot Type Label */}
+                    {state === 'chase' && (
+                      <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1">
                         {card.is_god_pack && (
                           <div className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded border border-black uppercase animate-pulse shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                              ⚡ God Pack
                           </div>
                         )}
-                        {card.serial_number && (
+                        {card.is_foil && (card.rarity === 'Mythic' || card.rarity === 'Divine') && (
+                          <div className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded border border-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                             ✨ Foil {card.rarity}
+                          </div>
+                        )}
+                        {card.is_serialized && (card.serial_number ?? card.serial_no ?? card.serial) != null && (
                           <motion.div 
                             initial={{ scale: 0, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.5, type: 'spring' }}
                             className="bg-black text-yellow-300 text-[10px] font-black px-2 py-1 rounded border-2 border-yellow-300 uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-12 mt-2"
                           >
-                             MINT #{card.serial_number}
+                             MINT #{card.serial_number ?? card.serial_no ?? card.serial}
                           </motion.div>
                         )}
-                     </div>
-                   )}
+                      </div>
+                    )}
                 </div>
               </div>
             </div>

@@ -5,6 +5,25 @@ import { cn } from '../lib/utils';
 
 const UPDATES = [
   {
+    version: '1.2.9',
+    date: '2026-04-27',
+    title: 'Mythic Foil & Polishing Update',
+    icon: Sparkles,
+    color: 'text-yellow-500',
+    changes: [
+      'Enabled ✨ Foil editions for Mythic and Divine rarities.',
+      'Updated Card Display to show normal, foil, and serialized counts separately in the collection.',
+      'Distinct 🔢 Serialized Edition badges now appear alongside serial numbers.',
+      'Added a celebration shimmer effect for Foil Mythic/Divine reveals.',
+      'Fixed a bug in Trade offers where card templates were referenced incorrectly.',
+      'Improved Quicksell clarity with accurate foil value previews (3× normal value).',
+      'Refined Store layout with clearer pricing and updated serialized edition descriptions.',
+      'Fixed missing parameters in collection set detail RPC calls.',
+      'Added "Daily Streak" to home quick stats for better progress tracking.',
+      'Filtered Season Pass exclusive items from the general shop rotation.'
+    ]
+  },
+  {
     version: '1.2.8',
     date: '2026-04-26',
     title: 'The Social & Rare Feed Update',
