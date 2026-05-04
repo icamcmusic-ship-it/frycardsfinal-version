@@ -766,17 +766,6 @@ export function Store() {
           )}
         </div>
 
-        {/* Price Tag Sticker */}
-        <div className="absolute top-[30cqw] right-[-2cqw] flex flex-col items-end gap-1 z-[35]">
-          <div className={cn(
-            "sticker px-[2.5cqw] py-[1.5cqw] rounded-l-[2.5cqw] border-l-[0.6cqw] border-t-[0.6cqw] border-b-[0.6cqw] border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center gap-[1.5cqw] rotate-1",
-            useGems ? "bg-emerald-500 text-white" : "bg-yellow-400 text-black"
-          )}>
-            {useGems ? <Gem className="w-[4cqw] h-[4cqw]" /> : <Coins className="w-[4cqw] h-[4cqw]" />}
-            <span className="text-[4.5cqw] font-black leading-none">{cost?.toLocaleString()}</span>
-          </div>
-        </div>
-
         <div className="p-6 flex flex-col flex-1">
           <div className="flex items-start justify-between mb-2">
             <h3 className="text-2xl font-black text-[var(--text)] uppercase">{pack.name}</h3>
@@ -831,25 +820,23 @@ export function Store() {
                   onClick={() => handleOpenPack(pack.id, useGems, pack.image_url, pack.name, cost)}
                   disabled={opening || balance < cost}
                   className={cn(
-                    "flex-1 font-black py-3 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-2",
+                    "flex-1 font-black py-2 px-2 rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center gap-1 text-sm",
                     useGems ? "bg-emerald-500 hover:bg-emerald-600 text-black" : "bg-blue-500 hover:bg-blue-600 text-white",
                     balance < cost && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  <Zap className="w-5 h-5" />
-                  Open Now
+                  <span>{useGems ? <Gem className="w-3 h-3 inline" /> : <Coins className="w-3 h-3 inline" />} {cost?.toLocaleString()} Open</span>
                 </button>
                 <button 
                   onClick={() => handleBuyToInventory(pack.id, useGems, pack.name, cost)}
                   disabled={opening || balance < cost}
                   className={cn(
-                    "flex-1 font-black py-3 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2",
+                    "flex-1 font-black py-2 px-2 rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-1 text-sm",
                     useGems ? "bg-emerald-100 hover:bg-emerald-200 text-emerald-800" : "bg-slate-100 hover:bg-slate-200 text-slate-800",
                     balance < cost && "opacity-50 cursor-not-allowed"
                   )}
                 >
-                  <PackageOpen className="w-5 h-5" />
-                  Stash
+                  <PackageOpen className="w-4 h-4" /> Stash
                 </button>
               </div>
 
