@@ -17,6 +17,107 @@ const REWARD_ICONS: Record<string, React.ReactNode> = {
   profile_avatar: <User className="w-5 h-5 text-orange-500" />,
 };
 
+interface TierCardProps {
+  tier: any;
+  userLevel: number;
+  isPremium: boolean;
+  isClaimed: boolean;
+  isClaiming: boolean;
+  onClaim: (tier: number) => void;
+}
+
+const TierCard: React.FC<TierCardProps> = ({ tier, userLevel, isPremium, isClaimed, isClaiming, onClaim }) => {
+  const isLocked = tier.tier > userLevel;
+  const isPremiumTier = tier.is_premium;
+  const canClaim = !isLocked && !isClaimed && (isPremium || !isPremiumTier);
+
+  return (
+    <div className={cn(
+      "flex justify-between items-center p-5 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[4px_4px_0px_0px_var(--border)] relative overflow-visible transition-all",
+      (isLocked || isClaimed) && "opacity-60 grayscale-[0.3]",
+      isPremiumTier && !isPremium && "border-yellow-500/50 bg-yellow-50/10"
+    )}>
+      
+      <div className="absolute -top-3 left-4 bg-[var(--border)] text-white font-black text-[10px] px-2 py-0.5 rounded-full z-20">
+        Tier {tier.tier}
+      </div>
+      
+      {isPremiumTier && (
+        <div className="absolute top-0 right-0 bg-yellow-400 text-black px-2 py-0.5 font-black text-[8px] uppercase rounded-bl-lg border-l-2 border-b-2 border-black z-10 flex items-center gap-1">
+          <Gem className="w-2 h-2" />
+          Premium
+        </div>
+      )}
+
+      <div className="flex items-center gap-4">
+        <div className="text-3xl font-black text-slate-300 w-10 text-center">#{tier.tier}</div>
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-16 h-16 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_black] overflow-hidden bg-slate-100 shrink-0",
+            isPremiumTier ? "bg-yellow-50" : "bg-slate-50"
+          )}>
+            {tier.preview_image ? (
+              <img 
+                src={tier.preview_image} 
+                className={cn(
+                  "w-full h-full",
+                  tier.reward_type === 'card_back' ? "object-contain p-1" : "object-cover"
+                )}
+                alt={tier.preview_name}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                {REWARD_ICONS[tier.reward_type] ?? <Gift className="w-6 h-6 text-slate-400" />}
+              </div>
+            )}
+          </div>
+          <div>
+            {tier.is_exclusive && (
+              <span className="text-[8px] font-black text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded border border-yellow-400 uppercase mb-1 inline-block">
+                ✨ Exclusive
+              </span>
+            )}
+            <h3 className="font-black text-base uppercase text-[var(--text)] line-clamp-1">
+              {tier.preview_name || tier.reward_label}
+            </h3>
+            <p className="text-xs font-bold text-slate-500">
+              {isLocked ? `Unlock at Level ${tier.tier}` : isClaimed ? 'Claimed' : 'Ready to claim!'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center">
+        {isClaimed ? (
+          <div className="p-3 bg-green-400 rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+            <Check className="w-5 h-5 text-white" />
+          </div>
+        ) : isLocked ? (
+          <div className="p-3 bg-slate-100 rounded-xl border-4 border-slate-200">
+            <Lock className="w-5 h-5 text-slate-400" />
+          </div>
+        ) : isPremiumTier && !isPremium ? (
+          <div className="flex flex-col items-center gap-1">
+            <div className="p-3 bg-yellow-100 rounded-xl border-4 border-yellow-300">
+              <Lock className="w-5 h-5 text-yellow-600" />
+            </div>
+            <span className="text-[8px] font-black uppercase text-yellow-600">Premium</span>
+          </div>
+        ) : (
+          <button 
+            onClick={() => onClaim(tier.tier)}
+            disabled={isClaiming}
+            className="px-6 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_black] flex items-center justify-center gap-2"
+          >
+            {isClaiming ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Claim!'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function SeasonPass() {
   const { profile } = useProfileStore();
   const [passData, setPassData] = useState<any>(null);
@@ -43,8 +144,7 @@ export function SeasonPass() {
     setLoading(true);
     const [passRes, tiersRes] = await Promise.all([
       supabase.rpc('get_or_create_season_pass', { p_season: 1 }),
-      // ORDER BY tier (not tier_level — that column doesn't exist)
-      supabase.from('season_pass_tiers').select('*').order('tier'),
+      supabase.rpc('get_season_pass_with_previews', { p_season: 1 }),
     ]);
     setPassData(passRes.data);
     setTiers(tiersRes.data || []);
@@ -144,70 +244,17 @@ export function SeasonPass() {
       </div>
 
       <div className="grid gap-3">
-        {tiers.map(tier => {
-          const isLocked   = tier.tier > userLevel;
-          const isClaimed  = claimedTiers.includes(tier.tier);
-          const isPremiumTier = tier.is_premium;
-          const canClaim   = !isLocked && !isClaimed && (isPremium || !isPremiumTier);
-
-          return (
-            <div key={tier.id}
-              className={cn("flex justify-between items-center p-5 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl shadow-[4px_4px_0px_0px_var(--border)] relative overflow-visible",
-                (isLocked || isClaimed) && "opacity-50",
-                isPremiumTier && !isPremium && "border-yellow-500/50 bg-yellow-50/10"
-              )}>
-              
-              <div className="absolute -top-3 left-4 bg-[var(--border)] text-white font-black text-[10px] px-2 py-0.5 rounded-full z-20">
-                Tier {tier.tier}
-              </div>
-              
-              {isPremiumTier && (
-                <div className="absolute top-0 right-0 bg-yellow-400 text-black px-2 py-0.5 font-black text-[8px] uppercase rounded-bl-lg border-l-2 border-b-2 border-black z-10 flex items-center gap-1">
-                  <Gem className="w-2 h-2" />
-                  Premium
-                </div>
-              )}
-
-              <div className="flex items-center gap-4">
-                <div className="text-3xl font-black text-slate-300 w-10 text-center">#{tier.tier}</div>
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "p-2 rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_black]",
-                    isPremiumTier ? "bg-yellow-100" : "bg-slate-100"
-                  )}>
-                    {REWARD_ICONS[tier.reward_type] ?? <Gift className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    {(tier.reward_type === 'card_back' || tier.reward_type === 'banner' || tier.reward_type === 'profile_banner') && (
-                      <span className="text-[8px] font-black text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded border border-yellow-400 uppercase mb-1 inline-block">
-                        ✨ Exclusive
-                      </span>
-                    )}
-                    <h3 className="font-black text-base uppercase text-[var(--text)]">{tier.reward_label}</h3>
-                    <p className="text-xs font-bold text-slate-500">Reach Level {tier.tier}</p>
-                  </div>
-                </div>
-              </div>
-
-              {isClaimed ? (
-                <div className="p-3 bg-green-400 rounded-xl border-2 border-[var(--border)]"><Check className="w-5 h-5" /></div>
-              ) : isLocked ? (
-                <div className="p-3 bg-slate-200 rounded-xl border-2 border-[var(--border)]"><Lock className="w-5 h-5 text-slate-400" /></div>
-              ) : isPremiumTier && !isPremium ? (
-                <div className="flex flex-col items-center gap-1">
-                  <div className="p-3 bg-yellow-200 rounded-xl border-2 border-yellow-400"><Lock className="w-5 h-5 text-yellow-600" /></div>
-                  <span className="text-[8px] font-black uppercase text-yellow-600">Premium Only</span>
-                </div>
-              ) : (
-                <button onClick={() => claimTier(tier.tier)}
-                  disabled={claiming === tier.tier}
-                  className="px-5 py-2 bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center justify-center gap-2">
-                  {claiming === tier.tier ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Claim!'}
-                </button>
-              )}
-            </div>
-          );
-        })}
+        {tiers.map(tier => (
+          <TierCard 
+            key={tier.id || tier.tier}
+            tier={tier}
+            userLevel={userLevel}
+            isPremium={isPremium}
+            isClaimed={claimedTiers.includes(tier.tier)}
+            isClaiming={claiming === tier.tier}
+            onClaim={claimTier}
+          />
+        ))}
 
         {tiers.length === 0 && (
           <div className="text-center py-16 bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl font-bold text-slate-500">

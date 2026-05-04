@@ -26,11 +26,13 @@ const SLOT_LABELS: Record<string, { label: string; color: string }> = {
   variance:          { label: '🎲 Common 98.5% / Mythic-Divine 1.5%', color: 'text-orange-500' },
   chase:             { label: '🎯 Rare 87.6% / SR 12.4%',           color: 'text-blue-600' },
   foil_chase:        { label: '✨ Foil Rare 87.6% / SR 12.4%',      color: 'text-blue-400' },
-  foil_chase_sr_plus:{ label: '✨ Foil SR+ guaranteed',             color: 'text-purple-500' },
+  foil_chase_sr_plus:{ label: '✨ Foil SR+ guaranteed (100%)',      color: 'text-purple-500' },
   wildcard:          { label: '🃏 Any rarity (pity-tracked)',        color: 'text-indigo-500' },
   foil_wildcard:     { label: '✨ Foil Any (1% SR+ floor)',          color: 'text-indigo-400' },
   mythic_or_divine:  { label: '🔥 Guaranteed Mythic or Divine',     color: 'text-red-500' },
-  sr_or_higher:      { label: '⭐ Guaranteed SR+',                   color: 'text-purple-600' },
+  sr_or_higher:      { label: '⭐ Super-Rare+ (87.5% SR / 12.5% M+)',color: 'text-purple-600' },
+  chase_guaranteed:  { label: '🎯 Guaranteed Rare+',                color: 'text-blue-500' },
+  mythic_boosted:    { label: '🔥 10x Mythic/Divine Odds',           color: 'text-red-500' },
 };
 
 function SlotBreakdown({ slotConfig }: { slotConfig: any[] }) {
@@ -939,7 +941,7 @@ export function Store() {
       {/* Content based on activeTab */}
       {activeTab === 'packs' && (
         <div className="space-y-12">
-          {/* Global Pity Progress Section */}
+          {/* Global Pity Tracker Section */}
           <div className="bg-[var(--surface)] border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full" />
              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -960,12 +962,12 @@ export function Store() {
                                <Star className="w-3 h-3 fill-current" />
                                SR+ Guaranteed
                              </span>
-                             <span className="text-[var(--text)]">{profile?.pity_counter ?? 0}/100</span>
+                             <span className="text-[var(--text)]">{profile?.pity_counter ?? 0}/50</span>
                            </div>
                            <div className="h-4 bg-slate-100 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
                              <motion.div 
                                initial={{ width: 0 }}
-                               animate={{ width: `${((profile?.pity_counter ?? 0) / 100) * 100}%` }}
+                               animate={{ width: `${Math.min(100, ((profile?.pity_counter ?? 0) / 50) * 100)}%` }}
                                className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 relative"
                              >
                                 <div className="absolute inset-0 bg-white/20 animate-pulse" />
@@ -979,12 +981,12 @@ export function Store() {
                                <Zap className="w-3 h-3 fill-current" />
                                Mythic Boost
                              </span>
-                             <span className="text-[var(--text)]">{profile?.soft_pity_counter ?? 0}/50</span>
+                             <span className="text-[var(--text)]">{profile?.soft_pity_counter ?? 0}/100</span>
                            </div>
                            <div className="h-4 bg-slate-100 rounded-full border-2 border-black overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)]">
                              <motion.div 
                                initial={{ width: 0 }}
-                               animate={{ width: `${((profile?.soft_pity_counter ?? 0) / 50) * 100}%` }}
+                               animate={{ width: `${Math.min(100, ((profile?.soft_pity_counter ?? 0) / 100) * 100)}%` }}
                                className="h-full bg-gradient-to-r from-orange-500 to-red-600 relative"
                              >
                                 <div className="absolute inset-0 bg-white/20 animate-pulse" />
@@ -1050,12 +1052,12 @@ export function Store() {
             </div>
           ) : (
             <div className="space-y-12">
-              {/* === BOOSTER BOX SECTION === */}
+              {/* === COLLECTOR BOOSTER BOX SECTION === */}
               {packs.filter(p => p.pack_tier === 'booster_box').length > 0 && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
                     <Package className="w-6 h-6 text-yellow-500" />
-                    Booster Box
+                    Collector Booster Box
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
                     {packs.filter(p => p.pack_tier === 'booster_box').map(pack => renderPackCard(pack))}

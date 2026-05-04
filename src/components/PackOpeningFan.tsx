@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Zap } from 'lucide-react';
+import { Sparkles, Zap, SkipForward, ArrowRight } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { CardDisplay } from './CardDisplay';
 import { audioService } from '../services/AudioService';
@@ -16,168 +16,127 @@ interface PackOpeningFanProps {
   } | null;
 }
 
+const RARITY_ORDER = ['Divine', 'Mythic', 'Super-Rare', 'Rare', 'Uncommon', 'Common'];
+
 export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningFanProps) {
-  const [flippedCount, setFlippedCount] = useState(0);
-  const [flippedStates, setFlippedStates] = useState<Record<number, 'idle' | 'revealing' | 'collected' | 'chase'>>({});
-  const [isAutoRunning, setIsAutoRunning] = useState(false);
-  const [blockManualClicks, setBlockManualClicks] = useState(false);
+  const [revealed, setRevealed] = useState<Set<number>>(new Set());
+  const [currentIndex, setCurrentIndex] = useState<number>(-1);
+  const [isAutoOpening, setIsAutoOpening] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   
-  const chaseIndex = useMemo(() => {
-    if (cards.length === 0) return -1;
-    // Find the most rare card index
-    const rarityOrder = ['Divine', 'Mythic', 'Super-Rare', 'Rare', 'Uncommon', 'Common'];
-    let bestIndex = cards.length - 1;
-    let bestRarityIdx = rarityOrder.indexOf(cards[cards.length - 1].rarity);
-    
-    for (let i = 0; i < cards.length; i++) {
-      const currentRarityIdx = rarityOrder.indexOf(cards[i].rarity);
-      if (currentRarityIdx < bestRarityIdx) {
-        bestRarityIdx = currentRarityIdx;
-        bestIndex = i;
-      }
-    }
+  const isAutoOpeningRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-    if (bestRarityIdx >= rarityOrder.indexOf('Rare')) {
-      return -1;
-    }
-
-    return bestIndex;
-  }, [cards]);
-
-  const pileOffsets = useMemo(() => {
-    return cards.map(() => ({
-      x: (Math.random() * 100) - 50,
-      y: (Math.random() * 30) - 15,
-      rot: (Math.random() * 16) - 8
-    }));
-  }, [cards]);
-
-  const flippedCountRef = useRef(0);
-  const isAutoRunningRef = useRef(false);
-  const revealingIndicesRef = useRef<Set<number>>(new Set());
-
+  // Reset state when opening/closing
   useEffect(() => {
     if (isOpen) {
-      setFlippedCount(0);
-      flippedCountRef.current = 0;
-      revealingIndicesRef.current.clear();
-      setFlippedStates({});
-      setIsAutoRunning(false);
-      isAutoRunningRef.current = false;
-      setBlockManualClicks(false);
+      setRevealed(new Set());
+      setCurrentIndex(-1);
+      setIsAutoOpening(false);
+      isAutoOpeningRef.current = false;
       setShowSummary(false);
+      
+      const isGodPack = cards.some(c => c.is_god_pack);
+      if (isGodPack) audioService.play('god_pack');
     }
   }, [isOpen, cards]);
 
-  const flipAndMove = async (idx: number, fromAuto = false, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (!fromAuto && (blockManualClicks || isAutoRunningRef.current)) return;
-    if (flippedStates[idx] && flippedStates[idx] !== 'idle') return;
-    if (revealingIndicesRef.current.has(idx)) return;
+  const chaseIndex = useMemo(() => {
+    if (!cards.length) return -1;
+    let bestIdx = -1;
+    let bestRank = Infinity;
+
+    cards.forEach((card, i) => {
+      const rank = RARITY_ORDER.indexOf(card.rarity);
+      if (rank < bestRank) {
+        bestRank = rank;
+        bestIdx = i;
+      }
+    });
+
+    // Only "Chase" if it's Rare or better
+    return bestRank <= RARITY_ORDER.indexOf('Rare') ? bestIdx : -1;
+  }, [cards]);
+
+  const revealCard = useCallback((index: number) => {
+    if (revealed.has(index)) return;
     
-    // Check if we're trying to flip the chase card too early
-    if (idx === chaseIndex && flippedCountRef.current < cards.length - 1) {
+    // Chase card locking logic: can't reveal chase until others are done
+    if (index === chaseIndex && revealed.size < cards.length - 1) {
       return;
     }
 
-    audioService.play('card_reveal');
-    revealingIndicesRef.current.add(idx);
+    const card = cards[index];
     
-    setFlippedStates(prev => ({ ...prev, [idx]: 'revealing' }));
-    flippedCountRef.current += 1;
-    setFlippedCount(flippedCountRef.current);
-
-    const isChase = idx === chaseIndex;
-    const displayDuration = (isAutoRunningRef.current || fromAuto) ? 200 : 600;
-
-    setTimeout(() => {
-      if (isChase) {
-        setFlippedStates(prev => ({ ...prev, [idx]: 'chase' }));
-        audioService.play('divine_reveal');
-        setTimeout(() => setShowSummary(true), 1200);
-      } else {
-        setFlippedStates(prev => ({ ...prev, [idx]: 'collected' }));
-      }
-    }, displayDuration);
-
-    // If all non-chase cards are flipped, or we just flipped the chase, ensure clicks are unblocked
-    if (flippedCountRef.current >= cards.length - 1) {
-      setBlockManualClicks(false);
+    // Play sound based on rarity
+    if (card.rarity === 'Divine') {
+      audioService.play('divine_reveal');
+      if ('vibrate' in navigator) navigator.vibrate([15, 40, 15]);
+    } else if (card.rarity === 'Mythic') {
+      audioService.play('mythic_reveal');
+      if ('vibrate' in navigator) navigator.vibrate([15, 40, 15]);
+    } else if (['Super-Rare', 'Rare'].includes(card.rarity)) {
+      audioService.play('rare_reveal');
+    } else {
+      audioService.play('card_reveal');
     }
-  };
 
-  const autoFlipAll = async (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (isAutoRunningRef.current) return;
-    
-    isAutoRunningRef.current = true;
-    setIsAutoRunning(true);
-    setBlockManualClicks(true);
+    setRevealed(prev => {
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+    setCurrentIndex(index);
 
-    const stack = [];
+    // If it's the last card, show summary after a delay
+    if (revealed.size + 1 === cards.length) {
+      setTimeout(() => setShowSummary(true), 1200);
+    }
+  }, [revealed, cards, chaseIndex]);
+
+  const autoRevealAll = async () => {
+    if (isAutoOpening) return;
+    setIsAutoOpening(true);
+    isAutoOpeningRef.current = true;
+
+    // Flip all normal cards first
     for (let i = 0; i < cards.length; i++) {
-      if (!flippedStates[i] && i !== chaseIndex) {
-        stack.push(i);
-      }
+      if (!isAutoOpeningRef.current) break;
+      if (i === chaseIndex) continue;
+      if (revealed.has(i)) continue;
+
+      revealCard(i);
+      await new Promise(r => setTimeout(r, 150));
     }
 
-    // Sort sequentially
-    stack.sort((a, b) => a - b);
-
-    for (let i = 0; i < stack.length; i++) {
-      await flipAndMove(stack[i], true);
-      const progress = i / stack.length;
-      const delay = 80 + (progress * 220);
-      await new Promise(r => setTimeout(r, delay));
-    }
-    
-    // Final check for chase card
-    if (flippedCountRef.current === cards.length - 1 && chaseIndex !== -1) {
-       setBlockManualClicks(false);
+    // Finally flip chase card
+    if (isAutoOpeningRef.current && chaseIndex !== -1 && !revealed.has(chaseIndex)) {
+      await new Promise(r => setTimeout(r, 400));
+      revealCard(chaseIndex);
     }
 
-    isAutoRunningRef.current = false;
-    setIsAutoRunning(false);
+    setIsAutoOpening(false);
+    isAutoOpeningRef.current = false;
   };
+
+  const sortedSummaryCards = useMemo(() => {
+    return [...cards].sort((a, b) => {
+      const rankA = RARITY_ORDER.indexOf(a.rarity);
+      const rankB = RARITY_ORDER.indexOf(b.rarity);
+      if (rankA !== rankB) return rankA - rankB;
+      return a.name.localeCompare(b.name);
+    });
+  }, [cards]);
 
   if (!isOpen) return null;
 
-  const arc = 120;
-  const count = cards.length;
-  const step = count > 1 ? arc / (count - 1) : 0;
-  const startAngle = (arc / 2) * -1;
-
-  const isGodPack = cards.length > 0 && cards[0]?.is_god_pack;
-
-  useEffect(() => {
-    if (isOpen && isGodPack) {
-      audioService.play('god_pack');
-    }
-  }, [isOpen, isGodPack]);
-
   return (
-    <div 
-      onClick={(e) => {
-        if (!showSummary && !isAutoRunningRef.current) {
-          autoFlipAll(e);
-        }
-      }}
-      className={cn(
-        "fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-end transition-opacity duration-500 cursor-pointer",
-        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-      )}
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 overflow-hidden"
     >
-      {/* God Pack Flash */}
-      {isGodPack && isOpen && flippedCount === 0 && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 1, 0] }}
-          transition={{ duration: 1.5, times: [0, 0.2, 1] }}
-          className="absolute inset-0 bg-yellow-400 z-[110] pointer-events-none"
-        />
-      )}
-      {/* Background patterns */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" 
            style={{ 
              backgroundImage: 'radial-gradient(#fc3f46 1px, transparent 1px)', 
@@ -185,177 +144,192 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
            }} 
       />
 
-      {cards.length > 0 && cards[0]?.is_god_pack && (
-        <div className="absolute top-0 inset-x-0 z-50 text-center py-3 bg-yellow-400 border-b-4 border-[var(--border)] font-black text-2xl uppercase tracking-widest animate-pulse">
-          ⚡ GOD PACK ⚡
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="absolute top-12 left-0 right-0 text-center z-10 px-4">
-        <h2 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
-          Pack Unboxing
-        </h2>
-        <p className="text-white/60 font-bold mt-2 uppercase tracking-widest text-sm">
-          {flippedCount} / {cards.length} Cards Revealed
-        </p>
-      </div>
-
-      {/* Close Button */}
-      {showSummary && (
-        <button 
-          onClick={onClose}
-          className="absolute top-10 right-10 bg-white text-black px-8 py-3 rounded-xl border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] font-black uppercase text-xl hover:bg-gray-100 transition-all z-[110] active:translate-y-1 active:shadow-none"
-        >
-          Finish
-        </button>
-      )}
-
-      {/* Auto Reveal Button */}
-      {!showSummary && flippedCount < cards.length - 1 && (
-        <div className="absolute top-28 right-8 z-[110]">
-          <button 
-            onClick={autoFlipAll}
-            disabled={isAutoRunning}
-            className="bg-[#ffdf6c] text-black px-8 py-4 rounded-full border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] font-black uppercase text-lg hover:bg-yellow-300 transition-all flex items-center gap-2 active:translate-y-1 active:shadow-none disabled:opacity-50"
+      <AnimatePresence mode="wait">
+        {!showSummary ? (
+          <motion.div 
+            key="reveal-stage"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            className="relative w-full max-w-6xl h-full flex flex-col items-center justify-center"
           >
-            <Sparkles className="w-6 h-6" />
-            Auto-Reveal
-          </button>
-        </div>
-      )}
-
-      {/* Fan Stage */}
-      <div className="relative w-full h-[60vh] flex justify-center items-end pb-[10vh]">
-        {cards.map((card, i) => {
-          const state = flippedStates[i] || 'idle';
-          const angle = startAngle + (i * step);
-          const xOffset = (i - (count - 1) / 2) * (count > 15 ? 25 : 38);
-          const isChase = i === chaseIndex;
-          const isLocked = isChase && flippedCount < count - 1;
-          const isRevealing = state === 'revealing';
-          const isCollected = state === 'collected';
-          const isChaseRevealed = state === 'chase';
-          
-          let transform = `translateX(${xOffset}px) rotate(${angle}deg)`;
-          let zIndex = i;
-
-          if (isRevealing) {
-            transform = `translateX(${xOffset}px) translateY(-100px) rotate(0deg) scale(1.5)`;
-            zIndex = 2000 + i;
-          } else if (isCollected) {
-            const pile = pileOffsets[i];
-            transform = `translateY(calc(-55vh + ${pile.y}px)) translateX(${pile.x}px) rotate(${pile.rot}deg) scale(0.6)`;
-            zIndex = 500 + i;
-          } else if (isChaseRevealed) {
-            transform = `translateY(-35vh) translateX(0) rotate(0deg) scale(2.2)`;
-            zIndex = 9999;
-          } else if (isChase && !isLocked) {
-             // Chase is ready
-             transform = `translateX(${xOffset}px) translateY(-30px) rotate(0deg) scale(1.15)`;
-             zIndex = 1500;
-          }
-
-          return (
-            <div
-              key={i}
-              className={cn(
-                "absolute w-[140px] h-[186px] transition-all duration-500 ease-out cursor-pointer preserve-3d",
-                isLocked && "grayscale contrast-50 brightness-50 opacity-50 pointer-events-none",
-                isCollected && "pointer-events-none opacity-40",
-                isChase && !isLocked && !isChaseRevealed && "animate-pulse shadow-[0_0_20px_#ffdf6c]"
-              )}
-              style={{ transform, zIndex, transformStyle: 'preserve-3d' }}
-              onClick={(e) => flipAndMove(i, false, e)}
-            >
-              <div className={cn(
-                "relative w-full h-full transition-transform duration-700 preserve-3d rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
-                (isRevealing || isCollected || isChaseRevealed) && "rotate-y-180"
-              )}>
-                {/* Front (Back of card) */}
-                <div className="absolute inset-0 backface-hidden bg-[#fe3448] border-2 border-black rounded-xl flex items-center justify-center overflow-hidden">
-                  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#fff 2px, transparent 2px)', backgroundSize: '15px 15px' }} />
-                  <span className="text-6xl font-black text-white drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">F</span>
+            {/* Header */}
+            <div className="absolute top-8 text-center">
+              <h2 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter mb-2">
+                Revealing Pack
+              </h2>
+              <div className="flex items-center justify-center gap-2">
+                <div className="h-2 w-48 bg-white/10 rounded-full overflow-hidden border border-white/20">
+                  <motion.div 
+                    className="h-full bg-yellow-400"
+                    animate={{ width: `${(revealed.size / cards.length) * 100}%` }}
+                  />
                 </div>
-
-                {/* Back (Front of card) */}
-                <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white border-2 border-black rounded-xl overflow-hidden">
-                   <CardDisplay card={card} showQuantity={false} showNewBadge={true} />
-                   
-                    {/* Slot Type Label */}
-                    {state === 'chase' && (
-                      <div className="absolute top-2 right-2 z-20 flex flex-col items-end gap-1">
-                        {card.is_god_pack && (
-                          <div className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded border border-black uppercase animate-pulse shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                             ⚡ God Pack
-                          </div>
-                        )}
-                        {card.is_foil && (card.rarity === 'Mythic' || card.rarity === 'Divine') && (
-                          <div className="bg-yellow-400 text-black text-[8px] font-black px-1.5 py-0.5 rounded border border-black uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                             ✨ Foil {card.rarity}
-                          </div>
-                        )}
-                        {card.is_serialized && (card.serial_number ?? card.serial_no ?? card.serial) != null && (
-                          <motion.div 
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ delay: 0.5, type: 'spring' }}
-                            className="bg-black text-yellow-300 text-[10px] font-black px-2 py-1 rounded border-2 border-yellow-300 uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-12 mt-2"
-                          >
-                             MINT #{card.serial_number ?? card.serial_no ?? card.serial}
-                          </motion.div>
-                        )}
-                      </div>
-                    )}
-                </div>
+                <span className="text-white/60 font-black text-xs uppercase tracking-widest">
+                  {revealed.size} / {cards.length}
+                </span>
               </div>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Summary Overlay */}
-      <AnimatePresence>
-        {showSummary && summary && (
+            {/* Skip All */}
+            {revealed.size < cards.length && (
+              <button 
+                onClick={autoRevealAll}
+                disabled={isAutoOpening}
+                className="absolute top-12 right-0 bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full border border-white/20 font-black uppercase text-xs tracking-widest flex items-center gap-2 transition-all disabled:opacity-50"
+              >
+                <SkipForward className="w-4 h-4" />
+                Skip All
+              </button>
+            )}
+
+            {/* Fan Stage */}
+            <div ref={containerRef} className="relative w-full h-[50vh] flex justify-center items-center">
+              {cards.map((card, i) => {
+                const isRevealed = revealed.has(i);
+                const isCurrent = currentIndex === i;
+                const isChase = i === chaseIndex;
+                const isLocked = isChase && revealed.size < cards.length - 1;
+                
+                const arc = 120;
+                const step = cards.length > 1 ? arc / (cards.length - 1) : 0;
+                const angle = (step * i) - (arc / 2);
+                const xOffset = (i - (cards.length - 1) / 2) * (cards.length > 15 ? 25 : 45);
+
+                return (
+                  <motion.div
+                    key={i}
+                    layoutId={`card-${i}`}
+                    style={{ 
+                      zIndex: isCurrent ? 100 : i,
+                      transformStyle: 'preserve-3d',
+                      perspective: '1000px'
+                    }}
+                    animate={{
+                      x: isCurrent ? 0 : xOffset,
+                      y: isCurrent ? -50 : (Math.abs(angle) * 0.8),
+                      rotateZ: isCurrent ? 0 : angle,
+                      scale: isCurrent ? 1.5 : 1,
+                      rotateY: isRevealed ? 180 : 0,
+                    }}
+                    transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+                    className={cn(
+                      "absolute w-[140px] aspect-[3/4] cursor-pointer",
+                      isLocked && "opacity-50 grayscale contrast-50 pointer-events-none"
+                    )}
+                    onClick={() => revealCard(i)}
+                  >
+                    <div className="relative w-full h-full preserve-3d" style={{ transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)', transformStyle: 'preserve-3d' }}>
+                      {/* Card Back */}
+                      <div className="absolute inset-0 backface-hidden bg-[#fe3448] border-2 border-black rounded-xl overflow-hidden shadow-2xl flex items-center justify-center">
+                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#fff 2px, transparent 2px)', backgroundSize: '15px 15px' }} />
+                        <span className="text-6xl font-black text-white drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">F</span>
+                        {isChase && !isRevealed && !isLocked && (
+                          <motion.div 
+                            animate={{ opacity: [0.5, 1, 0.5] }}
+                            transition={{ repeat: Infinity, duration: 1.5 }}
+                            className="absolute inset-0 border-4 border-yellow-400 rounded-xl"
+                          />
+                        )}
+                      </div>
+
+                      {/* Card Front */}
+                      <div className="absolute inset-0 backface-hidden rotate-y-180 bg-white border-2 border-black rounded-xl overflow-hidden shadow-2xl">
+                        <CardDisplay card={card} showQuantity={false} />
+                        
+                        {/* High Rarity Sparkles */}
+                        {isRevealed && (card.rarity === 'Divine' || card.rarity === 'Mythic') && (
+                          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                            {[...Array(12)].map((_, j) => (
+                              <motion.div
+                                key={j}
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ 
+                                  opacity: [0, 1, 0],
+                                  scale: [0, 1.5, 0],
+                                  x: (Math.random() - 0.5) * 140,
+                                  y: (Math.random() - 0.5) * 186
+                                }}
+                                transition={{ repeat: Infinity, duration: 1.5, delay: j * 0.1 }}
+                                className="absolute w-2 h-2 bg-white rounded-full blur-[1px]"
+                                style={{ top: '50%', left: '50%' }}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Foil Sweep */}
+                        {card.is_foil && (
+                          <motion.div 
+                            animate={{ x: ['100%', '-100%'] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                            className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/40 to-transparent skew-x-12 z-10 pointer-events-none"
+                          />
+                        )}
+
+                        {/* God Pack Border */}
+                        {card.is_god_pack && (
+                          <div className="absolute inset-0 border-4 border-transparent rounded-xl animate-hue-rotate z-20 pointer-events-none" style={{ backgroundImage: 'linear-gradient(white, white), radial-gradient(circle at top left, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)', backgroundOrigin: 'border-box', backgroundClip: 'content-box, border-box' }} />
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        ) : (
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            key="summary-stage"
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
-            className="absolute bottom-12 left-0 right-0 flex justify-center px-4 z-[120]"
+            className="w-full max-w-5xl flex flex-col h-full py-12"
           >
-            <div className="bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex gap-8 items-center">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center border-2 border-blue-200">
-                  <Zap className="w-6 h-6 text-blue-600" />
+            {/* Summary Header */}
+            <div className="flex items-center justify-between mb-8 bg-white border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+              <div className="flex gap-8">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">XP Gained</span>
+                  <span className="text-3xl font-black text-blue-600">+{summary?.xp_gained}</span>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase">XP Gained</p>
-                  <p className="text-xl font-black text-blue-600">+{summary.xp_gained}</p>
+                <div className="w-px h-12 bg-slate-100" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">New Cards</span>
+                  <span className="text-3xl font-black text-yellow-600">{summary?.new_card_count}</span>
                 </div>
-              </div>
-              <div className="w-px h-10 bg-slate-200" />
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center border-2 border-yellow-200">
-                  <Sparkles className="w-6 h-6 text-yellow-600" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase">New Cards</p>
-                  <p className="text-xl font-black text-yellow-600">{summary.new_card_count}</p>
-                </div>
-              </div>
-              {summary.pack_points_earned && summary.pack_points_earned > 0 && (
-                <>
-                  <div className="w-px h-10 bg-slate-200" />
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center border-2 border-indigo-200">
-                      <Sparkles className="w-6 h-6 text-indigo-600" />
+                {summary?.pack_points_earned && (
+                  <>
+                    <div className="w-px h-12 bg-slate-100" />
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pack Points</span>
+                      <span className="text-3xl font-black text-indigo-600">+{summary.pack_points_earned}</span>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase">Points Earned</p>
-                      <p className="text-xl font-black text-indigo-600">+{summary.pack_points_earned}</p>
-                    </div>
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
+              
+              <button 
+                onClick={onClose}
+                className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase flex items-center gap-2 hover:bg-slate-800 transition-all active:translate-y-1"
+              >
+                Continue <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Summary Grid */}
+            <div className="flex-1 overflow-y-auto pr-2 scrollbar-hide grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {sortedSummaryCards.map((card, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="aspect-[3/4] relative"
+                  style={{ contain: 'layout paint' }}
+                >
+                  <CardDisplay card={card} showQuantity={false} showNewBadge={card.is_new} />
+                </motion.div>
+              ))}
             </div>
           </motion.div>
         )}
@@ -365,7 +339,12 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
         .preserve-3d { transform-style: preserve-3d; }
         .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
+        @keyframes hue-rotate {
+          from { filter: hue-rotate(0deg); }
+          to { filter: hue-rotate(360deg); }
+        }
+        .animate-hue-rotate { animation: hue-rotate 3s linear infinite; }
       `}} />
-    </div>
+    </motion.div>
   );
 }

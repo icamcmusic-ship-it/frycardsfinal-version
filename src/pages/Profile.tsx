@@ -7,6 +7,7 @@ import { cn, getAvatarUrl, getBannerUrl, getCardBackUrl } from '../lib/utils';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from '../components/ConfirmModal';
+import RecentPulls from '../components/RecentPulls';
 
 export function Profile() {
   const { profile, setProfile, collectionStats: ownStats } = useProfileStore();
@@ -365,16 +366,16 @@ export function Profile() {
                 </div>
                 <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)] group relative cursor-help">
                   <p className="text-xs text-slate-500 font-bold uppercase mb-1 flex items-center gap-1">SR+ Pity <Star className="w-3 h-3 text-purple-600" /></p>
-                  <p className="text-2xl font-black text-purple-600">{profile.pity_counter}/100</p>
+                  <p className="text-2xl font-black text-purple-600">{profile.pity_counter}/50</p>
                   <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-black text-white text-[10px] rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl border border-white/20">
-                    Guaranteed Super-Rare or better at 100 packs. Progress shared across all standard packs.
+                    Guaranteed Super-Rare or better at 50 packs. Progress shared across all standard packs.
                   </div>
                 </div>
-                <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)] group relative cursor-help">
+                <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0_0_var(--border)] group relative cursor-help">
                   <p className="text-xs text-slate-500 font-bold uppercase mb-1 flex items-center gap-1">Mythic Pity <Zap className="w-3 h-3 text-orange-600" /></p>
-                  <p className="text-2xl font-black text-orange-600">{profile.soft_pity_counter}/50</p>
+                  <p className="text-2xl font-black text-orange-600">{profile.soft_pity_counter}/100</p>
                   <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-black text-white text-[10px] rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl border border-white/20">
-                    Guaranteed Mythic at 50 packs. This boost increases your chances significantly as you approach 50.
+                    Guaranteed Mythic or Divine card at 100 packs.
                   </div>
                 </div>
               </div>
@@ -495,6 +496,7 @@ export function Profile() {
 
       {/* Achievements / Showcase */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <RecentPulls />
         <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 shadow-[8px_8px_0px_0px_var(--border)]">
           <h2 className="text-2xl font-black text-[var(--text)] mb-6 flex items-center gap-2 uppercase">
             <Trophy className="w-6 h-6 text-yellow-500 fill-yellow-500" />

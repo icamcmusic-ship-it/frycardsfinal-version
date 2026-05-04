@@ -24,9 +24,21 @@ interface ShopSectionProps {
 export function ShopSection({ shopItems, profile, userCosmetics, onBuyItem }: ShopSectionProps) {
   const ownedItemIds = useMemo(() => new Set(userCosmetics.map(c => c.item_id)), [userCosmetics]);
 
-  const cardBacks = useMemo(() => shopItems.filter(i => i.item_type === 'card_back' && i.collection_method !== 'season_pass'), [shopItems]);
-  const icons = useMemo(() => shopItems.filter(i => i.item_type === 'profile_avatar' && i.collection_method !== 'season_pass'), [shopItems]);
-  const banners = useMemo(() => shopItems.filter(i => i.item_type === 'profile_banner' && i.collection_method !== 'season_pass'), [shopItems]);
+  const cardBacks = useMemo(() => 
+    shopItems.filter(i => i.item_type === 'card_back' && !i.is_season_pass_exclusive)
+             .sort((a, b) => (a.cost_gold ?? a.cost_gems ?? 0) - (b.cost_gold ?? b.cost_gems ?? 0)), 
+    [shopItems]
+  );
+  const icons = useMemo(() => 
+    shopItems.filter(i => i.item_type === 'profile_avatar' && !i.is_season_pass_exclusive)
+             .sort((a, b) => (a.cost_gold ?? a.cost_gems ?? 0) - (b.cost_gold ?? b.cost_gems ?? 0)), 
+    [shopItems]
+  );
+  const banners = useMemo(() => 
+    shopItems.filter(i => i.item_type === 'profile_banner' && !i.is_season_pass_exclusive)
+             .sort((a, b) => (a.cost_gold ?? a.cost_gems ?? 0) - (b.cost_gold ?? b.cost_gems ?? 0)), 
+    [shopItems]
+  );
 
   const renderItem = (item: ShopItem, aspectClass: string) => {
     const isOwned = ownedItemIds.has(item.id);
