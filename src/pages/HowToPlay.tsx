@@ -26,7 +26,7 @@ export function HowToPlay() {
       title: 'The Store & Pity',
       icon: Store,
       color: 'bg-indigo-100 text-indigo-600',
-      content: 'Opening packs is the primary way to collect cards. Every pack has a Hard Pity at 100 rolls (guaranteed Rare+) and a Mythic Boost at 50 rolls (boosted Mythic & SR rates). God Packs (1:2000) contain only all-SR+ foil cards!'
+      content: 'Opening packs is the primary way to collect cards. Every pack has a Super-Rare Pity at 50 rolls and a Mythic Pity at 100 rolls. God Packs (1:2000) contain only all-SR+ foil cards! Wildcard slots have linear scaling boosts between 50 and 100 rolls.'
     },
     {
       title: 'Marketplace & Trading',

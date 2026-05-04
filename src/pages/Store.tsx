@@ -19,20 +19,20 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { audioService } from '../services/AudioService';
 
 const SLOT_LABELS: Record<string, { label: string; color: string }> = {
-  foundation:        { label: '✅ Common (100%)',                    color: 'text-slate-500' },
+  foundation:        { label: '⚪ Common (100%)',                    color: 'text-slate-500' },
   foil_foundation:   { label: '✨ Foil Common (100%)',               color: 'text-slate-400' },
   synergy:           { label: '🟢 Uncommon (100%)',                  color: 'text-green-600' },
   foil_synergy:      { label: '✨ Foil Uncommon (100%)',             color: 'text-green-500' },
-  variance:          { label: '🎲 Common 98.5% / Mythic-Divine 1.5%', color: 'text-orange-500' },
-  chase:             { label: '🎯 Rare 87.6% / SR 12.4%',           color: 'text-blue-600' },
+  variance:          { label: '🎲 Common / 0.75% M / 0.75% D', color: 'text-orange-500' },
+  chase:             { label: '🎯 Rare 87.6% / Super-Rare 12.4%',    color: 'text-blue-600' },
   foil_chase:        { label: '✨ Foil Rare 87.6% / SR 12.4%',      color: 'text-blue-400' },
-  foil_chase_sr_plus:{ label: '✨ Foil SR+ guaranteed (100%)',      color: 'text-purple-500' },
-  wildcard:          { label: '🃏 Any rarity (pity-tracked)',        color: 'text-indigo-500' },
-  foil_wildcard:     { label: '✨ Foil Any (1% SR+ floor)',          color: 'text-indigo-400' },
-  mythic_or_divine:  { label: '🔥 Guaranteed Mythic or Divine',     color: 'text-red-500' },
-  sr_or_higher:      { label: '⭐ Super-Rare+ (87.5% SR / 12.5% M+)',color: 'text-purple-600' },
-  chase_guaranteed:  { label: '🎯 Guaranteed Rare+',                color: 'text-blue-500' },
-  mythic_boosted:    { label: '🔥 10x Mythic/Divine Odds',           color: 'text-red-500' },
+  foil_chase_sr_plus:{ label: '✨ 70% SR / 20% M / 10% D',            color: 'text-purple-500' },
+  wildcard:          { label: '🃏 Full table (Pity tracked)',        color: 'text-indigo-500' },
+  foil_wildcard:     { label: '✨ Foil Any (Higher Rare floor)',      color: 'text-indigo-400' },
+  mythic_or_divine:  { label: '🔥 50% Mythic / 50% Divine',           color: 'text-red-500' },
+  sr_or_higher:      { label: '⭐ 80% SR / 15% M / 5% D',             color: 'text-purple-600' },
+  prismatic:         { label: '🌈 Always Foil (Boosted Odds)',        color: 'text-pink-500' },
+  elite_chase:       { label: '💎 89% SR / 10% M / 1% D',             color: 'text-cyan-500' },
 };
 
 function SlotBreakdown({ slotConfig }: { slotConfig: any[] }) {
@@ -40,6 +40,8 @@ function SlotBreakdown({ slotConfig }: { slotConfig: any[] }) {
   // Count and group slots
   const counts: Record<string, number> = {};
   slotConfig.forEach(s => { counts[s.type] = (counts[s.type] || 0) + 1; });
+  const hasWildcard = Object.keys(counts).includes('wildcard');
+
   return (
     <div className="space-y-1 text-xs mt-2 border-t border-[var(--border)] pt-2">
       <p className="font-black text-[10px] text-slate-400 uppercase mb-1">Pack Slots</p>
@@ -49,6 +51,17 @@ function SlotBreakdown({ slotConfig }: { slotConfig: any[] }) {
           <span className="font-black">×{count}</span>
         </div>
       ))}
+      {hasWildcard && (
+        <div className="mt-3 p-2 bg-slate-50 border-2 border-black/5 rounded-lg text-[9px] font-bold text-slate-500 leading-tight">
+          <p className="uppercase font-black text-indigo-600 mb-1">🃏 Wildcard Logic</p>
+          <p className="mb-2 text-[8px] opacity-70">Baseline: 0.1% Divine · 0.4% Mythic · 0.62% SR · 8% Rare · 20% U · 70.88% C</p>
+          <ul className="space-y-1 list-disc pl-3">
+            <li><span className="font-black">SR-Pity (50):</span> 90% SR / 8% M / 2% D</li>
+            <li><span className="font-black">Mythic-Pity (100):</span> 80% M / 20% D</li>
+            <li><span className="font-black">Soft-Boost (50-99):</span> Linear ramp on SR+ rates</li>
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
