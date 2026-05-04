@@ -54,9 +54,7 @@ export function CardDisplay({
     <div 
       className={cn(
         'card-base brut-border brut-shadow transition-all duration-300 group hover:-translate-y-2 hover:scale-[1.02]',
-        rarityKey === 'super-rare' && 'effect-sr',
-        rarityKey === 'mythic' && 'effect-mythic',
-        rarityKey === 'divine' && 'effect-divine',
+        rarityKey === 'divine' && card.is_video && 'effect-divine',
         isFoil && 'foil-shine',
         className
       )}
@@ -120,20 +118,20 @@ export function CardDisplay({
               {card.rarity}
             </span>
           </div>
-
-          { (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) != null && (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) > 0 && (
-            <div className="absolute top-[6cqw] right-[6cqw] mt-[14cqw] flex flex-col items-end gap-[1cqw] z-30">
-              <div className="sticker px-[2cqw] py-[1cqw] rounded-[2cqw] brut-border bg-yellow-300 text-black rotate-2 shadow-sm whitespace-nowrap">
-                <span className="text-[2.5cqw] font-black uppercase tracking-tighter">🔢 Serialized Edition</span>
-              </div>
-              <div className="sticker px-[2cqw] py-[1cqw] rounded-[2cqw] brut-border bg-black text-yellow-300 -rotate-3 shadow-gold shadow-sm whitespace-nowrap">
-                <span className="text-[3cqw] font-black uppercase tracking-tighter">
-                  #{card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id}/{card.max_serial_supply ?? 200}
-                </span>
-              </div>
-            </div>
-          )}
         </div>
+
+        { (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) != null && (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) > 0 && (
+          <div className="absolute bottom-[20cqw] right-[4cqw] flex flex-col items-end gap-[1cqw] z-30">
+            <div className="sticker px-[2cqw] py-[1cqw] rounded-[2cqw] border-[0.6cqw] border-black bg-white text-black rotate-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">
+              <span className="text-[2.5cqw] font-black uppercase tracking-tighter">🔢 Serialized Edition</span>
+            </div>
+            <div className="sticker px-[2cqw] py-[1cqw] rounded-[2cqw] border-[0.6cqw] border-black bg-black text-white -rotate-3 shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] whitespace-nowrap">
+              <span className="text-[3cqw] font-black uppercase tracking-tighter">
+                #{card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id}/{card.max_serial_supply ?? 200}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Section: Title & Flavor Text */}
         <div className="absolute bottom-[4cqw] left-[2cqw] right-[2cqw] flex flex-col gap-[1.5cqw] items-center pointer-events-none">

@@ -38,9 +38,15 @@ export const FlipCard: React.FC<FlipCardProps> = ({
   const [internalFlipped, setInternalFlipped] = useState(false);
   const flipped = isFlipped !== undefined ? isFlipped : internalFlipped;
   const isFoil = (card.is_foil || (card.foil_quantity ?? 0) > 0);
-  let glowClass = RARITY_GLOW[card.rarity] ?? '';
-  if (isFoil && (card.rarity === 'Mythic' || card.rarity === 'Divine')) {
-    glowClass = 'shadow-[0_0_80px_rgba(255,215,0,1),_0_0_120px_rgba(255,255,255,0.8)]';
+  const isDivineVideo = card.rarity === 'Divine' && card.is_video;
+  
+  let glowClass = '';
+  if (isFoil || isDivineVideo) {
+    if (isFoil && (card.rarity === 'Mythic' || card.rarity === 'Divine')) {
+      glowClass = 'shadow-[0_0_80px_rgba(255,215,0,1),_0_0_120px_rgba(255,255,255,0.8)]';
+    } else {
+      glowClass = RARITY_GLOW[card.rarity] ?? '';
+    }
   }
   
   const randomRotation = useMemo(() => (Math.random() - 0.5) * 15, []);
@@ -66,7 +72,7 @@ export const FlipCard: React.FC<FlipCardProps> = ({
   return (
     <div className="relative flex items-center justify-center w-full h-full">
       <AnimatePresence>
-        {flipped && (
+        {flipped && (isFoil || isDivineVideo) && (
           <motion.div
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: [0, 1, 0], scale: [0.5, 4] }}
