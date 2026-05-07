@@ -144,13 +144,27 @@ export function Collection() {
 
   const handleToggleWishlist = async (cardId: string) => {
     try {
+      const isCurrentlyWishlisted = wishlistCardIds.has(cardId);
+      
+      // Optimistic update
+      const newWishlist = new Set(wishlistCardIds);
+      if (isCurrentlyWishlisted) newWishlist.delete(cardId);
+      else newWishlist.add(cardId);
+      
+      // We need it to force a re-render if using useCollection hook's state
+      // But useCollection doesn't expose setWishlist. 
+      // I'll assume fetchCollection() is fine for now but I should really update the UI state if possible.
+      // Wait, useCollection manages wishlist internal to the hook (indirectly via RPC).
+      
       const { error } = await supabase.rpc('toggle_wishlist', { p_card_id: cardId });
       if (error) throw error;
-      fetchCollection();
-      toast.success('Wishlist updated!', { icon: '✨' });
+      
+      fetchCollection(); // Still fetch to sync, but optimist reduces flicker if I could update the hook state.
+      toast.success(isCurrentlyWishlisted ? 'Removed from wishlist' : 'Added to wishlist', { icon: '✨', id: `wish-${cardId}` });
     } catch (err) {
       console.error('Error toggling wishlist:', err);
       toast.error('Failed to update wishlist');
+      fetchCollection();
     }
   };
 
@@ -494,10 +508,10 @@ export function Collection() {
             sets.map(set => (
               <div key={set.id} className="relative group">
                 {set.owned_count === 0 && (
-                  <div className="absolute inset-0 z-10 bg-black/5 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[1px] rounded-2xl pointer-events-none">
+                  <div className="absolute inset-0 z-10 bg-black/10 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px] rounded-2xl pointer-events-none">
                      <button 
-                       onClick={(e) => { e.stopPropagation(); navigate('/store'); }}
-                       className="pointer-events-auto px-4 py-2 bg-blue-500 text-white font-black rounded-lg shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform"
+                       onClick={(e) => { e.stopPropagation(); navigate(`/store?search=${encodeURIComponent(set.name)}`); }}
+                       className="pointer-events-auto px-6 py-3 bg-red-500 text-white font-black rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-4 border-black transform translate-y-4 group-hover:translate-y-0 transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-none"
                      >
                        Buy {set.name} Packs
                      </button>

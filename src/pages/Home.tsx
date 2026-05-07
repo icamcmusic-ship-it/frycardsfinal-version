@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useProfileStore } from '../stores/profileStore';
 import { supabase } from '../lib/supabase';
-import { Trophy, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift, Package, ShieldAlert, Target, Crown } from 'lucide-react';
+import { Trophy, PackageOpen, LayoutGrid, ChevronRight, Loader2, Sparkles, Coins, Gem, Gift, Package, ShieldAlert, Target, Crown, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -25,6 +25,12 @@ export function Home() {
   const [userQuests, setUserQuests] = useState<any[]>([]);
   const [loadingQuestsNew, setLoadingQuestsNew] = useState(true);
   const [topPulls, setTopPulls] = useState<any[]>([]);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -72,9 +78,8 @@ export function Home() {
   const isDailyClaimable = () => {
     if (!profile?.last_daily_claim) return true;
     const lastClaim = profile.last_daily_claim || "2000-01-01";
-    const today = new Date();
-    const localDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-    return localDate > lastClaim;
+    const todayUTC = new Date().toISOString().slice(0, 10);
+    return todayUTC > lastClaim;
   };
 
   useEffect(() => {
@@ -145,10 +150,42 @@ export function Home() {
     }
   };
 
-  const handleOpenSpinner = () => {
-    setShowSpinner(true);
-    setShowDailyPreview(false);
+  const handleOpenSpinner = async () => {
+    setClaimingDaily(true);
+    try {
+      setShowSpinner(true);
+      setShowDailyPreview(false);
+    } finally {
+      // Small delay to ensure modal transition
+      setTimeout(() => setClaimingDaily(false), 500);
+    }
   };
+
+  const MISSION_LABELS: Record<string, string> = {
+    open_packs: '📦 Open Packs',
+    win_battles: '⚔️ Win Battles',
+    collect_cards: '🃏 Collect Cards',
+    spend_gold: '💰 Spend Gold',
+    daily_login: '📅 Daily Login'
+  };
+
+  // Helper for energy countdown
+  const getEnergyDisplay = () => {
+    if (!profile) return null;
+    const maxEnergy = 10;
+    const currentEnergy = profile.energy ?? 0;
+    if (currentEnergy >= maxEnergy) return 'MAX';
+
+    const lastRegen = new Date(profile.energy_last_regen || Date.now()).getTime();
+    const nextRegen = lastRegen + (15 * 60 * 1000); // 15 mins
+    const now = Date.now();
+    const diff = Math.max(0, nextRegen - now);
+    const mins = Math.floor(diff / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const isAnyClaimInFlight = claimingQuest !== null || claimingDaily;
 
   if (!profile) {
     return (
@@ -176,6 +213,13 @@ export function Home() {
             <p className="text-xl text-black font-bold bg-white/50 inline-block px-3 py-1 border-2 border-black rounded-lg transform -rotate-1">
               Level {profile.level} • {profile.xp} XP
             </p>
+            <div className="text-xl text-black font-bold bg-blue-100 inline-block px-3 py-1 border-2 border-black rounded-lg transform rotate-1 flex items-center gap-2">
+              <Zap className="w-5 h-5 text-blue-600 fill-blue-600" />
+              {profile.energy || 0}/10 
+              <span className="text-xs text-blue-400 font-black ml-1">
+                {getEnergyDisplay() !== 'MAX' ? `+1 in ${getEnergyDisplay()}` : 'MAX'}
+              </span>
+            </div>
             {passData && (
               <Link to="/season-pass" className="text-xl text-black font-bold bg-yellow-300 hover:bg-yellow-400 transition-colors inline-block px-3 py-1 border-2 border-black rounded-lg transform rotate-1 flex items-center gap-2">
                 <Sparkles className="w-5 h-5" />
@@ -227,7 +271,8 @@ export function Home() {
                 <div className="flex items-center gap-4">
                   <button 
                     onClick={handleOpenSpinner}
-                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2"
+                    disabled={isAnyClaimInFlight}
+                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg rounded-xl border-4 border-black transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-center gap-2 disabled:opacity-50 disabled:grayscale"
                   >
                     <Trophy className="w-6 h-6" />
                     Reveal Reward
@@ -496,43 +541,26 @@ export function Home() {
             ) : quests.length === 0 ? (
               <div className="text-center py-8 text-slate-500 font-bold bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">No active missions.</div>
             ) : (
-              quests.slice(0, 3).map((quest) => (
-                <div key={quest.id} className="bg-white border-2 border-[var(--border)] rounded-xl p-4 flex flex-col items-stretch gap-4 shadow-[2px_2px_0px_0px_var(--border)]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-blue-100 border-2 border-[var(--border)] flex items-center justify-center shrink-0">
-                      <Target className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-black text-[var(--text)] text-sm uppercase truncate">{(quest.mission_type || quest.quest_type || '').replace(/_/g, ' ')}</p>
-                      <div className="w-full h-2 bg-slate-100 border border-[var(--border)] rounded-full mt-1 overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-400 transition-all duration-500" 
-                          style={{ width: `${Math.min(100, (quest.progress / (quest.target || quest.target_value || 1)) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between pl-11">
-                    <p className="text-xs font-black text-slate-500">{quest.progress} / {quest.target || quest.target_value}</p>
-                    {quest.is_completed && !quest.is_claimed ? (
-                      <button 
-                        onClick={() => handleClaimQuest(quest.id)}
-                        disabled={claimingQuest === quest.id}
-                        className="px-3 py-1 bg-green-400 hover:bg-green-500 disabled:opacity-50 text-black font-black text-[10px] rounded border-2 border-black shadow-[2px_2px_0px_0px_black] active:translate-y-0.5 active:shadow-none transition-all"
-                      >
-                        {claimingQuest === quest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'CLAIM'}
-                      </button>
-                    ) : quest.is_claimed ? (
-                       <span className="text-[10px] text-emerald-500 font-black uppercase">Completed</span>
-                    ) : (
-                      <div className="flex items-center gap-1 bg-yellow-100 px-1.5 py-0.5 rounded border border-yellow-300">
-                        <Coins className="w-3 h-3 text-yellow-600" />
-                        <span className="text-[10px] font-black text-yellow-700">{quest.reward_amount || quest.reward_gold || 0}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
+              quests.slice(0, 3).map((quest) => {
+                const missionType = MISSION_LABELS[quest.mission_type] || (quest.mission_type || '').replace(/_/g, ' ').toUpperCase();
+                const primaryReward = quest.reward_gems > 0
+                  ? { type: 'gems', amount: quest.reward_gems }
+                  : quest.reward_gold > 0
+                    ? { type: 'gold', amount: quest.reward_gold }
+                    : { type: 'xp', amount: quest.reward_xp };
+
+                return (
+                  <MissionRow 
+                    key={quest.id} 
+                    quest={quest} 
+                    missionType={missionType} 
+                    primaryReward={primaryReward} 
+                    onClaim={() => handleClaimQuest(quest.id)}
+                    isClaiming={claimingQuest === quest.id}
+                    disabled={isAnyClaimInFlight}
+                  />
+                );
+              })
             )}
           </div>
         </div>
@@ -594,11 +622,15 @@ export function Home() {
       </div>
 
       {showDailyPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+          onClick={() => setShowDailyPreview(false)}
+        >
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-3xl p-8 max-w-sm w-full shadow-[12px_12px_0px_0px_var(--border)] text-center relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[var(--surface)] border-4 border-var(--border) rounded-3xl p-8 max-w-sm w-full shadow-[12px_12px_0px_0px_var(--border)] text-center relative overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500" />
             
@@ -649,5 +681,61 @@ export function Home() {
         onClose={() => setShowSpinner(false)} 
       />
     </motion.div>
+  );
+}
+
+function MissionRow({ quest, missionType, primaryReward, onClaim, isClaiming, disabled }: { 
+  quest: any; 
+  missionType: string; 
+  primaryReward: any; 
+  onClaim: () => void;
+  isClaiming: boolean;
+  disabled: boolean;
+}) {
+  const [displayWidth, setDisplayWidth] = useState(0);
+  const target = quest.target || quest.target_value || 1;
+  const progressPercent = Math.min(100, (quest.progress / target) * 100);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDisplayWidth(progressPercent), 100);
+    return () => clearTimeout(t);
+  }, [progressPercent]);
+
+  return (
+    <div className="bg-white border-2 border-[var(--border)] rounded-xl p-4 flex flex-col items-stretch gap-4 shadow-[2px_2px_0px_0px_var(--border)]">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded bg-blue-100 border-2 border-[var(--border)] flex items-center justify-center shrink-0">
+          <Target className="w-4 h-4 text-blue-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-black text-[var(--text)] text-sm uppercase truncate">{missionType}</p>
+          <div className="w-full h-2 bg-slate-100 border border-[var(--border)] rounded-full mt-1 overflow-hidden">
+            <div 
+              className="h-full bg-blue-400 transition-all duration-700" 
+              style={{ width: `${displayWidth}%` }}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between pl-11">
+        <p className="text-xs font-black text-slate-500">{quest.progress} / {target}</p>
+        {quest.is_completed && !quest.is_claimed ? (
+          <button 
+            onClick={onClaim}
+            disabled={isClaiming || disabled}
+            className="px-3 py-1 bg-green-400 hover:bg-green-500 disabled:opacity-50 text-black font-black text-[10px] rounded border-2 border-black shadow-[2px_2px_0px_0px_black] active:translate-y-0.5 active:shadow-none transition-all"
+          >
+            {isClaiming ? <Loader2 className="w-3 h-3 animate-spin" /> : 'CLAIM'}
+          </button>
+        ) : quest.is_claimed ? (
+          <span className="text-[10px] text-emerald-500 font-black uppercase">Completed</span>
+        ) : (
+          <div className="flex items-center gap-1 bg-yellow-100 px-1.5 py-0.5 rounded border border-yellow-300">
+            {primaryReward.type === 'gems' ? <Gem className="w-3 h-3 text-emerald-600" /> : primaryReward.type === 'gold' ? <Coins className="w-3 h-3 text-yellow-600" /> : <Trophy className="w-3 h-3 text-blue-600" />}
+            <span className="text-[10px] font-black text-yellow-700">{primaryReward.amount}</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

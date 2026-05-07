@@ -18,6 +18,12 @@ interface CardDisplayProps {
     slot_type?: string;
     set_name?: string;
     set_theme_color?: string;
+    power_grade?: string;
+    cast_cost?: number;
+    defense?: number;
+    keyword?: string;
+    keyword_tier?: number;
+    card_rarity_id?: number;
     // Other fields are ignored as per user request
     [key: string]: any; 
   };
@@ -49,6 +55,16 @@ export function CardDisplay({
   };
   const colorKey = RARITY_COLOR_MAP[rarityKey] ?? 'gray';
   const isFoil = Boolean(card.is_foil);
+
+  // Derive Grade Background
+  const GRADE_MAP: Record<string, string> = {
+    'S': 'bg-red-500 text-white',
+    'A': 'bg-orange-500 text-white',
+    'B': 'bg-blue-500 text-white',
+    'C': 'bg-slate-500 text-white',
+    'D': 'bg-slate-400 text-white',
+  };
+  const gradeStyles = GRADE_MAP[card.power_grade || 'C'] || 'bg-slate-200 text-black';
 
   return (
     <div 
@@ -83,7 +99,17 @@ export function CardDisplay({
       {/* Content Overlay */}
       <div className="absolute inset-0 z-10 pointer-events-none">
         {/* Top Section: Type & Rarity Stickers */}
-        <div className="absolute top-[6cqw] left-[6cqw] -rotate-12 z-20">
+        <div className="absolute top-[6cqw] left-[6cqw] -rotate-12 z-20 flex flex-col gap-[1cqw]">
+          {/* Grade Badge */}
+          {card.power_grade && (
+            <div className={cn(
+              "sticker w-[10cqw] h-[10cqw] rounded-lg brut-border shadow-sm flex items-center justify-center rotate-6",
+              gradeStyles
+            )}>
+              <span className="text-[5cqw] font-black leading-none">{card.power_grade}</span>
+            </div>
+          )}
+
           {/* Type Sticker */}
           <div className={cn(
             "sticker shrink-0 w-[22cqw] h-[22cqw] rounded-full brut-border shadow-sm flex items-center justify-center",
@@ -94,9 +120,16 @@ export function CardDisplay({
               {card.card_type || 'Unit'}
             </span>
           </div>
+
+          {/* Cast Cost */}
+          {card.cast_cost !== undefined && (
+            <div className="sticker w-[12cqw] h-[12cqw] rounded-full bg-slate-100 border-[0.8cqw] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center transform -translate-y-[2cqw] -rotate-12">
+              <span className="text-[6cqw] font-black text-black">{card.cast_cost}</span>
+            </div>
+          )}
         </div>
  
-        <div className="absolute top-[6cqw] right-[6cqw] rotate-6 z-20">
+        <div className="absolute top-[6cqw] right-[6cqw] rotate-6 z-20 flex flex-col items-end gap-[1.5cqw]">
           {/* Rarity Sticker */}
           <div className={cn(
             "sticker relative px-[3cqw] py-[1.5cqw] rounded-[3cqw] brut-border shadow-sm flex flex-col",
@@ -119,6 +152,23 @@ export function CardDisplay({
               {card.rarity}
             </span>
           </div>
+
+          {/* Keyword Badge */}
+          {card.keyword && (
+            <div className="sticker px-[2cqw] py-[1cqw] rounded-lg bg-black text-yellow-400 brut-border shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-[1cqw]">
+              <span className="text-[2.5cqw] font-black uppercase tracking-tighter">
+                {card.keyword} {card.keyword_tier > 0 && `v${card.keyword_tier}`}
+              </span>
+            </div>
+          )}
+
+          {/* Defense Score */}
+          {card.defense !== undefined && (
+            <div className="sticker w-[14cqw] h-[14cqw] rounded-lg bg-blue-600 text-white border-[0.8cqw] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-center transform rotate-6">
+              <span className="text-[2cqw] font-black uppercase leading-none mb-[0.5cqw]">DEF</span>
+              <span className="text-[5cqw] font-black leading-none">{card.defense}</span>
+            </div>
+          )}
         </div>
  
         { card.serial_number != null && card.serial_number > 0 && (

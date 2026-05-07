@@ -94,13 +94,37 @@ export default function GameBoard() {
   // Match-end side effect: report result for XP
   useEffect(() => {
     if (!state || state.phase !== "ended" || !initState) return;
-    // winner in types is PlayerSide ('A' | 'B')
-    const winner = state.winner;
-    void supabase.rpc("report_cpu_match_result", {
-      p_difficulty: initState.difficulty,
-      p_won: winner === "A",
-      p_hand_count: state.handNumber,
-    });
+    
+    const reportResult = async () => {
+      try {
+        const winner = state.winner;
+        const { data, error } = await supabase.rpc("report_cpu_match_result", {
+          p_deck_id: initState.p1Deck.leader.id, // Using leader ID as proxy for deck id since initState has p1Deck
+          p_difficulty: initState.difficulty,
+          p_won: winner === "A",
+          p_hands_played: state.handNumber,
+          p_summary: {
+            final_pot: state.pot.main + state.pot.phantom,
+            logs: state.log.slice(-10),
+            player_stash: state.players.A.stash,
+            cpu_stash: state.players.B.stash
+          }
+        });
+
+        if (error) {
+          console.error("Match reporting failed:", error);
+        } else if (data) {
+          toast.success(`Match reported! +${data.xp_earned} XP, +${data.gold_earned} Gold`, {
+            icon: '🏆',
+            duration: 5000
+          });
+        }
+      } catch (err) {
+        console.error("Error reporting match:", err);
+      }
+    };
+
+    reportResult();
     setReveal(true);
   }, [state, initState]);
 

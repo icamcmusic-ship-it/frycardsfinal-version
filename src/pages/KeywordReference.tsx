@@ -25,62 +25,51 @@ const CATEGORY_ICON: Record<Category, React.ReactNode | null> = {
 
 interface KwRow {
   keyword: string;
-  category: "Leader" | "Location" | "Unit" | "Event" | "Artifact";
   tier: 1 | 2 | 3;
-  effect_text: string;
-  trigger: string;
-  power_grade: "S" | "A" | "B" | "C" | null;
-  anti_synergies: string[];
+  name: string;
+  short_description: string;
+  rules_text: string;
+  example_card_name?: string;
+  power_grade?: "S" | "A" | "B" | "C" | "D" | null;
 }
 
 export default function KeywordReference() {
   const [data, setData] = useState<KwRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<Category>("All");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => { void loadData(); }, []);
 
   async function loadData() {
-    const { data: rows, error } = await supabase.rpc("get_keyword_definitions");
-    if (error || !rows) {
-      // Fallback to client constant
-      const fallback: KwRow[] = [];
-      for (const kw in KEYWORDS) {
-        const entry = KEYWORDS[kw as keyof typeof KEYWORDS];
-        for (const tier in entry) {
-          const t = entry[tier as unknown as 1|2|3]!;
-          fallback.push({
-            keyword: t.keyword,
-            category: t.category as any,
-            tier: t.tier as any,
-            effect_text: t.effect_text,
-            trigger: t.trigger,
-            power_grade: t.power_grade as any,
-            anti_synergies: t.anti_synergies as any,
-          });
-        }
+    setLoading(true);
+    try {
+      const { data: rows, error } = await supabase.rpc("get_keyword_definitions");
+      if (error || !rows) {
+        toast.error("Failed to fetch glossary. Using minimal set.");
+        setData([]);
+      } else {
+        setData(rows as KwRow[]);
       }
-      setData(fallback);
-    } else {
-      setData(rows as KwRow[]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   const grouped = useMemo(() => {
     const m = new Map<string, KwRow[]>();
     for (const r of data) {
-      if (category !== "All" && r.category !== category) continue;
-      if (search && !r.keyword.toLowerCase().includes(search.toLowerCase())) continue;
+      const searchTerm = search.toLowerCase();
+      if (search && !r.keyword.toLowerCase().includes(searchTerm) && !r.name.toLowerCase().includes(searchTerm)) continue;
       const k = r.keyword;
       if (!m.has(k)) m.set(k, []);
       m.get(k)!.push(r);
     }
     for (const [, rows] of m) rows.sort((a, b) => a.tier - b.tier);
     return Array.from(m.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [data, search, category]);
+  }, [data, search]);
 
   function toggle(k: string) {
     setExpanded((cur) => {
@@ -91,89 +80,112 @@ export default function KeywordReference() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6" id="keyword-reference-page">
-      <h1 className="text-4xl font-bold text-amber-400 mb-2">Keyword Codex</h1>
-      <p className="text-gray-400 mb-6">All keywords, all tiers, all effects.</p>
+    <div className="max-w-5xl mx-auto p-6" id="keyword-codex">
+      <div className="bg-amber-400 rounded-3xl p-8 mb-8 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transform -rotate-1">
+        <h1 className="text-5xl font-black text-black tracking-tighter uppercase italic">The Shadow Glossary</h1>
+        <p className="text-black/80 font-bold mt-2 max-w-xl">Master the keywords of the Shadow Realm. Knowledge is the ultimate weapon in Dead Man's Hand.</p>
+      </div>
 
-      <div className="flex flex-wrap gap-2 mb-4" id="keyword-filters">
-        <div className="flex-1 relative min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+      <div className="flex flex-wrap gap-4 mb-8" id="keyword-search-container">
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search keyword…"
-            className="w-full pl-9 pr-3 py-2 bg-gray-900 border border-gray-800 rounded text-white"
-            id="keyword-search"
+            placeholder="Search by keyword or name..."
+            className="w-full pl-12 pr-4 py-4 bg-white border-4 border-black rounded-2xl font-bold text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:translate-y-0.5 focus:shadow-none transition-all placeholder:text-slate-300"
+            id="keyword-search-input"
           />
-        </div>
-        <div className="flex gap-1" id="category-filters">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`px-3 py-1 rounded text-sm flex items-center gap-1 ${
-                category === c
-                  ? "bg-amber-500 text-black font-bold"
-                  : "bg-gray-900 text-gray-300 hover:bg-gray-800"
-              }`}
-            >{CATEGORY_ICON[c]} {c}</button>
-          ))}
         </div>
       </div>
 
       {loading ? (
-        <p className="text-gray-400" id="loading-keywords">Loading…</p>
+        <div className="flex justify-center py-20">
+          <Search className="w-12 h-12 text-amber-500 animate-pulse" />
+        </div>
       ) : grouped.length === 0 ? (
-        <p className="text-gray-500" id="no-keywords-found">No keywords match.</p>
+        <div className="text-center py-20 bg-slate-100 rounded-3xl border-4 border-dashed border-slate-300">
+          <p className="text-2xl font-black text-slate-400 uppercase italic">No matches in the library</p>
+        </div>
       ) : (
-        <ul className="space-y-2" id="keywords-list">
+        <div className="grid grid-cols-1 gap-6" id="keywords-list">
           {grouped.map(([kw, tiers]) => (
-            <li key={kw} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden" id={`keyword-item-${kw}`}>
+            <motion.div 
+              key={kw} 
+              layout
+              className="bg-white border-4 border-black rounded-3xl overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
+            >
               <button
                 onClick={() => toggle(kw)}
-                className="w-full flex items-center justify-between p-3 hover:bg-gray-800"
+                className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-colors"
+                id={`btn-toggle-${kw}`}
               >
-                <div className="flex items-center gap-3">
-                  {CATEGORY_ICON[tiers[0].category]}
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center rotate-3">
+                    <Swords className="w-6 h-6 text-amber-400" />
+                  </div>
                   <div className="text-left">
-                    <div className="text-amber-300 font-bold">{kw}</div>
-                    <div className="text-xs text-gray-400">{tiers[0].category} · {tiers.length} tier{tiers.length > 1 ? "s" : ""}</div>
+                    <h2 className="text-2xl font-black text-black uppercase tracking-tight italic">{kw}</h2>
+                    <p className="text-slate-500 font-bold">{tiers[0].name}</p>
                   </div>
                 </div>
-                {expanded.has(kw) ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                <div className={cn("transition-transform duration-300", expanded.has(kw) ? "rotate-180" : "")}>
+                  <ChevronDown className="w-8 h-8 text-black" />
+                </div>
               </button>
+
               <AnimatePresence>
                 {expanded.has(kw) && (
                   <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-gray-800 px-3 py-2 space-y-3"
+                    initial={{ height: 0 }}
+                    animate={{ height: "auto" }}
+                    exit={{ height: 0 }}
+                    className="overflow-hidden bg-slate-50"
                   >
-                    {tiers.map((t) => (
-                      <div key={t.tier} className="flex gap-3 items-start" id={`keyword-${kw}-tier-${t.tier}`}>
-                        <span className="px-2 py-1 rounded bg-amber-700 text-white text-xs font-bold w-12 text-center">
-                          T-{t.tier === 1 ? "I" : t.tier === 2 ? "II" : "III"}
-                        </span>
-                        <div className="flex-1 text-sm text-gray-200">
-                          <p>{t.effect_text}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Trigger: <span className="text-gray-400">{t.trigger}</span>
-                            {t.power_grade && <span className="ml-2">· Power Grade: <span className="text-amber-300">{t.power_grade}</span></span>}
-                            {t.anti_synergies.length > 0 && (
-                              <span className="ml-2">· Anti-synergy: <span className="text-rose-400">{t.anti_synergies.join(", ")}</span></span>
-                            )}
-                          </p>
-                        </div>
+                    <div className="p-6 pt-0 space-y-4 border-t-2 border-black">
+                      <div className="bg-white p-4 rounded-xl border-2 border-black mt-4">
+                         <p className="text-slate-600 font-medium italic">{tiers[0].short_description}</p>
                       </div>
-                    ))}
+
+                      <div className="grid gap-4">
+                        {tiers.map((t) => (
+                          <div key={t.tier} className="flex gap-4 items-start p-4 bg-white rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="w-10 h-10 bg-amber-400 border-2 border-black rounded-lg flex items-center justify-center font-black text-black rotate-6">
+                                {t.tier}
+                              </span>
+                              {t.power_grade && (
+                                <span className={cn(
+                                  "text-[10px] font-black px-1.5 py-0.5 rounded border border-black",
+                                  t.power_grade === 'S' ? 'bg-red-500 text-white' : 'bg-slate-200 text-black'
+                                )}>
+                                  {t.power_grade}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-black font-bold leading-tight">{t.rules_text}</p>
+                              {t.example_card_name && (
+                                <p className="text-[10px] uppercase font-black text-blue-600 mt-2 flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3" /> Ex: {t.example_card_name}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </li>
+            </motion.div>
           ))}
-        </ul>
+        </div>
       )}
+      
+      <div className="mt-12 text-center text-slate-400 font-bold text-sm">
+        <p>Values and tiers are subject to balance changes in v1.1</p>
+      </div>
     </div>
   );
 }

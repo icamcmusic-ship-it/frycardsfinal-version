@@ -25,6 +25,8 @@ export function Profile() {
   const [loadingBlocked, setLoadingBlocked] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
   const [achievements, setAchievements] = useState<any[]>([]);
+  const [ratings, setRatings] = useState<{ rating: number; wins: number; losses: number; draws: number } | null>(null);
+  const [loadingRatings, setLoadingRatings] = useState(false);
 
   const discordAvatar = user?.user_metadata?.avatar_url;
 
@@ -34,8 +36,29 @@ export function Profile() {
       setAvatarUrl(profile.avatar_url || '');
       setBannerUrl(profile.banner_url || '');
       setBio(profile.bio || '');
+      fetchRatings();
     }
   }, [profile]);
+
+  const fetchRatings = async () => {
+    if (!profile?.id) return;
+    setLoadingRatings(true);
+    try {
+      const { data, error } = await supabase
+        .from('player_ratings')
+        .select('rating, wins, losses, draws')
+        .eq('user_id', profile.id)
+        .maybeSingle(); // Use maybeSingle to avoid 406 if no rating yet
+      
+      if (!error && data) {
+        setRatings(data);
+      }
+    } catch (err) {
+      console.error('Error fetching ratings:', err);
+    } finally {
+      setLoadingRatings(false);
+    }
+  };
 
   useEffect(() => {
     fetchAchievements();
@@ -365,6 +388,40 @@ export function Profile() {
                   <p className="text-xs text-slate-500 font-bold uppercase mb-1">Gems</p>
                   <p className="text-2xl font-black text-emerald-600">{profile.gem_balance}</p>
                 </div>
+              </div>
+
+              {/* Ranked Stats */}
+              <div className="mt-6">
+                <h3 className="text-xs font-black uppercase text-slate-400 mb-3 tracking-widest">Ranked Profile</h3>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-gradient-to-br from-amber-50 to-amber-100 border-2 border-amber-400 rounded-xl p-4 shadow-[2px_2px_0px_0px_rgba(251,191,36,0.3)] group relative">
+                    <p className="text-[10px] text-amber-700 font-black uppercase mb-1 flex items-center gap-1">
+                      <Trophy className="w-3 h-3" /> ELO Rating
+                    </p>
+                    <p className="text-2xl font-black text-amber-900">{ratings?.rating ?? 1000}</p>
+                    <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-black text-white text-[10px] rounded pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl border border-white/20">
+                      Calculated using the v2 Elo algorithm based on PvP performance.
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 shadow-[2px_2px_0px_0px_rgba(59,130,246,0.1)]">
+                    <p className="text-[10px] text-blue-600 font-black uppercase mb-1">Total Wins</p>
+                    <p className="text-2xl font-black text-blue-800">{ratings?.wins ?? 0}</p>
+                  </div>
+                  <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 shadow-[2px_2px_0px_0px_rgba(239,68,68,0.1)]">
+                    <p className="text-[10px] text-red-600 font-black uppercase mb-1">Losses</p>
+                    <p className="text-2xl font-black text-red-800">{ratings?.losses ?? 0}</p>
+                  </div>
+                  <div className="bg-slate-50 border-2 border-slate-200 rounded-xl p-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)]">
+                    <p className="text-[10px] text-slate-600 font-black uppercase mb-1">Win Rate</p>
+                    <p className="text-2xl font-black text-slate-800">
+                      {ratings ? (ratings.wins + ratings.losses === 0 ? '0%' : `${Math.round((ratings.wins / (ratings.wins + ratings.losses)) * 100)}%`) : '0%'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Showcase Stats */}
+              <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-[var(--bg)] border-2 border-[var(--border)] rounded-xl p-4 shadow-[2px_2px_0px_0px_var(--border)]">
                   <p className="text-xs text-slate-500 font-bold uppercase mb-1">Unique Cards</p>
                   <p className="text-2xl font-black text-blue-600">{ownStats?.unique_cards || 0}</p>

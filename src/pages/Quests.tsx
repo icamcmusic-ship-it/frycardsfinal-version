@@ -11,6 +11,7 @@ export function Quests() {
   const [quests, setQuests] = useState<any[]>([]);
   const [dailyMissions, setDailyMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bgRefreshing, setBgRefreshing] = useState(false);
   const [claiming, setClaiming] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,14 +20,14 @@ export function Quests() {
     // Periodic refresh every 30s when visible
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        fetchAll();
+        fetchAll(true);
       }
     }, 30000);
 
     // Refresh on tab focus
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        fetchAll();
+        fetchAll(true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -37,11 +38,15 @@ export function Quests() {
     };
   }, [profile]);
 
-  const fetchAll = async () => {
+  const fetchAll = async (background = false) => {
     if (!profile) return;
-    setLoading(true);
+    if (!background) setLoading(true);
+    else setBgRefreshing(true);
+    
     await Promise.all([fetchQuests(), fetchDailyMissions()]);
+    
     setLoading(false);
+    setBgRefreshing(false);
   };
 
   const fetchQuests = async () => {
@@ -143,20 +148,29 @@ export function Quests() {
     );
   }
 
-  const activeQuests = quests.filter(q => q.status !== 'claimed');
-  const completedQuests = quests.filter(q => q.status === 'claimed');
+  const activeQuests = quests.filter(q => q.status === 'in_progress');
+  const readyQuests = quests.filter(q => q.status === 'completed');
+  const claimedQuests = quests.filter(q => q.status === 'claimed');
 
   const activeDaily = dailyMissions.filter(m => !m.is_claimed);
   const completedDaily = dailyMissions.filter(m => m.is_claimed);
 
   return (
     <div className="space-y-12 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase flex items-center gap-3">
-          <Target className="w-10 h-10 text-blue-500" />
-          Missions & Quests
-        </h1>
-        <p className="text-slate-600 font-bold mt-1">Complete tasks to earn rewards and progress your duelist career</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-black text-[var(--text)] tracking-tight uppercase flex items-center gap-3">
+            <Target className="w-10 h-10 text-blue-500" />
+            Missions & Quests
+          </h1>
+          <p className="text-slate-600 font-bold mt-1">Complete tasks to earn rewards and progress your duelist career</p>
+        </div>
+        {bgRefreshing && (
+          <div className="flex items-center gap-2 text-blue-500 text-xs font-black uppercase">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Refreshing...
+          </div>
+        )}
       </div>
 
       {/* Daily Missions Section */}
@@ -225,12 +239,28 @@ export function Quests() {
           <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200 uppercase">Long-term Goals</span>
         </div>
 
-        {activeQuests.length === 0 && completedQuests.length === 0 ? (
+        {activeQuests.length === 0 && readyQuests.length === 0 && claimedQuests.length === 0 ? (
           <div className="text-center py-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 font-bold">
             No epic quests available.
           </div>
         ) : (
           <div className="space-y-6">
+            {readyQuests.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-black uppercase text-emerald-600">Ready to Claim</h3>
+                <div className="grid gap-4">
+                  {readyQuests.map(quest => (
+                    <QuestCard 
+                      key={quest.id} 
+                      quest={quest} 
+                      onClaim={() => handleClaimQuest(quest.id)}
+                      claiming={claiming === quest.id}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activeQuests.length > 0 && (
               <div className="grid gap-4">
                 {activeQuests.map(quest => (
@@ -244,11 +274,11 @@ export function Quests() {
               </div>
             )}
 
-            {completedQuests.length > 0 && (
+            {claimedQuests.length > 0 && (
               <div className="space-y-4 pt-4">
-                <h3 className="text-lg font-black uppercase text-slate-400">Completed</h3>
-                <div className="grid gap-4 opacity-75">
-                  {completedQuests.map(quest => (
+                <h3 className="text-sm font-black uppercase text-slate-400">Claimed</h3>
+                <div className="grid gap-4 opacity-60">
+                  {claimedQuests.map(quest => (
                     <QuestCard 
                       key={quest.id} 
                       quest={quest} 
@@ -266,11 +296,29 @@ export function Quests() {
   );
 }
 
+const MISSION_LABELS: Record<string, string> = {
+  open_packs: '📦 Open Packs',
+  win_battles: '⚔️ Win Battles',
+  collect_cards: '🃏 Collect Cards',
+  spend_gold: '💰 Spend Gold',
+  daily_login: '📅 Daily Login'
+};
+
 function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mission: any, onClaim: () => void | Promise<void>, claiming: boolean }) {
+  const [displayWidth, setDisplayWidth] = useState(0);
   const isCompleted = mission.is_completed;
   const isClaimed = mission.is_claimed;
   const target = mission.target_value ?? mission.target ?? 1;
   const progressPercent = Math.min(100, (mission.progress / target) * 100);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDisplayWidth(progressPercent), 100);
+    return () => clearTimeout(t);
+  }, [progressPercent]);
+
+  const rewardGems = mission.reward_gems ?? 0;
+  const rewardGold = mission.reward_gold ?? 0;
+  const rewardXp = mission.reward_xp ?? 0;
 
   return (
     <motion.div 
@@ -279,7 +327,7 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
       className={cn(
         "bg-[var(--surface)] border-4 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-[4px_4px_0px_0px_var(--border)]",
         isClaimed ? "border-slate-200 bg-slate-50" : 
-        isCompleted ? "border-yellow-400 bg-yellow-50" : "border-[var(--border)]"
+        isCompleted ? "border-emerald-400 bg-emerald-50" : "border-[var(--border)] shadow-[4px_4px_0px_0px_var(--border)]"
       )}
     >
       <div className="flex-1 w-full">
@@ -291,7 +339,7 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
             <Zap className={cn("w-4 h-4", isClaimed ? "text-slate-400" : "text-blue-600")} />
           </div>
           <h3 className="font-black uppercase text-[var(--text)] text-sm">
-            {mission.description || (mission.mission_type || '').replace(/_/g, ' ')}
+            {MISSION_LABELS[mission.mission_type] || (mission.description || (mission.mission_type || '').replace(/_/g, ' '))}
           </h3>
         </div>
         
@@ -303,8 +351,8 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
             </div>
             <div className="h-2 bg-slate-200 rounded-full border border-[var(--border)] overflow-hidden">
               <div 
-                className={cn("h-full transition-all duration-500", isCompleted ? "bg-yellow-400" : "bg-blue-400")}
-                style={{ width: `${progressPercent}%` }}
+                className={cn("h-full transition-all duration-700", isCompleted ? "bg-emerald-400" : "bg-blue-400")}
+                style={{ width: `${displayWidth}%` }}
               />
             </div>
           </div>
@@ -315,23 +363,26 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
         <div className="text-right">
           <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Rewards</p>
           <div className="flex flex-col items-end gap-1 font-black">
-            {(mission.reward_gold > 0 || (!mission.reward_gold && !mission.reward_gems && !mission.reward_xp)) && (
+            {rewardGold > 0 && (
               <div className="flex items-center gap-1 text-yellow-600">
                 <Coins className="w-3 h-3" />
-                <span>{mission.reward_gold || mission.reward_amount || 0}</span>
+                <span>{rewardGold}</span>
               </div>
             )}
-            {mission.reward_gems > 0 && (
+            {rewardGems > 0 && (
               <div className="flex items-center gap-1 text-emerald-600">
                 <Gem className="w-3 h-3" />
-                <span>{mission.reward_gems}</span>
+                <span>{rewardGems}</span>
               </div>
             )}
-            {mission.reward_xp > 0 && (
+            {rewardXp > 0 && (
               <div className="flex items-center gap-1 text-blue-600">
                 <Zap className="w-3 h-3" />
-                <span>{mission.reward_xp} XP</span>
+                <span>{rewardXp} XP</span>
               </div>
+            )}
+            {rewardGold === 0 && rewardGems === 0 && rewardXp === 0 && (
+               <span className="text-[10px] text-slate-400">---</span>
             )}
           </div>
         </div>
@@ -358,9 +409,15 @@ function DailyMissionCard({ mission, onClaim, claiming }: { key?: React.Key, mis
 }
 
 function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, onClaim: () => void | Promise<void>, claiming: boolean }) {
+  const [displayWidth, setDisplayWidth] = useState(0);
   const isClaimed = quest.status === 'claimed';
   const isCompleted = quest.status === 'completed' || isClaimed;
   const progressPercent = Math.min(100, (quest.current_value / quest.target_value) * 100);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDisplayWidth(progressPercent), 100);
+    return () => clearTimeout(t);
+  }, [progressPercent]);
 
   const difficultyColors: Record<string, string> = {
     easy: 'bg-green-200 text-green-800 border-green-400',
@@ -409,10 +466,10 @@ function QuestCard({ quest, onClaim, claiming }: { key?: React.Key, quest: any, 
             <div className="h-4 bg-slate-200 rounded-full border-2 border-[var(--border)] overflow-hidden">
               <div 
                 className={cn(
-                  "h-full transition-all duration-500",
+                  "h-full transition-all duration-700",
                   isCompleted ? "bg-emerald-500" : "bg-blue-500"
                 )}
-                style={{ width: `${progressPercent}%` }}
+                style={{ width: `${displayWidth}%` }}
               />
             </div>
           </div>

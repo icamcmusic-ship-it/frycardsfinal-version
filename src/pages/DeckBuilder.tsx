@@ -321,11 +321,16 @@ function DeckEditor({
       </div>
 
       {!isLegal && (
-        <div className="bg-red-950 border border-red-800 rounded-lg p-3 mb-4 flex gap-2 items-start" id="legality-warnings">
-          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-          <ul className="text-sm text-red-300 list-disc pl-4">
-            {legalityReasons.map((r) => <li key={r}>{r}</li>)}
-          </ul>
+        <div className="bg-red-900/30 border-4 border-red-500 rounded-2xl p-4 mb-6 shadow-[4px_4px_0px_0px_rgba(239,68,68,1)] transform -rotate-1" id="legality-warnings">
+          <div className="flex gap-3 items-start">
+            <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0" />
+            <div>
+              <h3 className="font-black text-red-500 uppercase italic">⚠️ Tournament Illegal Deck</h3>
+              <ul className="text-sm text-red-200 font-bold mt-1 list-none">
+                {legalityReasons.map((r) => <li key={r}>• {r}</li>)}
+              </ul>
+            </div>
+          </div>
         </div>
       )}
 
@@ -426,13 +431,18 @@ function DeckEditor({
                   <div className="flex justify-between items-center">
                     <span className="flex items-center gap-1">
                       {TYPE_ICON[c.card_type]}
-                      <span className={RARITY_COLOR[c.rarity]}>{c.name}</span>
+                      <span className={cn("font-bold", RARITY_COLOR[c.rarity])}>{c.name}</span>
                     </span>
                     <span className="text-xs text-gray-500">{inDeck}/{Math.min(2, owned)}</span>
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Cost {c.cast_cost ?? "—"} · Def {c.defense ?? "—"}
-                    {c.keyword && <span className="ml-1 text-amber-300">{c.keyword} {romanize(c.keyword_tier)}</span>}
+                  <div className="text-[10px] sm:text-xs text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                    {c.cast_cost !== null && <span className="bg-slate-800 px-1 rounded">Cost {c.cast_cost}</span>}
+                    {c.defense !== null && <span className="bg-blue-900 px-1 rounded flex items-center gap-0.5"><Shield className="w-2.5 h-2.5" /> {c.defense}</span>}
+                    {c.keyword && (
+                      <span className="text-amber-400 font-black uppercase">
+                        {c.keyword} {romanize(c.keyword_tier)}
+                      </span>
+                    )}
                   </div>
                 </button>
               );
