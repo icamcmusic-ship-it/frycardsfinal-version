@@ -48,7 +48,7 @@ export function CardDisplay({
     'divine':     'red',
   };
   const colorKey = RARITY_COLOR_MAP[rarityKey] ?? 'gray';
-  const isFoil = (card.is_foil || (card.foil_quantity ?? 0) > 0);
+  const isFoil = Boolean(card.is_foil);
 
   return (
     <div 
@@ -75,10 +75,11 @@ export function CardDisplay({
           alt={card.name} 
           className="full-art" 
           referrerPolicy="no-referrer" 
+          loading="lazy"
           onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-card.png'; }}
         />
       )}
-
+ 
       {/* Content Overlay */}
       <div className="absolute inset-0 z-10 pointer-events-none">
         {/* Top Section: Type & Rarity Stickers */}
@@ -94,7 +95,7 @@ export function CardDisplay({
             </span>
           </div>
         </div>
-
+ 
         <div className="absolute top-[6cqw] right-[6cqw] rotate-6 z-20">
           {/* Rarity Sticker */}
           <div className={cn(
@@ -119,15 +120,15 @@ export function CardDisplay({
             </span>
           </div>
         </div>
-
-        { (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) != null && (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) > 0 && (
+ 
+        { card.serial_number != null && card.serial_number > 0 && (
           <div className="absolute bottom-[20cqw] right-[4cqw] flex flex-col items-end gap-[1cqw] z-30">
             <div className="sticker px-[2cqw] py-[1cqw] rounded-[2cqw] border-[0.6cqw] border-black bg-white text-black rotate-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap">
               <span className="text-[2.5cqw] font-black uppercase tracking-tighter">🔢 Serialized Edition</span>
             </div>
             <div className="sticker px-[2cqw] py-[1cqw] rounded-[2cqw] border-[0.6cqw] border-black bg-black text-white -rotate-3 shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] whitespace-nowrap">
               <span className="text-[3cqw] font-black uppercase tracking-tighter">
-                #{card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id}/{card.max_serial_supply ?? 200}
+                #{card.serial_number}/{card.max_serial_supply ?? 200}
               </span>
             </div>
           </div>

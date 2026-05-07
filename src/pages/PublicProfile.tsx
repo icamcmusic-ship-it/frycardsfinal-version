@@ -124,8 +124,23 @@ export function PublicProfile() {
     });
   };
 
-  if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
-  if (!profile) return <div className="text-center py-20 font-black text-2xl">Profile not found or private.</div>;
+  if (loading) return <div className="flex items-center justify-center h-full min-h-[60vh]"><Loader2 className="w-10 h-10 animate-spin text-blue-500" /></div>;
+  
+  if (!profile) return (
+    <div className="max-w-md mx-auto text-center py-20 px-4">
+      <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-red-500 shadow-[8px_8px_0px_0px_rgba(239,68,68,1)] transform rotate-3">
+        <Loader2 className="w-12 h-12 text-red-500" />
+      </div>
+      <h2 className="text-4xl font-black text-[var(--text)] uppercase italic mb-4">404: Hidden Duelist</h2>
+      <p className="text-slate-600 font-bold mb-8">This duelist has either vanished into the shadow realm or set their profile to private.</p>
+      <button 
+        onClick={() => navigate('/')}
+        className="w-full px-6 py-3 bg-blue-500 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 transition-transform uppercase"
+      >
+        Return to Safety
+      </button>
+    </div>
+  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">

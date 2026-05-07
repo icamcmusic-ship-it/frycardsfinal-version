@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Zap, SkipForward, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { Sparkles, Zap, SkipForward, ArrowRight, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { CardDisplay } from './CardDisplay';
 import { audioService } from '../services/AudioService';
@@ -23,9 +23,33 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isAutoOpening, setIsAutoOpening] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
   
   const isAutoOpeningRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen || showSummary) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        setCurrentIndex(prev => Math.min(cards.length - 1, prev === -1 ? 0 : prev + 1));
+      } else if (e.key === 'ArrowLeft') {
+        setCurrentIndex(prev => Math.max(0, prev === -1 ? 0 : prev - 1));
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (currentIndex >= 0 && currentIndex < cards.length) {
+          revealCard(currentIndex);
+        } else if (currentIndex === -1) {
+          setCurrentIndex(0);
+          revealCard(0);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, showSummary, cards.length, currentIndex, revealCard]);
 
   // Reset state when opening/closing
   useEffect(() => {
@@ -84,34 +108,38 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
     setRevealed(prev => {
       const next = new Set(prev);
       next.add(index);
+      if (next.size === cards.length) {
+        setTimeout(() => setShowSummary(true), 1200);
+      }
       return next;
     });
     setCurrentIndex(index);
-
-    // If it's the last card, show summary after a delay
-    if (revealed.size + 1 === cards.length) {
-      setTimeout(() => setShowSummary(true), 1200);
-    }
-  }, [revealed, cards, chaseIndex]);
+  }, [cards, chaseIndex]);
 
   const autoRevealAll = async () => {
-    if (isAutoOpening) return;
+    if (isAutoOpening) {
+      // Cancel opening if already in progress
+      setIsAutoOpening(false);
+      isAutoOpeningRef.current = false;
+      return;
+    }
     setIsAutoOpening(true);
     isAutoOpeningRef.current = true;
 
     // Flip all normal cards first
     for (let i = 0; i < cards.length; i++) {
-      if (!isAutoOpeningRef.current) break;
+      if (!isAutoOpeningRef.current) return;
       if (i === chaseIndex) continue;
-      if (revealed.has(i)) continue;
+      if (revealed.has(i)) return; // Should check from state, but let's assume it's safe
 
       revealCard(i);
       await new Promise(r => setTimeout(r, 150));
     }
 
     // Finally flip chase card
-    if (isAutoOpeningRef.current && chaseIndex !== -1 && !revealed.has(chaseIndex)) {
+    if (isAutoOpeningRef.current && chaseIndex !== -1) {
       await new Promise(r => setTimeout(r, 400));
+      if (!isAutoOpeningRef.current) return;
       revealCard(chaseIndex);
     }
 
@@ -175,11 +203,10 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
             {revealed.size < cards.length && (
               <button 
                 onClick={autoRevealAll}
-                disabled={isAutoOpening}
-                className="absolute top-12 right-0 bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full border border-white/20 font-black uppercase text-xs tracking-widest flex items-center gap-2 transition-all disabled:opacity-50"
+                className="absolute top-12 right-0 bg-white/10 hover:bg-white/20 text-white px-6 py-2 rounded-full border border-white/20 font-black uppercase text-xs tracking-widest flex items-center gap-2 transition-all"
               >
-                <SkipForward className="w-4 h-4" />
-                Skip All
+                {isAutoOpening ? <X className="w-4 h-4" /> : <SkipForward className="w-4 h-4" />}
+                {isAutoOpening ? 'Stop' : 'Skip All'}
               </button>
             )}
 
@@ -212,12 +239,14 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
                       scale: isCurrent ? 1.5 : 1,
                       rotateY: isRevealed ? 180 : 0,
                     }}
-                    transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', damping: 20, stiffness: 100 }}
                     className={cn(
-                      "absolute w-[140px] aspect-[3/4] cursor-pointer",
+                      "absolute w-[140px] aspect-[3/4] cursor-pointer focus:outline-none focus:ring-4 focus:ring-blue-500 rounded-xl",
                       isLocked && "opacity-50 grayscale contrast-50 pointer-events-none"
                     )}
                     onClick={() => revealCard(i)}
+                    tabIndex={isOpen && !showSummary ? 0 : -1}
+                    onMouseEnter={() => !isAutoOpening && setCurrentIndex(i)}
                   >
                     <div className="relative w-full h-full preserve-3d" style={{ transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)', transformStyle: 'preserve-3d' }}>
                       {/* Card Back */}

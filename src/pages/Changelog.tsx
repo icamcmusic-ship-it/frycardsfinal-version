@@ -130,7 +130,7 @@ const UPDATES = [
     color: 'text-red-500',
     changes: [
       'Initial release of Frycards!',
-      'Core set of 300+ unique cards across 6 rarities.',
+      'Core set of 270+ unique cards across 6 rarities.',
       'Quest system and Daily Objectives launched.',
       'Season Pass "Genesis" is now live.'
     ]

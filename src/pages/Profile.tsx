@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
 import { supabase } from '../lib/supabase';
@@ -10,6 +11,7 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import RecentPulls from '../components/RecentPulls';
 
 export function Profile() {
+  const navigate = useNavigate();
   const { profile, setProfile, collectionStats: ownStats } = useProfileStore();
   const { user, signOut: authSignOut } = useAuthStore();
   const [editing, setEditing] = useState(false);
@@ -278,6 +280,13 @@ export function Profile() {
                 </div>
 
                 <div className="flex flex-wrap gap-3">
+                  <button 
+                    onClick={() => navigate('/decks')}
+                    className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"
+                  >
+                    <LayoutGrid className="w-5 h-5" />
+                    My Decks
+                  </button>
                   <button 
                     onClick={() => window.open(`/profile/${profile?.id}`, '_blank')}
                     className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-black rounded-xl border-4 border-[var(--border)] transition-transform active:translate-y-1 shadow-[4px_4px_0px_0px_var(--border)] flex items-center gap-2"

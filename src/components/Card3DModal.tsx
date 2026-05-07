@@ -165,12 +165,12 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onTogg
             </div>
             <div className="flex flex-wrap gap-2 mb-4">
               <span className={cn("text-xs font-black px-3 py-1.5 rounded-full border-2 shadow-[2px_2px_0px_rgba(0,0,0,1)]",
-                getRarityStyles(card.rarity, (card.is_foil || (card.foil_quantity ?? 0) > 0)))}>
-                {((card.is_foil || (card.foil_quantity ?? 0) > 0)) ? `✨ Foil ${card.rarity}` : card.rarity}
+                getRarityStyles(card.rarity, Boolean(card.is_foil)))}>
+                {Boolean(card.is_foil) ? `✨ Foil ${card.rarity}` : card.rarity}
               </span>
-              { (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) != null && (card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id) > 0 && (
+              { card.serial_number != null && card.serial_number > 0 && (
                 <span className="text-xs font-black px-3 py-1.5 rounded-xl border-2 border-black bg-black text-yellow-300 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
-                  🔢 #{card.serial_number ?? card.serial_no ?? card.serial ?? card.serial_id} / {card.max_serial_supply ?? 200}
+                  🔢 #{card.serial_number} / {card.max_serial_supply ?? 200}
                 </span>
               )}
               <span className="text-xs font-bold px-3 py-1.5 rounded-xl border-2 border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]">

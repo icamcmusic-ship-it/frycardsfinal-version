@@ -257,6 +257,19 @@ export function Collection() {
   };
 
   const observerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut for search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Infinite scroll listener
   useEffect(() => {
@@ -479,7 +492,17 @@ export function Collection() {
             <EmptyState icon={Trophy} title="No Sets" description="No sets available." ctaText="Back" ctaAction={() => setActiveTab('collection')} />
           ) : (
             sets.map(set => (
-              <div key={set.id}>
+              <div key={set.id} className="relative group">
+                {set.owned_count === 0 && (
+                  <div className="absolute inset-0 z-10 bg-black/5 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[1px] rounded-2xl pointer-events-none">
+                     <button 
+                       onClick={(e) => { e.stopPropagation(); navigate('/store'); }}
+                       className="pointer-events-auto px-4 py-2 bg-blue-500 text-white font-black rounded-lg shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-transform"
+                     >
+                       Buy {set.name} Packs
+                     </button>
+                  </div>
+                )}
                 <SetProgress set={set} onClaimed={() => { fetchSets(); }} />
               </div>
             ))
@@ -493,8 +516,9 @@ export function Collection() {
               <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
+                  ref={searchInputRef}
                   type="text"
-                  placeholder="Search cards..."
+                  placeholder="Search cards... (Press /)"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)]"

@@ -95,8 +95,20 @@ export function Layout() {
       fetchNewCardCount();
       fetchPendingCounts();
 
+      // Realtime Reconnect Handler
+      const statusInterval = setInterval(() => {
+        const channels = supabase.realtime.getChannels();
+        if (channels.length > 0) {
+          const disconnected = channels.filter(c => c.state === 'closed' || c.state === 'errored');
+          if (disconnected.length > 0) {
+            console.warn(`${disconnected.length} channels disconnected. Re-subscribing...`);
+            disconnected.forEach(c => c.subscribe());
+          }
+        }
+      }, 60000);
+
       const profileChannel = supabase
-        .channel('profile-updates')
+        .channel(`profile-updates-${user.id}`)
         .on('postgres_changes', {
           event: 'UPDATE',
           schema: 'public',
@@ -108,7 +120,7 @@ export function Layout() {
         .subscribe();
 
       const notifChannel = supabase
-        .channel('notifications')
+        .channel(`notifications-${user.id}`)
         .on('postgres_changes', {
           event: 'INSERT',
           schema: 'public',
@@ -137,7 +149,7 @@ export function Layout() {
         .subscribe();
 
       const cardsChannel = supabase
-        .channel('user-cards')
+        .channel(`user-cards-${user.id}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -149,7 +161,7 @@ export function Layout() {
         .subscribe();
 
       const tradesChannel = supabase
-        .channel('trades-updates')
+        .channel(`trades-updates-${user.id}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -161,7 +173,7 @@ export function Layout() {
         .subscribe();
 
       const socialChannel = supabase
-        .channel('social-updates')
+        .channel(`social-updates-${user.id}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
@@ -173,7 +185,7 @@ export function Layout() {
         .subscribe();
 
       const rarePullChannel = supabase
-        .channel('my-rare-pulls')
+        .channel(`my-rare-pulls-${user.id}`)
         .on('postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'rare_pull_announcements', filter: `user_id=eq.${user.id}` },
           (payload) => {
@@ -189,6 +201,7 @@ export function Layout() {
           event: 'INSERT',
           schema: 'public',
           table: 'messages_history',
+          filter: 'room_id=eq.global'
         }, (payload) => {
           if (payload.new) {
             addMessage(payload.new as any);
@@ -200,6 +213,7 @@ export function Layout() {
         .subscribe();
 
       return () => {
+        clearInterval(statusInterval);
         profileChannel.unsubscribe();
         notifChannel.unsubscribe();
         cardsChannel.unsubscribe();
@@ -217,7 +231,9 @@ export function Layout() {
 
   const navItems = [
     { name: 'Home', path: '/', icon: Home, category: 'Main' },
-    { name: 'Collection', path: '/collection', icon: LayoutGrid, category: 'Main' },
+    { name: 'Play', path: '/play', icon: Sword, category: 'Game' },
+    { name: 'Decks', path: '/decks', icon: LayoutGrid, category: 'Game' },
+    { name: 'Collection', path: '/collection', icon: PackageOpen, category: 'Main' },
     { name: 'Store', path: '/store', icon: Store, category: 'Main' },
     { name: 'Market', path: '/marketplace', icon: ShoppingBag, category: 'Main' },
     { name: 'Profile', path: '/profile', icon: UserIcon, category: 'Main' },
@@ -233,6 +249,7 @@ export function Layout() {
     { name: 'Leaderboard', path: '/leaderboard', icon: Trophy, category: 'Progression' },
     { name: 'Season Pass', path: '/season-pass', icon: Gift, category: 'Progression' },
     
+    { name: 'Keywords', path: '/keywords', icon: BookOpen, category: 'Help' },
     { name: 'How to Play', path: '/how-to-play', icon: BookOpen, category: 'Help' },
     { name: 'Changelog', path: '/changelog', icon: History, category: 'Help' },
     

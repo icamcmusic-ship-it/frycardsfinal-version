@@ -92,13 +92,14 @@ export function Settings() {
       const { data: prof } = await supabase.rpc('get_my_profile');
       const saved = localStorage.getItem('frycards_settings');
       const localData = saved ? JSON.parse(saved) : {};
+      const remotePrefs = prof?.notification_prefs || {};
 
       setSettings({
         low_perf_mode: localData.low_perf_mode ?? false,
-        notifications_enabled: localData.notifications_enabled ?? true,
-        trade_notifications: localData.trade_notifications ?? true,
-        auction_notifications: localData.auction_notifications ?? true,
-        friend_notifications: localData.friend_notifications ?? true,
+        notifications_enabled: remotePrefs.enabled ?? localData.notifications_enabled ?? true,
+        trade_notifications: remotePrefs.trades ?? localData.trade_notifications ?? true,
+        auction_notifications: remotePrefs.marketplace ?? localData.auction_notifications ?? true,
+        friend_notifications: remotePrefs.friends ?? localData.friend_notifications ?? true,
         show_online_status: prof?.show_online_status ?? localData.show_online_status ?? true,
         is_public: prof?.is_public ?? localData.is_public ?? true,
       });
@@ -121,16 +122,29 @@ export function Settings() {
       saveToLocalStorage(newSettings);
     }
 
-    if (key === 'is_public' || key === 'show_online_status') {
+    const isPrivacySetting = key === 'is_public' || key === 'show_online_status';
+    const isNotificationSetting = key === 'notifications_enabled' || key.includes('_notifications');
+
+    if (isPrivacySetting || isNotificationSetting) {
       try {
+        const updatedSettings = isNotificationSetting ? { ...settings, [key]: value } : settings;
+        
         const { error } = await supabase.rpc('update_user_profile', {
           p_is_public: key === 'is_public' ? value : settings.is_public,
-          p_show_online_status: key === 'show_online_status' ? value : settings.show_online_status
+          p_show_online_status: key === 'show_online_status' ? value : settings.show_online_status,
+          p_notification_prefs: isNotificationSetting 
+            ? {
+                enabled: updatedSettings.notifications_enabled,
+                trades: updatedSettings.trade_notifications,
+                marketplace: updatedSettings.auction_notifications,
+                friends: updatedSettings.friend_notifications
+              }
+            : undefined
         });
         if (error) throw error;
       } catch (err: any) {
         console.error(`Error updating ${key}:`, err);
-        toast.error('Failed to update privacy settings');
+        // Fallback to localStorage if RPC fails or column missing
       }
     }
   };
@@ -226,56 +240,74 @@ export function Settings() {
         <h2 className="text-2xl font-black uppercase flex items-center gap-2 text-[var(--text)]">
           <Volume2 className="w-6 h-6" /> Audio
         </h2>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-[var(--text)]">Enable Audio</span>
-            <button 
-              onClick={() => updateSetting('audio_enabled', !audioEnabled)}
-              className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${audioEnabled ? 'bg-green-400' : 'bg-slate-300'}`}
-            >
-              <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${audioEnabled ? 'left-6' : 'left-1'}`} />
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm font-bold text-[var(--text)]">
-              <span>Master Volume</span>
-              <span>{masterVolume}%</span>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-[var(--text)]">Enable Audio</span>
+              <button 
+                onClick={() => updateSetting('audio_enabled', !audioEnabled)}
+                className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${audioEnabled ? 'bg-green-400' : 'bg-slate-300'}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${audioEnabled ? 'left-6' : 'left-1'}`} />
+              </button>
             </div>
-            <input 
-              type="range" min="0" max="100" 
-              value={masterVolume}
-              onChange={(e) => updateSetting('master_volume', parseInt(e.target.value))}
-              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-            />
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm font-bold text-[var(--text)]">
-              <span>Music Volume</span>
-              <span>{musicVolume}%</span>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-bold text-[var(--text)]">
+                <span className="flex items-center gap-2">Master Volume</span>
+                <span>{masterVolume}%</span>
+              </div>
+              <input 
+                type="range" min="0" max="100" 
+                value={masterVolume}
+                onChange={(e) => updateSetting('master_volume', parseInt(e.target.value))}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
             </div>
-            <input 
-              type="range" min="0" max="100" 
-              value={musicVolume}
-              onChange={(e) => updateSetting('music_volume', parseInt(e.target.value))}
-              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
-            />
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm font-bold text-[var(--text)]">
-              <span>SFX Volume</span>
-              <span>{sfxVolume}%</span>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-bold text-[var(--text)]">
+                <span className="flex items-center gap-2">
+                  Music Volume
+                  <button 
+                    onClick={() => { import('../services/AudioService').then(s => s.audioService.play('pack_open_divine')); }}
+                    className="p-1 hover:bg-slate-100 rounded border border-slate-200"
+                    title="Test Music Channel"
+                  >
+                    <Volume2 className="w-3 h-3 text-purple-600" />
+                  </button>
+                </span>
+                <span>{musicVolume}%</span>
+              </div>
+              <input 
+                type="range" min="0" max="100" 
+                value={musicVolume}
+                onChange={(e) => updateSetting('music_volume', parseInt(e.target.value))}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              />
             </div>
-            <input 
-              type="range" min="0" max="100" 
-              value={sfxVolume}
-              onChange={(e) => updateSetting('sfx_volume', parseInt(e.target.value))}
-              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-            />
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm font-bold text-[var(--text)]">
+                <span className="flex items-center gap-2">
+                  SFX Volume
+                  <button 
+                    onClick={() => { import('../services/AudioService').then(s => s.audioService.play('rare_reveal')); }}
+                    className="p-1 hover:bg-slate-100 rounded border border-slate-200"
+                    title="Test SFX Channel"
+                  >
+                    <Volume2 className="w-3 h-3 text-emerald-600" />
+                  </button>
+                </span>
+                <span>{sfxVolume}%</span>
+              </div>
+              <input 
+                type="range" min="0" max="100" 
+                value={sfxVolume}
+                onChange={(e) => updateSetting('sfx_volume', parseInt(e.target.value))}
+                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+            </div>
           </div>
-        </div>
       </div>
 
       {/* General Settings */}

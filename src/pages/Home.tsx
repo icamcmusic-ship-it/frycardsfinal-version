@@ -357,33 +357,61 @@ export function Home() {
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
-          <div className="w-14 h-14 rounded-xl bg-yellow-300 flex items-center justify-center border-4 border-[var(--border)] transform -rotate-3">
-            <Trophy className="w-7 h-7 text-black" />
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex flex-col gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-yellow-300 flex items-center justify-center border-4 border-[var(--border)] transform -rotate-3">
+              <Trophy className="w-7 h-7 text-black" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-600 font-bold uppercase">Collection Score</p>
+              <p className="text-3xl font-black text-[var(--text)] font-mono">{(stats?.total_cards ?? 0).toLocaleString()}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-slate-600 font-bold uppercase">Collection Score</p>
-            <p className="text-3xl font-black text-[var(--text)] font-mono">{(stats?.total_cards ?? 0).toLocaleString()}</p>
-          </div>
-        </div>
-        
-        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
-          <div className="w-14 h-14 rounded-xl bg-cyan-300 flex items-center justify-center border-4 border-[var(--border)] transform rotate-3">
-            <LayoutGrid className="w-7 h-7 text-black" />
-          </div>
-          <div>
-            <p className="text-sm text-slate-600 font-bold uppercase">Unique Cards</p>
-            <p className="text-3xl font-black text-[var(--text)] font-mono">{stats?.unique_cards ?? 0} / {stats?.total_possible ?? '?'}</p>
+          <div className="pt-2">
+             <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 mb-1">
+               <span>Total Cards Owned</span>
+             </div>
           </div>
         </div>
         
-        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex items-center gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
-          <div className="w-14 h-14 rounded-xl bg-orange-400 flex items-center justify-center border-4 border-[var(--border)] transform -rotate-3">
-            <Sparkles className="w-7 h-7 text-white" />
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex flex-col gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-cyan-300 flex items-center justify-center border-4 border-[var(--border)] transform rotate-3">
+              <LayoutGrid className="w-7 h-7 text-black" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-600 font-bold uppercase">Unique Cards</p>
+              <p className="text-3xl font-black text-[var(--text)] font-mono">{stats?.unique_cards ?? 0} / {stats?.total_possible ?? '?'}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-slate-600 font-bold uppercase">Daily Streak</p>
-            <p className="text-3xl font-black text-[var(--text)] font-mono">{profile.daily_streak || 0}</p>
+          <div className="w-full">
+             <div className="flex justify-between text-[10px] font-black uppercase text-slate-400 mb-1">
+               <span>Completion</span>
+               <span>{stats ? Math.round((stats.unique_cards / stats.total_possible) * 100) : 0}%</span>
+             </div>
+             <div className="h-2 bg-slate-100 rounded-full border-2 border-slate-200 overflow-hidden">
+               <div 
+                 className="h-full bg-cyan-400 transition-all duration-1000"
+                 style={{ width: `${stats ? (stats.unique_cards / stats.total_possible) * 100 : 0}%` }}
+               />
+             </div>
+          </div>
+        </div>
+        
+        <div className="bg-[var(--surface)] border-4 border-[var(--border)] rounded-2xl p-6 flex flex-col gap-4 shadow-[4px_4px_0px_0px_var(--border)] transform hover:-translate-y-1 transition-transform">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-xl bg-orange-400 flex items-center justify-center border-4 border-[var(--border)] transform -rotate-3">
+              <Sparkles className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-600 font-bold uppercase">Daily Streak</p>
+              <p className="text-3xl font-black text-[var(--text)] font-mono">{profile.daily_streak || 0}</p>
+            </div>
+          </div>
+          <div className="pt-2">
+             <p className="text-[10px] font-black uppercase text-orange-600">
+               {profile.daily_streak >= 7 ? '🔥 Master Duelist' : 'Keep it up!'}
+             </p>
           </div>
         </div>
       </div>

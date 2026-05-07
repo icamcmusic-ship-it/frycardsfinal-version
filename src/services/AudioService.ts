@@ -8,20 +8,20 @@ import { useAudioStore } from '../stores/audioStore';
  * the assets locally.
  */
 const SOUNDS = {
-  click: 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3',
-  hover: 'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3',
-  success: 'https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3',
-  error: 'https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3',
-  pack_shake: 'https://assets.mixkit.co/active_storage/sfx/2590/2590-preview.mp3',
-  pack_open: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3',
-  card_reveal: 'https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3',
-  rare_reveal: 'https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3',
-  mythic_reveal: 'https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3', // Placeholder
-  divine_reveal: 'https://assets.mixkit.co/active_storage/sfx/2015/2015-preview.mp3', // Placeholder
-  god_pack: 'https://assets.mixkit.co/active_storage/sfx/2012/2012-preview.mp3', // High energy win sound
-  god_pack_alarm: 'https://assets.mixkit.co/active_storage/sfx/994/994-preview.mp3', // Loud alarm/siren sound
-  gold_gain: 'https://assets.mixkit.co/active_storage/sfx/2015/2015-preview.mp3',
-  gem_gain: 'https://assets.mixkit.co/active_storage/sfx/2016/2016-preview.mp3',
+  click: '/sounds/click.mp3',
+  hover: '/sounds/hover.mp3',
+  success: '/sounds/success.mp3',
+  error: '/sounds/error.mp3',
+  pack_shake: '/sounds/pack_shake.mp3',
+  pack_open: '/sounds/pack_open.mp3',
+  card_reveal: '/sounds/card_reveal.mp3',
+  rare_reveal: '/sounds/rare_reveal.mp3',
+  mythic_reveal: '/sounds/mythic_reveal.mp3',
+  divine_reveal: '/sounds/divine_reveal.mp3',
+  god_pack: '/sounds/god_pack.mp3',
+  god_pack_alarm: '/sounds/god_pack_alarm.mp3',
+  gold_gain: '/sounds/gold_gain.mp3',
+  gem_gain: '/sounds/gem_gain.mp3',
 };
 
 class AudioService {

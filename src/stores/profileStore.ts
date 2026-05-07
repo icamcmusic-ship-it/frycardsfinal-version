@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 
+export type RewardType = 'gold' | 'gems' | 'pack' | 'xp' | 'card';
+
 export interface Profile {
   id: string;
   username: string;
@@ -22,13 +24,12 @@ export interface Profile {
   is_public: boolean;
   show_online_status: boolean;
   is_admin: boolean;
-  last_reward_type: string | null;
+  last_reward_type: RewardType | null;
   pack_points: number;
   soft_pity_counter: number;
-  foil_cards?: number;
 }
 
-interface CollectionStats {
+export interface CollectionStats {
   unique_cards: number;
   total_cards: number;
   total_possible: number;
@@ -41,7 +42,7 @@ interface ProfileState {
   collectionStats: CollectionStats | null;
   loading: boolean;
   setProfile: (profile: Profile | null) => void;
-  fetchProfile: () => Promise<void>;
+  fetchProfile: (retryCount?: number) => Promise<void>;
   refreshProfile: () => Promise<void>;
   fetchCollectionStats: () => Promise<CollectionStats | null>;
 }
@@ -64,7 +65,7 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       return null;
     }
   },
-  fetchProfile: async () => {
+  fetchProfile: async (retryCount = 0) => {
     set({ loading: true });
     try {
       const { data, error } = await supabase.rpc('get_my_profile');
@@ -73,13 +74,13 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
         set({ profile: data as Profile, loading: false });
         get().fetchCollectionStats();
       } else {
-        // Retry once after delay — profile may be mid-creation
+        // Retry up to 3 times after delay — profile may be mid-creation
         const currentProfile = get().profile;
-        if (!currentProfile) {
+        if (!currentProfile && retryCount < 3) {
           setTimeout(() => {
             const stillNoProfile = get().profile;
             if (!stillNoProfile) {
-              get().fetchProfile().catch(err => console.error('Retry fetch profile error:', err));
+              get().fetchProfile(retryCount + 1).catch(err => console.error('Retry fetch profile error:', err));
             }
           }, 1500);
         }

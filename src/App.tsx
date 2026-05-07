@@ -25,8 +25,12 @@ import { Notifications } from './pages/Notifications';
 import { Quests } from './pages/Quests';
 import { Achievements } from './pages/Achievements';
 import { Changelog } from './pages/Changelog';
-import { HowToPlay } from './pages/HowToPlay';
+import HowToPlay from './pages/HowToPlay';
 import { RarePulls } from './pages/RarePulls';
+import PlayPage from './pages/PlayPage';
+import GameBoard from './pages/GameBoard';
+import DeckBuilder from './pages/DeckBuilder';
+import KeywordReference from './pages/KeywordReference';
 import { Loader2 } from 'lucide-react';
 
 export default function App() {
@@ -111,6 +115,10 @@ export default function App() {
               <Route path="/rare-pulls" element={<RarePulls />} />
               <Route path="/changelog" element={<Changelog />} />
               <Route path="/how-to-play" element={<HowToPlay />} />
+              <Route path="/play" element={<PlayPage />} />
+              <Route path="/play/match" element={<GameBoard />} />
+              <Route path="/decks" element={<DeckBuilder />} />
+              <Route path="/keywords" element={<KeywordReference />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           )}
