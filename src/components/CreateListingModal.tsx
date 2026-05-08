@@ -44,25 +44,24 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, initialCard }: 
   const fetchMarketStats = async () => {
     if (!selectedCard) return;
     try {
-      const { data, error } = await supabase.rpc('get_active_listings', {
-        p_limit: 10,
-        p_offset: 0,
-        p_rarity: null,
-        p_listing_type: 'fixed_price',
+      const { data, error } = await supabase.rpc('get_market_listings', {
         p_search: selectedCard.name,
-        p_sort_by: 'price'
+        p_sort_by: 'price_asc',
+        p_limit: 10,
+        p_offset: 0
       });
       
       if (error) throw error;
       
-      if (data && data.length > 0) {
-        const goldListings = data.filter((l: any) => l.currency === 'gold');
-        const gemListings = data.filter((l: any) => l.currency === 'gems');
+      const listings = data?.listings || [];
+      if (listings.length > 0) {
+        const goldListings = listings.filter((l: any) => l.currency === 'gold');
+        const gemListings = listings.filter((l: any) => l.currency === 'gems');
 
         setMarketStats({
           min_gold: goldListings.length > 0 ? Math.min(...goldListings.map((l: any) => l.price)) : 0,
           min_gems: gemListings.length > 0 ? Math.min(...gemListings.map((l: any) => l.price)) : 0,
-          count: data.length
+          count: data.total_count || listings.length
         });
       } else {
         setMarketStats(null);

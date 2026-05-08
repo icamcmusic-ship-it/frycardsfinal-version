@@ -144,9 +144,13 @@ export function Settings() {
           .eq('id', profile?.id);
 
         if (error) throw error;
+        toast.success('Settings updated');
       } catch (err: any) {
         console.error(`Error updating ${key}:`, err);
+        toast.error('Failed to update settings');
       }
+    } else {
+      toast.success('Settings updated');
     }
   };
 

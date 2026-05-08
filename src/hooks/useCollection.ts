@@ -142,6 +142,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
     filters.search, 
     filters.foilFilter, 
     filters.keyword,
+    filters.lowSerialOnly,
     fetchCollection, 
     fetchStats, 
     fetchWishlistCardIds

@@ -905,10 +905,28 @@ export function Marketplace() {
                         YOUR LISTING
                       </div>
                     )}
-                    <h3 className="font-black text-[var(--text)] text-base leading-tight uppercase flex items-center gap-1.5">
+                    <h3 className="font-black text-[var(--text)] text-base leading-tight uppercase flex items-center flex-wrap gap-1.5">
                       {listing.card_name}
                       {wishlistCardIds.has(listing.card_id) && (
                         <Bookmark className="w-3.5 h-3.5 fill-blue-400 text-blue-600" title="On your wishlist!" />
+                      )}
+                      
+                      {/* Marketplace Quick Badges */}
+                      {listing.card?.power_grade && (
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded border-2 text-[8px] font-black leading-none uppercase",
+                          listing.card.power_grade === 'S' ? 'bg-red-500 text-white border-red-300' :
+                          listing.card.power_grade === 'A' ? 'bg-orange-500 text-white border-orange-300' :
+                          listing.card.power_grade === 'B' ? 'bg-blue-500 text-white border-blue-300' :
+                          'bg-slate-500 text-white border-slate-300'
+                        )}>
+                          {listing.card.power_grade}
+                        </span>
+                      )}
+                      {listing.card?.keyword && (
+                        <span className="px-1.5 py-0.5 rounded border-2 border-black bg-black text-yellow-400 text-[8px] font-black leading-none uppercase tracking-tighter">
+                          {listing.card.keyword}
+                        </span>
                       )}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">

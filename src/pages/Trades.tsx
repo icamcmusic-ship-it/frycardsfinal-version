@@ -29,14 +29,26 @@ export function Trades() {
   const [submitting, setSubmitting] = useState(false);
   const [mySearch, setMySearch] = useState('');
   const [myDebouncedSearch, setMyDebouncedSearch] = useState('');
+  const [receiverSearch, setReceiverSearch] = useState('');
+  const [receiverDebouncedSearch, setReceiverDebouncedSearch] = useState('');
 
   useEffect(() => {
     const timer = setTimeout(() => setMyDebouncedSearch(mySearch), 350);
     return () => clearTimeout(timer);
   }, [mySearch]);
 
+  useEffect(() => {
+    const timer = setTimeout(() => setReceiverDebouncedSearch(receiverSearch), 350);
+    return () => clearTimeout(timer);
+  }, [receiverSearch]);
+
   useEffect(() => { fetchTrades(); fetchFriends(); fetchMyCards(); }, []);
   useEffect(() => { fetchMyCards(); }, [myDebouncedSearch]);
+  useEffect(() => {
+    if (receiverId) {
+      fetchReceiverCards(receiverId);
+    }
+  }, [receiverDebouncedSearch]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -63,7 +75,9 @@ export function Trades() {
     setLoadingReceiverCards(true);
     try {
       const { data, error } = await supabase.rpc('get_other_user_collection', {
-        p_target_user_id: uid
+        p_target_user_id: uid,
+        p_search: receiverDebouncedSearch || null,
+        p_limit: 500
       });
       if (error) throw error;
       setReceiverCards(data || []);
@@ -296,10 +310,23 @@ export function Trades() {
             </div>
 
             <div className="space-y-4 p-4 bg-emerald-50/50 border-2 border-emerald-200 rounded-xl">
-              <h3 className="font-black uppercase text-emerald-700 flex items-center gap-2">
-                <ArrowRightLeft className="w-4 h-4" />
-                You Receive
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-black uppercase text-emerald-700 flex items-center gap-2">
+                  <ArrowRightLeft className="w-4 h-4" />
+                  You Receive
+                </h3>
+                {receiverId && (
+                  <div className="relative w-32 min-[400px]:w-48">
+                    <input 
+                      type="text" 
+                      placeholder="Search..." 
+                      value={receiverSearch}
+                      onChange={e => setReceiverSearch(e.target.value)}
+                      className="w-full text-[10px] p-1 border-2 border-emerald-200 rounded font-bold"
+                    />
+                  </div>
+                )}
+              </div>
               {receiverId ? (
                 <>
                   <div>

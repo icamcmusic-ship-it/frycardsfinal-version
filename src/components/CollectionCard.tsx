@@ -55,6 +55,26 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, onSel
         isWishlisted={isWishlisted}
       />
 
+      {/* Grid Quick Indicators */}
+      <div className="absolute top-2 left-2 z-30 flex flex-col gap-1 pointer-events-none sm:opacity-0 group-hover:opacity-100 transition-opacity">
+        {card.power_grade && (
+          <div className={cn(
+            "px-2 py-0.5 rounded-lg border-2 border-black text-[10px] font-black shadow-[2px_2px_0px_rgba(0,0,0,1)]",
+            card.power_grade === 'S' ? 'bg-red-500 text-white' :
+            card.power_grade === 'A' ? 'bg-orange-500 text-white' :
+            card.power_grade === 'B' ? 'bg-blue-500 text-white' :
+            'bg-slate-500 text-white'
+          )}>
+            GRADE {card.power_grade}
+          </div>
+        )}
+        {card.keyword && (
+          <div className="px-2 py-0.5 rounded-lg border-2 border-black bg-black text-yellow-400 text-[8px] font-black shadow-[2px_2px_0px_rgba(0,0,0,1)] uppercase tracking-tighter">
+            {card.keyword}
+          </div>
+        )}
+      </div>
+
       {/* Info Overlay on Hover */}
       {!isBatchMode && card.effect_text && (
         <div className="absolute inset-x-0 bottom-0 z-40 p-4 opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0 duration-300 pointer-events-none">

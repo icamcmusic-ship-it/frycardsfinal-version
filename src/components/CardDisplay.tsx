@@ -59,13 +59,13 @@ export function CardDisplay({
 
   // Derive Grade Background
   const GRADE_MAP: Record<string, string> = {
-    'S': 'bg-red-500 text-white',
-    'A': 'bg-orange-500 text-white',
-    'B': 'bg-blue-500 text-white',
-    'C': 'bg-slate-500 text-white',
-    'D': 'bg-slate-400 text-white',
+    'S': 'bg-red-500 text-white border-red-300 shadow-[0_0_10px_rgba(239,68,68,0.4)]',
+    'A': 'bg-orange-500 text-white border-orange-300 shadow-[0_0_10px_rgba(249,115,22,0.4)]',
+    'B': 'bg-blue-500 text-white border-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.4)]',
+    'C': 'bg-slate-500 text-white border-slate-300 shadow-[0_0_10px_rgba(100,116,139,0.4)]',
+    'D': 'bg-slate-400 text-white border-slate-200 shadow-[0_0_10px_rgba(148,163,184,0.4)]',
   };
-  const gradeStyles = GRADE_MAP[card.power_grade || 'C'] || 'bg-slate-200 text-black';
+  const gradeStyles = GRADE_MAP[card.power_grade || 'C'] || 'bg-slate-200 text-black border-slate-300';
 
   return (
     <div 
@@ -104,10 +104,10 @@ export function CardDisplay({
           {/* Grade Badge */}
           {card.power_grade && (
             <div className={cn(
-              "sticker w-[10cqw] h-[10cqw] rounded-lg brut-border shadow-sm flex items-center justify-center rotate-6",
+              "sticker w-[11cqw] h-[11cqw] rounded-xl border-[0.8cqw] shadow-xl flex items-center justify-center rotate-6 transition-transform group-hover:scale-110",
               gradeStyles
             )}>
-              <span className="text-[5cqw] font-black leading-none">{card.power_grade}</span>
+              <span className="text-[6cqw] font-black leading-none drop-shadow-[1px_1px_0px_rgba(0,0,0,0.5)]">{card.power_grade}</span>
             </div>
           )}
 
@@ -156,8 +156,8 @@ export function CardDisplay({
 
           {/* Keyword Badge */}
           {card.keyword && (
-            <div className="sticker px-[2cqw] py-[1cqw] rounded-lg bg-black text-yellow-400 brut-border shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-[1cqw]">
-              <span className="text-[2.5cqw] font-black uppercase tracking-tighter">
+            <div className="sticker px-[2.5cqw] py-[1.2cqw] rounded-xl bg-black text-yellow-400 border-[0.6cqw] border-yellow-400/50 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] flex items-center gap-[1cqw] transition-transform group-hover:-translate-y-1">
+              <span className="text-[2.8cqw] font-black uppercase tracking-tighter">
                 {card.keyword} {card.keyword_tier > 0 && `v${card.keyword_tier}`}
               </span>
             </div>

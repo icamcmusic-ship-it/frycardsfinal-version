@@ -15,7 +15,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Crown, Coins, Flame, Skull, Sword, Shield, Eye, EyeOff } from "lucide-react";
+import { Crown, Coins, Flame, Skull, Sword, Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 import { newMatch, step, listLegalActions } from "../lib/dmh/engine";
@@ -225,7 +225,18 @@ export default function GameBoard() {
           ) : state.activePlayer === "A" ? (
             <ActionBar actions={myActions} onAct={act} />
           ) : (
-            <div className="text-center text-gray-400 italic py-2">Opponent thinking…</div>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+               <motion.div 
+                 initial={{ opacity: 0, scale: 0.9 }}
+                 animate={{ opacity: 1, scale: 1 }}
+                 className="bg-black/40 backdrop-blur-sm px-8 py-4 rounded-2xl border-4 border-amber-500/50 shadow-2xl"
+               >
+                 <div className="flex items-center gap-3">
+                   <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+                   <p className="text-xl font-black uppercase tracking-widest text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">Opponent thinking…</p>
+                 </div>
+               </motion.div>
+            </div>
           )}
         </div>
 

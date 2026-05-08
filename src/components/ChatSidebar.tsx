@@ -141,7 +141,7 @@ export function ChatSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () 
                         ? "bg-blue-400 text-black rounded-tr-none" 
                         : "bg-white text-black rounded-tl-none"
                     )}>
-                      {msg.body || msg.content}
+                      {msg.content || msg.body}
                     </div>
                   </div>
                   ))}

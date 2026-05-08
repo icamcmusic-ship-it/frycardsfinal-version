@@ -216,7 +216,7 @@ export function Social() {
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <p className="text-sm font-bold text-[var(--text)] break-words">{msg.body}</p>
+                    <p className="text-sm font-bold text-[var(--text)] break-words">{msg.content || msg.body}</p>
                   </motion.div>
                 ))}
               </AnimatePresence>
