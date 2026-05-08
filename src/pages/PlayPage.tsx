@@ -29,6 +29,13 @@ export default function PlayPage() {
 
   useEffect(() => {
     void (async () => {
+      // Refresh energy first
+      try {
+        await supabase.rpc("regen_energy");
+      } catch (err) {
+        console.error("Energy regen failed:", err);
+      }
+
       const { data, error } = await supabase.rpc("list_my_decks");
       if (error) toast.error(error.message);
       const legalDecks = ((data as DeckOption[]) ?? []).filter((d) => d.is_legal);

@@ -27,6 +27,9 @@ export interface Profile {
   last_reward_type: RewardType | null;
   pack_points: number;
   soft_pity_counter: number;
+  energy: number;
+  energy_last_regen: string | null;
+  max_energy: number;
 }
 
 export interface CollectionStats {

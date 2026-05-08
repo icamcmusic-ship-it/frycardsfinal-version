@@ -32,6 +32,7 @@ export function Collection() {
   const [foilFilter, setFoilFilter] = useState<'all' | 'foil' | 'non-foil'>(() => 
     (sessionStorage.getItem('col_foil_filter') as any) || 'all'
   );
+  const [keyword, setKeyword] = useState<string>(() => sessionStorage.getItem('col_keyword') || 'all');
   const [lowSerialOnly, setLowSerialOnly] = useState(false);
   const [viewSize, setViewSize] = useState<'normal' | 'large'>(() => 
     (localStorage.getItem('col_view_size') as any) || 'normal'
@@ -77,7 +78,8 @@ export function Collection() {
     setId: 'all',
     search: debouncedSearch,
     foilFilter,
-    lowSerialOnly
+    lowSerialOnly,
+    keyword
   });
 
   // Effects
@@ -96,8 +98,9 @@ export function Collection() {
     sessionStorage.setItem('col_sort', sortBy);
     sessionStorage.setItem('col_card_type', cardType);
     sessionStorage.setItem('col_foil_filter', foilFilter);
+    sessionStorage.setItem('col_keyword', keyword);
     localStorage.setItem('col_view_size', viewSize);
-  }, [activeTab, filter, sortBy, cardType, foilFilter, viewSize]);
+  }, [activeTab, filter, sortBy, cardType, foilFilter, viewSize, keyword]);
 
   useEffect(() => {
     if (profile) {
@@ -586,6 +589,17 @@ export function Collection() {
                 ))}
               </select>
 
+              <select
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                className="px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)]"
+              >
+                <option value="all">All Keywords</option>
+                {['Assassinate', 'Ward', 'Divine', 'Life-Steal', 'Rush', 'Taunt', 'Ambush', 'Bounty', 'Cursed', 'Deathwish', 'Ethereal', 'Frenzy', 'Guard', 'Inspire', 'Lurk', 'Overpower', 'Pierce', 'Regen', 'Soulbound', 'Untouchable'].sort().map(kw => (
+                  <option key={kw} value={kw}>{kw}</option>
+                ))}
+              </select>
+
               <button
                 onClick={() => setFoilFilter(prev => prev === 'all' ? 'foil' : prev === 'foil' ? 'non-foil' : 'all')}
                 className={cn(
@@ -616,6 +630,7 @@ export function Collection() {
                   setFilter('all');
                   setCardType('all');
                   setFoilFilter('all');
+                  setKeyword('all');
                   setLowSerialOnly(false);
                 }}
                 className="px-4 py-2 bg-white text-slate-500 font-bold rounded-xl border-4 border-slate-200 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors"
@@ -661,6 +676,7 @@ export function Collection() {
                     setFilter('all');
                     setCardType('all');
                     setFoilFilter('all');
+                    setKeyword('all');
                     setLowSerialOnly(false);
                   }}
                   ctaPath={(!stats || stats.total_cards === 0) ? "/store" : undefined} 

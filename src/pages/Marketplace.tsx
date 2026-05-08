@@ -141,7 +141,15 @@ export function Marketplace() {
   });
   const [rarityFilter, setRarityFilter] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('rarity') || 'all';
+    return (params.get('rarity') || 'all') as any;
+  });
+  const [keywordFilter, setKeywordFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('keyword') || 'all';
+  });
+  const [gradeFilter, setGradeFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('grade') || 'all';
   });
   const [sortBy, setSortBy] = useState<'newest' | 'price_asc' | 'price_desc' | 'ending_soon'>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -155,11 +163,13 @@ export function Marketplace() {
     if (debouncedSearch) params.set('q', debouncedSearch);
     if (filter !== 'all') params.set('type', filter);
     if (rarityFilter !== 'all') params.set('rarity', rarityFilter);
+    if (keywordFilter !== 'all') params.set('keyword', keywordFilter);
+    if (gradeFilter !== 'all') params.set('grade', gradeFilter);
     if (sortBy !== 'newest') params.set('sort', sortBy);
     
     const newRelativePathQuery = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
     window.history.replaceState(null, '', newRelativePathQuery);
-  }, [activeTab, debouncedSearch, filter, rarityFilter, sortBy]);
+  }, [activeTab, debouncedSearch, filter, rarityFilter, sortBy, keywordFilter, gradeFilter]);
   const [hoveredListing, setHoveredListing] = useState<string | null>(null);
   const [showBidHistoryModal, setShowBidHistoryModal] = useState(false);
   const [selectedListingForBids, setSelectedListingForBids] = useState<any>(null);
@@ -220,7 +230,7 @@ export function Marketplace() {
   useEffect(() => {
     const expireAuctions = async () => {
       try {
-        await supabase.rpc('expire_old_auctions');
+        await supabase.rpc('expire_listings');
       } catch (err) {
         console.error('Error expiring auctions:', err);
       }
@@ -309,7 +319,7 @@ export function Marketplace() {
     } else if (activeTab === 'my_listings') {
       fetchMyListings();
     }
-  }, [activeTab, rarityFilter, filter, sortBy, debouncedSearch]);
+  }, [activeTab, rarityFilter, filter, sortBy, debouncedSearch, keywordFilter, gradeFilter]);
 
   const fetchWishlistCardIds = async () => {
     try {
@@ -412,7 +422,9 @@ export function Marketplace() {
         p_rarity: rarityFilter === 'all' ? null : rarityFilter,
         p_listing_type: filter === 'all' ? null : filter,
         p_search: debouncedSearch || null,
-        p_sort_by: sortBy
+        p_sort_by: sortBy,
+        p_keyword: keywordFilter === 'all' ? null : keywordFilter,
+        p_power_grade: gradeFilter === 'all' ? null : gradeFilter
       });
       if (error) throw error;
       if (activeRequestIdRef.current !== requestId) return; // ignore stale response
@@ -797,12 +809,36 @@ export function Marketplace() {
             <option value="Divine">Divine</option>
           </select>
 
-          {(search || filter !== 'all' || rarityFilter !== 'all' || sortBy !== 'newest') && (
+          <select 
+            value={keywordFilter}
+            onChange={(e) => setKeywordFilter(e.target.value)}
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+          >
+            <option value="all">All Keywords</option>
+            {['Assassinate', 'Ward', 'Divine', 'Life-Steal', 'Rush', 'Taunt', 'Ambush', 'Bounty', 'Cursed', 'Deathwish', 'Ethereal', 'Frenzy', 'Guard', 'Inspire', 'Lurk', 'Overpower', 'Pierce', 'Regen', 'Soulbound', 'Untouchable'].sort().map(kw => (
+              <option key={kw} value={kw}>{kw}</option>
+            ))}
+          </select>
+
+          <select 
+            value={gradeFilter}
+            onChange={(e) => setGradeFilter(e.target.value)}
+            className="shrink-0 px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold appearance-none focus:outline-none shadow-[4px_4px_0px_0px_var(--border)]"
+          >
+            <option value="all">Grade: Any</option>
+            {['S', 'A', 'B', 'C', 'D'].map(g => (
+              <option key={g} value={g}>Grade {g}</option>
+            ))}
+          </select>
+
+          {(search || filter !== 'all' || rarityFilter !== 'all' || sortBy !== 'newest' || keywordFilter !== 'all' || gradeFilter !== 'all') && (
             <button
               onClick={() => {
                 setSearch('');
                 setFilter('all');
                 setRarityFilter('all');
+                setKeywordFilter('all');
+                setGradeFilter('all');
                 setSortBy('newest');
               }}
               className="shrink-0 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 font-black rounded-xl border-4 border-red-200 shadow-[4px_4px_0px_0px_#fecaca] flex items-center gap-2 transition-all active:translate-y-1 active:shadow-none uppercase text-xs"

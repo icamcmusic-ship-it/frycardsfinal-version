@@ -98,10 +98,13 @@ export default function GameBoard() {
     const reportResult = async () => {
       try {
         const winner = state.winner;
+        const won = winner === "A";
+
+        // Report match result
         const { data, error } = await supabase.rpc("report_cpu_match_result", {
-          p_deck_id: initState.p1Deck.leader.id, // Using leader ID as proxy for deck id since initState has p1Deck
+          p_deck_id: initState.p1Deck.leader.id,
           p_difficulty: initState.difficulty,
-          p_won: winner === "A",
+          p_won: won,
           p_hands_played: state.handNumber,
           p_summary: {
             final_pot: state.pot.main + state.pot.phantom,
@@ -119,6 +122,41 @@ export default function GameBoard() {
             duration: 5000
           });
         }
+
+        // Increment quest progress for specific events
+        // 1. win_at_location
+        if (won && state.location) {
+          await supabase.rpc('increment_quest_progress', {
+            p_quest_type: 'win_at_location',
+            p_amount: 1
+          });
+        }
+
+        // 2. assassinate_unit (count units removed from CPU)
+        // This is a simplification; we could parse logs for specific 'removed' events
+        const cpuUnitsDefeated = state.log.filter(l => l.text.includes('B removed')).length;
+        if (cpuUnitsDefeated > 0) {
+          await supabase.rpc('increment_quest_progress', {
+            p_quest_type: 'assassinate_unit',
+            p_amount: cpuUnitsDefeated
+          });
+        }
+
+        // 3. cast_keyword (any keywords used by player)
+        const keywordsUsed = new Set<string>();
+        state.log.forEach(l => {
+          if (l.text.includes('A used')) {
+             // Simple regex to extract keyword if possible, or just report 'keyword_used'
+             keywordsUsed.add('any');
+          }
+        });
+        if (keywordsUsed.size > 0) {
+          await supabase.rpc('increment_quest_progress', {
+            p_quest_type: 'cast_keyword',
+            p_amount: keywordsUsed.size
+          });
+        }
+
       } catch (err) {
         console.error("Error reporting match:", err);
       }

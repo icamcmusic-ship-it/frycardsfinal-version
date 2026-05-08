@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfileStore } from '../stores/profileStore';
 import { useAuthStore } from '../stores/authStore';
@@ -9,10 +9,13 @@ import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
 import { ConfirmModal } from '../components/ConfirmModal';
 import RecentPulls from '../components/RecentPulls';
+import { calculateLevelProgress } from '../lib/xp';
 
 export function Profile() {
   const navigate = useNavigate();
   const { profile, setProfile, collectionStats: ownStats } = useProfileStore();
+  
+  const levelInfo = useMemo(() => profile ? calculateLevelProgress(profile.xp) : null, [profile?.xp]);
   const { user, signOut: authSignOut } = useAuthStore();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -278,22 +281,45 @@ export function Profile() {
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1.5 bg-blue-100 px-3 py-1 rounded-full border-2 border-blue-200">
                           <Trophy className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-black text-blue-700 uppercase">Level {profile.level || 1}</span>
+                          <span className="text-sm font-black text-blue-700 uppercase">Level {levelInfo?.level || 1}</span>
                         </div>
                         <div className="flex-1 max-w-xs">
                           <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
                             <span>XP Progress</span>
-                            <span>{profile.xp % 1000} / 1000</span>
+                            <span>{levelInfo?.currentXp || 0} / {levelInfo?.nextLevelXp || 1000}</span>
                           </div>
                           <div className="h-3 bg-slate-200 rounded-full border-2 border-slate-300 overflow-hidden">
                             <motion.div 
                               initial={{ width: 0 }}
-                              animate={{ width: `${(profile.xp % 1000) / 10}%` }}
+                              animate={{ width: `${levelInfo?.progressPct || 0}%` }}
                               className="h-full bg-blue-500"
                             />
                           </div>
                         </div>
                       </div>
+                      
+                      {ownStats && (
+                        <div className="mt-4 flex items-center gap-4">
+                          <div className="flex items-center gap-1.5 bg-emerald-100 px-3 py-1 rounded-full border-2 border-emerald-200">
+                             <LayoutGrid className="w-4 h-4 text-emerald-600" />
+                             <span className="text-sm font-black text-emerald-700 uppercase">Collection</span>
+                          </div>
+                          <div className="flex-1 max-w-xs">
+                            <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 mb-1">
+                              <span>Completion</span>
+                              <span>{Math.round(ownStats.completion_pct || 0)}%</span>
+                            </div>
+                            <div className="h-3 bg-slate-200 rounded-full border-2 border-slate-300 overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${ownStats.completion_pct || 0}%` }}
+                                className="h-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                                transition={{ duration: 1.5, ease: "easeOut" }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   <p className="text-slate-500 font-bold mt-1">Joined {new Date(profile.created_at).toLocaleDateString()}</p>

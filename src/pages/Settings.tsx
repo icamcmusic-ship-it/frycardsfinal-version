@@ -129,22 +129,23 @@ export function Settings() {
       try {
         const updatedSettings = isNotificationSetting ? { ...settings, [key]: value } : settings;
         
-        const { error } = await supabase.rpc('update_user_profile', {
-          p_is_public: key === 'is_public' ? value : settings.is_public,
-          p_show_online_status: key === 'show_online_status' ? value : settings.show_online_status,
-          p_notification_prefs: isNotificationSetting 
-            ? {
-                enabled: updatedSettings.notifications_enabled,
-                trades: updatedSettings.trade_notifications,
-                marketplace: updatedSettings.auction_notifications,
-                friends: updatedSettings.friend_notifications
-              }
-            : undefined
-        });
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            is_public: key === 'is_public' ? value : settings.is_public,
+            show_online_status: key === 'show_online_status' ? value : settings.show_online_status,
+            notification_prefs: {
+              enabled: updatedSettings.notifications_enabled,
+              trades: updatedSettings.trade_notifications,
+              marketplace: updatedSettings.auction_notifications,
+              friends: updatedSettings.friend_notifications
+            }
+          })
+          .eq('id', profile?.id);
+
         if (error) throw error;
       } catch (err: any) {
         console.error(`Error updating ${key}:`, err);
-        // Fallback to localStorage if RPC fails or column missing
       }
     }
   };
@@ -269,7 +270,7 @@ export function Settings() {
                 <span className="flex items-center gap-2">
                   Music Volume
                   <button 
-                    onClick={() => { import('../services/AudioService').then(s => s.audioService.play('pack_open_divine')); }}
+                    onClick={() => { import('../services/AudioService').then(s => s.audioService.play('divine_reveal')); }}
                     className="p-1 hover:bg-slate-100 rounded border border-slate-200"
                     title="Test Music Channel"
                   >

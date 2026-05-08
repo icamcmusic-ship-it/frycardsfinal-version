@@ -28,43 +28,6 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
   const isAutoOpeningRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!isOpen || showSummary) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') {
-        setCurrentIndex(prev => Math.min(cards.length - 1, prev === -1 ? 0 : prev + 1));
-      } else if (e.key === 'ArrowLeft') {
-        setCurrentIndex(prev => Math.max(0, prev === -1 ? 0 : prev - 1));
-      } else if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        if (currentIndex >= 0 && currentIndex < cards.length) {
-          revealCard(currentIndex);
-        } else if (currentIndex === -1) {
-          setCurrentIndex(0);
-          revealCard(0);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, showSummary, cards.length, currentIndex, revealCard]);
-
-  // Reset state when opening/closing
-  useEffect(() => {
-    if (isOpen) {
-      setRevealed(new Set());
-      setCurrentIndex(-1);
-      setIsAutoOpening(false);
-      isAutoOpeningRef.current = false;
-      setShowSummary(false);
-      
-      const isGodPack = cards.some(c => c.is_god_pack);
-      if (isGodPack) audioService.play('god_pack');
-    }
-  }, [isOpen, cards]);
-
   const chaseIndex = useMemo(() => {
     if (!cards.length) return -1;
     let bestIdx = -1;
@@ -114,7 +77,44 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
       return next;
     });
     setCurrentIndex(index);
-  }, [cards, chaseIndex]);
+  }, [cards, chaseIndex, revealed.size]);
+
+  useEffect(() => {
+    if (!isOpen || showSummary) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        setCurrentIndex(prev => Math.min(cards.length - 1, prev === -1 ? 0 : prev + 1));
+      } else if (e.key === 'ArrowLeft') {
+        setCurrentIndex(prev => Math.max(0, prev === -1 ? 0 : prev - 1));
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (currentIndex >= 0 && currentIndex < cards.length) {
+          revealCard(currentIndex);
+        } else if (currentIndex === -1) {
+          setCurrentIndex(0);
+          revealCard(0);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, showSummary, cards.length, currentIndex, revealCard]);
+
+  // Reset state when opening/closing
+  useEffect(() => {
+    if (isOpen) {
+      setRevealed(new Set());
+      setCurrentIndex(-1);
+      setIsAutoOpening(false);
+      isAutoOpeningRef.current = false;
+      setShowSummary(false);
+      
+      const isGodPack = cards.some(c => c.is_god_pack);
+      if (isGodPack) audioService.play('god_pack');
+    }
+  }, [isOpen, cards]);
 
   const autoRevealAll = async () => {
     if (isAutoOpening) {
@@ -299,6 +299,20 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
                         {/* God Pack Border */}
                         {card.is_god_pack && (
                           <div className="absolute inset-0 border-4 border-transparent rounded-xl animate-hue-rotate z-20 pointer-events-none" style={{ backgroundImage: 'linear-gradient(white, white), radial-gradient(circle at top left, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)', backgroundOrigin: 'border-box', backgroundClip: 'content-box, border-box' }} />
+                        )}
+
+                        {/* Effect Tooltip on Hover */}
+                        {isCurrent && isRevealed && card.effect_text && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="absolute inset-x-0 bottom-0 z-50 p-2 pointer-events-none"
+                          >
+                            <div className="bg-black/90 text-white p-2 rounded-lg border-2 border-white/50 text-[8px] font-bold leading-tight shadow-xl">
+                              <p className="text-yellow-400 uppercase font-black mb-0.5">{card.keyword || 'Ability'}</p>
+                              {card.effect_text}
+                            </div>
+                          </motion.div>
                         )}
                       </div>
                     </div>

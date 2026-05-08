@@ -66,7 +66,8 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
         p_offset: targetOffset,
         p_search: filters.search || null,
         p_wishlist_only: activeTab === 'wishlist',
-        p_low_serial_only: filters.lowSerialOnly || false
+        p_low_serial_only: filters.lowSerialOnly || false,
+        p_keyword: filters.keyword === 'all' ? null : filters.keyword
       }).abortSignal(controller.signal);
       
       if (error) throw error;
@@ -116,7 +117,8 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
     filters.setId, 
     filters.search, 
     filters.foilFilter,
-    filters.lowSerialOnly
+    filters.lowSerialOnly,
+    filters.keyword
   ]);
 
   useEffect(() => {
@@ -139,6 +141,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
     filters.cardType, 
     filters.search, 
     filters.foilFilter, 
+    filters.keyword,
     fetchCollection, 
     fetchStats, 
     fetchWishlistCardIds

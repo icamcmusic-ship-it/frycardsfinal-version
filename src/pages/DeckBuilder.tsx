@@ -16,14 +16,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
-import { Trash2, Save, ChevronLeft, Search, Filter, AlertTriangle, Crown, MapPin, Swords, Sparkles, Package } from "lucide-react";
+import { Trash2, Save, ChevronLeft, Search, Filter, AlertTriangle, Crown, MapPin, Swords, Sparkles, Package, Shield, Info, Zap } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { cn } from "../lib/utils";
 
 // ──────────────────────────────────────────────────────────────────────────
 // TYPES (mirrors 04_types.ts but kept local to avoid pulling engine into UI)
 // ──────────────────────────────────────────────────────────────────────────
 type CardType = "Leader" | "Location" | "Unit" | "Event" | "Artifact";
-type Rarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
+type Rarity = "Common" | "Uncommon" | "Rare" | "Super-Rare" | "Mythic" | "Divine";
 
 interface OwnedCard {
   id: string;
@@ -59,12 +60,13 @@ interface DeckDetail {
   cards: OwnedCard[]; // duplicates expanded — array length == 19 when legal
 }
 
-const RARITY_COLOR: Record<Rarity, string> = {
-  common: "text-gray-300",
-  uncommon: "text-emerald-400",
-  rare: "text-sky-400",
-  epic: "text-purple-400",
-  legendary: "text-amber-400",
+const RARITY_COLOR: Record<string, string> = {
+  Common: "text-gray-400",
+  Uncommon: "text-emerald-500",
+  Rare: "text-blue-500",
+  'Super-Rare': "text-purple-500",
+  Mythic: "text-yellow-500",
+  Divine: "text-red-500",
 };
 
 const TYPE_ICON: Record<CardType, React.ReactNode> = {
@@ -228,24 +230,43 @@ function DeckEditor({
   // ── live legality check (client mirror of _validate_deck) ────────────────
   const legalityReasons = useMemo(() => {
     const reasons: string[] = [];
-    if (!leader) reasons.push("Deck has no Leader");
-    if (cards.length !== 19) reasons.push(`Main deck must be 19 cards (currently ${cards.length})`);
+    if (!leader) reasons.push("Deck must have exactly 1 Leader");
+    if (cards.length < 20) reasons.push(`Main deck must have at least 20 non-Leader cards (currently ${cards.length})`);
+    
     const locs = cards.filter((c) => c.card_type === "Location").length;
-    if (locs > 1) reasons.push(`Main deck contains ${locs} Locations (max 1)`);
+    if (locs < 1) reasons.push("Deck must contain at least 1 Location");
+    
     const dupCounts = cards.reduce<Record<string, number>>((acc, c) => {
       acc[c.id] = (acc[c.id] || 0) + 1;
       return acc;
     }, {});
+    
     for (const [cid, n] of Object.entries(dupCounts)) {
-      if ((n as number) > 2) {
-        const card = cards.find((c) => c.id === cid)!;
-        reasons.push(`Too many copies of ${card.name} (${n}, max 2)`);
+      const card = cards.find((c) => c.id === cid)!;
+      const isDivine = card.rarity === 'Divine';
+      const maxCopies = isDivine ? 1 : 2;
+      
+      if ((n as number) > maxCopies) {
+        reasons.push(`Too many copies of ${card.name} (${n}, max ${maxCopies}${isDivine ? ' for Divine' : ''})`);
       }
     }
     return reasons;
   }, [leader, cards]);
 
   const isLegal = legalityReasons.length === 0;
+
+  // ── mana curve ──
+  const manaCurveData = useMemo(() => {
+    const counts = new Array(8).fill(0);
+    cards.forEach(c => {
+      const cost = c.cast_cost ?? 0;
+      const index = Math.min(cost, 7);
+      counts[index]++;
+    });
+    return counts;
+  }, [cards]);
+
+  const maxCount = Math.max(...manaCurveData, 1);
 
   // ── filters ──────────────────────────────────────────────────────────────
   const visibleCollection = useMemo(() => {
@@ -266,11 +287,11 @@ function DeckEditor({
 
   // ── add / remove ─────────────────────────────────────────────────────────
   function addCard(card: OwnedCard) {
-    if (cards.length >= 19) return toast.error("Main deck is full (19 / 19)");
     const inDeck = cards.filter((c) => c.id === card.id).length;
-    if (inDeck >= 2) return toast.error(`Max 2 copies of ${card.name}`);
-    if (card.card_type === "Location" && cards.some((c) => c.card_type === "Location"))
-      return toast.error("Max 1 Location per deck");
+    const isDivine = card.rarity === 'Divine';
+    const limit = isDivine ? 1 : 2;
+    
+    if (inDeck >= limit) return toast.error(`Max ${limit} cop${limit > 1 ? 'ies' : 'y'} of ${card.name}`);
     setCards([...cards, card]);
   }
   function removeCard(idx: number) {
@@ -310,7 +331,7 @@ function DeckEditor({
           id="deck-name-input"
         />
         <span className={`px-2 py-1 rounded text-xs ${isLegal ? "bg-emerald-900 text-emerald-300" : "bg-red-900 text-red-300"}`} id="deck-status-badge">
-          {cards.length}/19 · {isLegal ? "Legal" : "Illegal"}
+          {cards.length} cards · {isLegal ? "Legal" : "Illegal"}
         </span>
         <button
           onClick={() => void save()}
@@ -365,7 +386,7 @@ function DeckEditor({
           )}
 
           <h2 className="text-lg font-bold text-amber-400 mb-2 flex items-center gap-2">
-            Main Deck ({cards.length}/19)
+            Main Deck ({cards.length})
           </h2>
           <div className="space-y-1" id="main-deck-list">
             <AnimatePresence>
@@ -379,14 +400,39 @@ function DeckEditor({
                   id={`card-in-deck-${c.id}-${idx}`}
                 >
                   {TYPE_ICON[c.card_type]}
-                  <span className={`flex-1 truncate text-sm ${RARITY_COLOR[c.rarity]}`}>{c.name}</span>
-                  <span className="text-xs text-gray-500">{c.cast_cost ?? "—"}</span>
-                  <button onClick={() => removeCard(idx)} className="text-gray-500 hover:text-red-400" id={`btn-remove-card-${idx}`}>
+                  <span className={`flex-1 truncate text-sm font-bold ${RARITY_COLOR[c.rarity]}`}>{c.name}</span>
+                  <span className="text-xs bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-black">{c.cast_cost ?? "0"}</span>
+                  <button onClick={() => removeCard(idx)} className="text-gray-500 hover:text-red-400 p-1" id={`btn-remove-card-${idx}`}>
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </motion.div>
               ))}
             </AnimatePresence>
+          </div>
+
+          <div className="mt-8 bg-gray-900/50 border-2 border-gray-800 rounded-xl p-4" id="mana-curve-chart">
+            <h3 className="text-xs font-black uppercase text-gray-500 mb-4 tracking-widest flex items-center gap-2">
+              <Zap className="w-4 h-4" /> Mana Curve
+            </h3>
+            <div className="flex items-end justify-between h-24 gap-1">
+              {manaCurveData.map((count, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
+                  <div 
+                    className={cn(
+                      "w-full rounded-t-sm transition-all duration-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]",
+                      count === 0 ? "bg-gray-800/20" : "bg-blue-500 group-hover:bg-blue-400"
+                    )}
+                    style={{ height: `${(count / maxCount) * 100}%`, minHeight: count > 0 ? '4px' : '2px' }}
+                  />
+                  <span className="text-[8px] font-black text-gray-600 group-hover:text-gray-400">{i === 7 ? '7+' : i}</span>
+                  {count > 0 && (
+                    <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white px-2 py-0.5 rounded text-[10px] font-black z-50 pointer-events-none">
+                      {count}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -435,13 +481,30 @@ function DeckEditor({
                     </span>
                     <span className="text-xs text-gray-500">{inDeck}/{Math.min(2, owned)}</span>
                   </div>
-                  <div className="text-[10px] sm:text-xs text-gray-400 mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                    {c.cast_cost !== null && <span className="bg-slate-800 px-1 rounded">Cost {c.cast_cost}</span>}
-                    {c.defense !== null && <span className="bg-blue-900 px-1 rounded flex items-center gap-0.5"><Shield className="w-2.5 h-2.5" /> {c.defense}</span>}
+                  <div className="text-[10px] sm:text-xs text-gray-400 mt-2 flex flex-wrap gap-x-2 gap-y-1 items-center">
+                    {c.cast_cost !== null && (
+                      <span className="bg-white text-black border-2 border-black px-1.5 rounded-lg font-black shadow-[1px_1px_0px_rgba(0,0,0,1)]">
+                        {c.cast_cost}
+                      </span>
+                    )}
+                    {c.defense !== null && (c.card_type === 'Unit' || c.card_type === 'Artifact') && (
+                      <span className="bg-blue-600 text-white border-2 border-black px-1.5 rounded-lg flex items-center gap-0.5 font-black shadow-[1px_1px_0px_rgba(0,0,0,1)]">
+                        <Shield className="w-2.5 h-2.5" /> {c.defense}
+                      </span>
+                    )}
                     {c.keyword && (
-                      <span className="text-amber-400 font-black uppercase">
+                      <span className="text-yellow-400 font-black uppercase text-[8px] bg-black border border-yellow-400 px-1 rounded shadow-[1px_1px_0px_rgba(255,255,0,0.2)]">
                         {c.keyword} {romanize(c.keyword_tier)}
                       </span>
+                    )}
+                    {c.effect_text && (
+                      <div className="group/effect relative ml-auto">
+                        <Info className="w-3.5 h-3.5 text-blue-400 cursor-help hover:text-blue-300" />
+                        <div className="absolute bottom-full right-0 mb-3 w-56 p-3 bg-black/95 text-white text-[11px] font-bold rounded-xl border-2 border-slate-700 hidden group-hover/effect:block z-[60] shadow-2xl backdrop-blur-sm">
+                          <p className="text-yellow-400 uppercase text-[9px] font-black mb-1">{c.keyword || 'Ability'}</p>
+                          {c.effect_text}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </button>

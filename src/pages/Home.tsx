@@ -9,8 +9,11 @@ import { cn } from '../lib/utils';
 
 import { DailySpinner } from '../components/DailySpinner';
 
+import { calculateLevelProgress } from '../lib/xp';
+
 export function Home() {
   const { profile } = useProfileStore();
+  const levelInfo = React.useMemo(() => profile ? calculateLevelProgress(profile.xp) : null, [profile?.xp]);
   const [quests, setQuests] = useState<any[]>([]);
   const [loadingQuests, setLoadingQuests] = useState(true);
 
@@ -162,11 +165,15 @@ export function Home() {
   };
 
   const MISSION_LABELS: Record<string, string> = {
-    open_packs: '📦 Open Packs',
-    win_battles: '⚔️ Win Battles',
-    collect_cards: '🃏 Collect Cards',
-    spend_gold: '💰 Spend Gold',
-    daily_login: '📅 Daily Login'
+    open_packs: '📦 Pack Opener',
+    win_battles: '⚔️ Gladiator',
+    win_matches: '⚔️ Gladiator',
+    collect_cards: '🃏 Collector',
+    spend_gold: '💰 Big Spender',
+    daily_login: '📅 Daily Check-in',
+    win_at_location: '📍 Local Hero',
+    cast_keyword: '✨ Technician',
+    assassinate_unit: '💀 Executioner'
   };
 
   // Helper for energy countdown
@@ -210,10 +217,19 @@ export function Home() {
             Welcome back, <br/><span className="text-white drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">{profile.username || 'Duelist'}</span>
           </h1>
           <div className="flex flex-wrap gap-3 mb-8">
-            <p className="text-xl text-black font-bold bg-white/50 inline-block px-3 py-1 border-2 border-black rounded-lg transform -rotate-1">
-              Level {profile.level} • {profile.xp} XP
-            </p>
-            <div className="text-xl text-black font-bold bg-blue-100 inline-block px-3 py-1 border-2 border-black rounded-lg transform rotate-1 flex items-center gap-2">
+            <div className="flex flex-col gap-1">
+              <p className="text-xl text-black font-bold bg-white/50 inline-block px-3 py-1 border-2 border-black rounded-lg transform -rotate-1">
+                Level {levelInfo?.level} • {levelInfo?.currentXp}/{levelInfo?.nextLevelXp} XP
+              </p>
+              <div className="h-2 bg-black/20 rounded-full border border-black/40 overflow-hidden w-48">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${levelInfo?.progressPct || 0}%` }}
+                  className="h-full bg-white"
+                />
+              </div>
+            </div>
+            <div className="text-xl text-black font-bold bg-blue-100 inline-block px-3 py-1 border-2 border-black rounded-lg transform rotate-1 flex items-center gap-2 h-fit self-start">
               <Zap className="w-5 h-5 text-blue-600 fill-blue-600" />
               {profile.energy || 0}/10 
               <span className="text-xs text-blue-400 font-black ml-1">
@@ -541,7 +557,21 @@ export function Home() {
             ) : quests.length === 0 ? (
               <div className="text-center py-8 text-slate-500 font-bold bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">No active missions.</div>
             ) : (
-              quests.slice(0, 3).map((quest) => {
+              [...quests]
+                .sort((a, b) => {
+                  // Claimable first, then active, then claimed
+                  const aClaimable = a.is_completed && !a.is_claimed;
+                  const bClaimable = b.is_completed && !b.is_claimed;
+                  if (aClaimable && !bClaimable) return -1;
+                  if (!aClaimable && bClaimable) return 1;
+                  
+                  if (!a.is_claimed && b.is_claimed) return -1;
+                  if (a.is_claimed && !b.is_claimed) return 1;
+                  
+                  return 0;
+                })
+                .slice(0, 3)
+                .map((quest) => {
                 const missionType = MISSION_LABELS[quest.mission_type] || (quest.mission_type || '').replace(/_/g, ' ').toUpperCase();
                 const primaryReward = quest.reward_gems > 0
                   ? { type: 'gems', amount: quest.reward_gems }
@@ -685,10 +715,11 @@ export function Home() {
 }
 
 function MissionRow({ quest, missionType, primaryReward, onClaim, isClaiming, disabled }: { 
+  key?: any;
   quest: any; 
   missionType: string; 
   primaryReward: any; 
-  onClaim: () => void;
+  onClaim: () => void | Promise<void>;
   isClaiming: boolean;
   disabled: boolean;
 }) {

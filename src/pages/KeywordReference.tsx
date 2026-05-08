@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { Crown, MapPin, Swords, Sparkles, Package, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { KEYWORDS } from "../lib/dmh/keywords-data"; // fallback
+import toast from "react-hot-toast";
+import { cn } from "../lib/utils";
 
 const CATEGORIES = ["All", "Leader", "Location", "Unit", "Event", "Artifact"] as const;
 type Category = typeof CATEGORIES[number];

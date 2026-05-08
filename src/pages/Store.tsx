@@ -286,6 +286,11 @@ export function Store() {
             // Update missions & quests
             supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
             
+            // Increment Season Pass XP (assumes p_amount is data.xp_earned or a portion of it)
+            if (data.xp_earned) {
+              supabase.rpc('add_season_pass_xp', { p_amount: data.xp_earned });
+            }
+            
             // ✨ Show god pack immediately on detection
             if (data.is_god_pack && !hasGodPack) {
               hasGodPack = true;
@@ -404,6 +409,10 @@ export function Store() {
       
       // Update missions & quests
       supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
+      
+      if (data.xp_earned) {
+        supabase.rpc('add_season_pass_xp', { p_amount: data.xp_earned });
+      }
 
       if (data.is_god_pack) {
         setShowGodPackCinematic(true);
@@ -475,6 +484,10 @@ export function Store() {
 
         // Update missions & quests
         supabase.rpc('increment_mission_progress', { p_mission_type: 'open_packs', p_amount: 1 });
+        
+        if (data.xp_earned) {
+          supabase.rpc('add_season_pass_xp', { p_amount: data.xp_earned });
+        }
 
         if (data.is_god_pack && !hasGodPack) {
           hasGodPack = true;

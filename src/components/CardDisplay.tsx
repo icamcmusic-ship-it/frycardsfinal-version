@@ -55,6 +55,7 @@ export function CardDisplay({
   };
   const colorKey = RARITY_COLOR_MAP[rarityKey] ?? 'gray';
   const isFoil = Boolean(card.is_foil);
+  const lowPerf = JSON.parse(localStorage.getItem('frycards_settings') || '{}').low_perf_mode;
 
   // Derive Grade Background
   const GRADE_MAP: Record<string, string> = {
@@ -71,7 +72,7 @@ export function CardDisplay({
       className={cn(
         'card-base brut-border brut-shadow transition-all duration-300 group hover:-translate-y-2 hover:scale-[1.02]',
         rarityKey === 'divine' && card.is_video && 'effect-divine',
-        isFoil && 'foil-shine',
+        isFoil && !lowPerf && 'foil-shine',
         className
       )}
     >
@@ -122,7 +123,7 @@ export function CardDisplay({
           </div>
 
           {/* Cast Cost */}
-          {card.cast_cost !== undefined && (
+          {card.cast_cost != null && (
             <div className="sticker w-[12cqw] h-[12cqw] rounded-full bg-slate-100 border-[0.8cqw] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center justify-center transform -translate-y-[2cqw] -rotate-12">
               <span className="text-[6cqw] font-black text-black">{card.cast_cost}</span>
             </div>
@@ -162,8 +163,15 @@ export function CardDisplay({
             </div>
           )}
 
-          {/* Defense Score */}
-          {card.defense !== undefined && (
+          {/* Effect Text */}
+          {card.effect_text && (
+            <div className="sticker mt-[1cqw] px-[2.5cqw] py-[1.5cqw] rounded-lg bg-white/90 border-[0.6cqw] border-black text-[2.2cqw] font-bold text-black leading-snug">
+              {card.effect_text}
+            </div>
+          )}
+
+          {/* Defense Score - Units & Artifacts only */}
+          {card.defense != null && (card.card_type === 'Unit' || card.card_type === 'Artifact') && (
             <div className="sticker w-[14cqw] h-[14cqw] rounded-lg bg-blue-600 text-white border-[0.8cqw] border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center justify-center transform rotate-6">
               <span className="text-[2cqw] font-black uppercase leading-none mb-[0.5cqw]">DEF</span>
               <span className="text-[5cqw] font-black leading-none">{card.defense}</span>
@@ -251,7 +259,7 @@ export function CardDisplay({
                   <span className="text-[4.5cqw] font-black leading-none">×{card.quantity}</span>
                 )}
                 {card.foil_quantity != null && card.foil_quantity > 0 && (
-                  <span className="text-[4.5cqw] font-black leading-none text-yellow-400 flex items-center">
+                  <span className="badge-foil text-[4.5cqw] font-black leading-none text-yellow-400 flex items-center">
                     {card.quantity != null && card.quantity > 0 && <span className="mx-[0.5cqw] text-white/50 text-[3cqw]">+</span>}
                     ✨×{card.foil_quantity}
                   </span>

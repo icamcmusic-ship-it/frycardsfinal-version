@@ -54,6 +54,16 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, onSel
         onToggleWishlist={!hideActions && onToggleWishlist ? () => onToggleWishlist() : undefined}
         isWishlisted={isWishlisted}
       />
+
+      {/* Info Overlay on Hover */}
+      {!isBatchMode && card.effect_text && (
+        <div className="absolute inset-x-0 bottom-0 z-40 p-4 opacity-0 group-hover:opacity-100 transition-opacity translate-y-4 group-hover:translate-y-0 duration-300 pointer-events-none">
+          <div className="bg-black/90 text-white p-3 rounded-2xl border-4 border-white shadow-xl">
+             <p className="text-[12px] font-black uppercase text-yellow-400 mb-1 leading-none">{card.keyword || 'Ability'}</p>
+             <p className="text-[10px] font-bold leading-tight line-clamp-3">{card.effect_text}</p>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

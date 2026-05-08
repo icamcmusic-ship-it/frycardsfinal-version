@@ -148,12 +148,20 @@ export function Quests() {
     );
   }
 
-  const activeQuests = quests.filter(q => q.status === 'in_progress');
-  const readyQuests = quests.filter(q => q.status === 'completed');
-  const claimedQuests = quests.filter(q => q.status === 'claimed');
-
-  const activeDaily = dailyMissions.filter(m => !m.is_claimed);
+  const activeDaily = dailyMissions
+    .filter(m => !m.is_claimed)
+    .sort((a, b) => {
+      const aReady = a.is_completed;
+      const bReady = b.is_completed;
+      if (aReady && !bReady) return -1;
+      if (!aReady && bReady) return 1;
+      return 0;
+    });
   const completedDaily = dailyMissions.filter(m => m.is_claimed);
+
+  const readyQuests = quests.filter(q => q.status === 'completed');
+  const activeQuests = quests.filter(q => q.status === 'in_progress');
+  const claimedQuests = quests.filter(q => q.status === 'claimed');
 
   return (
     <div className="space-y-12 max-w-4xl mx-auto">

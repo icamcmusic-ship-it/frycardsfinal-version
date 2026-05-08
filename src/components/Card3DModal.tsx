@@ -176,7 +176,49 @@ export function Card3DModal({ card, cardBackUrl, onClose, onSell, onList, onTogg
               <span className="text-xs font-bold px-3 py-1.5 rounded-xl border-2 border-black bg-gray-100 text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]">
                 {card.card_type}
               </span>
+              {card.power_grade && (
+                <span className={cn(
+                  "text-xs font-black px-3 py-1.5 rounded-xl border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]",
+                  card.power_grade === 'S' ? 'bg-red-500 text-white' : 
+                  card.power_grade === 'A' ? 'bg-orange-500 text-white' :
+                  card.power_grade === 'B' ? 'bg-blue-500 text-white' : 'bg-slate-500 text-white'
+                )}>
+                  Grade {card.power_grade}
+                </span>
+              )}
             </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {card.cast_cost != null && (
+                <div className="bg-slate-100 border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <p className="text-[10px] font-black uppercase text-slate-500">Cast Cost</p>
+                  <p className="text-2xl font-black">{card.cast_cost}</p>
+                </div>
+              )}
+              {card.defense != null && (card.card_type === 'Unit' || card.card_type === 'Artifact') && (
+                <div className="bg-blue-100 border-2 border-black rounded-xl p-3 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <p className="text-[10px] font-black uppercase text-blue-600">Defense</p>
+                  <p className="text-2xl font-black">{card.defense}</p>
+                </div>
+              )}
+            </div>
+
+            {card.keyword && (
+              <div className="bg-black text-yellow-400 border-2 border-black rounded-xl p-3 mb-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <p className="text-[10px] font-black uppercase text-yellow-400 mb-1">Ability Keyword</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-lg font-black uppercase">{card.keyword}</p>
+                  <span className="text-black bg-yellow-400 px-2 py-0.5 rounded font-black text-sm">Tier {card.keyword_tier || 1}</span>
+                </div>
+              </div>
+            )}
+
+            {card.effect_text && (
+              <div className="bg-white border-2 border-black rounded-xl p-4 mb-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <p className="text-[10px] font-black uppercase text-slate-400 mb-2">Effect</p>
+                <p className="text-sm font-bold leading-relaxed">{card.effect_text}</p>
+              </div>
+            )}
 
             {card.flavor_text && (
               <div className="bg-slate-50 border-2 border-black rounded-2xl p-4 mb-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">

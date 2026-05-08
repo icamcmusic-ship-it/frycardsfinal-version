@@ -204,7 +204,12 @@ export function Layout() {
           filter: 'room_id=eq.global'
         }, (payload) => {
           if (payload.new) {
-            addMessage(payload.new as any);
+            // Standardize on 'content' field
+            const msg = {
+              ...payload.new,
+              content: payload.new.content || payload.new.body
+            };
+            addMessage(msg as any);
             if (payload.new.user_id !== user.id && !isChatOpen) {
               setUnreadChatCountZustand((prev: number) => prev + 1);
             }

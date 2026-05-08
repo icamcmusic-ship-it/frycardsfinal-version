@@ -71,13 +71,13 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  sendMessage: async (body: string, userId: string, username: string) => {
+  sendMessage: async (content: string, userId: string, username: string) => {
     set({ sending: true });
     try {
       const { error } = await supabase.from('messages_history').insert({
         user_id: userId,
         username: username,
-        body: body,
+        content: content,
         room_id: 'global'
       });
 
@@ -89,11 +89,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   addMessage: (msg) => {
     set(state => {
+      const msgContent = msg.content || msg.body;
       if (state.messages.some(m => 
         (m.id && m.id === msg.id) || 
-        (m.user_id === msg.user_id && m.body === msg.body && Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 2000)
+        (m.user_id === msg.user_id && (m.content === msgContent || m.body === msgContent) && Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 2000)
       )) return state;
-      return { messages: [...state.messages, msg] };
+      return { messages: [...state.messages, { ...msg, content: msgContent }] };
     });
   },
 
