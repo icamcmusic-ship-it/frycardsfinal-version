@@ -177,15 +177,15 @@ export function Profile() {
     try {
       const { error } = await supabase.rpc('update_user_profile', {
         p_username: username,
-        p_avatar_url: profile.avatar_url,
-        p_banner_url: profile.banner_url,
+        p_avatar_url: avatarUrl,
+        p_banner_url: bannerUrl,
         p_bio: bio
       });
 
       if (error) throw error;
       
       // Update local state
-      setProfile({ ...profile, username, bio });
+      setProfile({ ...profile, username, avatar_url: avatarUrl, banner_url: bannerUrl, bio });
       setEditing(false);
       toast.success('Profile updated successfully!');
     } catch (err: any) {

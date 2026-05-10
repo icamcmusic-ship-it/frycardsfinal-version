@@ -68,8 +68,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
         p_search: filters.search || null,
         p_wishlist_only: activeTab === 'wishlist',
         p_low_serial_only: filters.lowSerialOnly || false,
-        p_keyword: filters.keyword === 'all' ? null : filters.keyword,
-        p_power_grade: null
+        p_keyword: filters.keyword === 'all' ? null : filters.keyword
       }).abortSignal(controller.signal);
       
       if (error) throw error;
@@ -157,6 +156,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
     hasMore,
     stats,
     wishlistCardIds,
+    setWishlistCardIds,
     fetchCollection,
     fetchStats,
     setCards

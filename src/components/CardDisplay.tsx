@@ -52,7 +52,13 @@ export function CardDisplay({
   };
   const rStyle = RARITY_COLOR_MAP[rarityKey] ?? RARITY_COLOR_MAP['common'];
   const isFoil = Boolean(card.is_foil);
-  const lowPerf = JSON.parse(localStorage.getItem('frycards_settings') || '{}').low_perf_mode;
+  const lowPerf = React.useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('frycards_settings') || '{}').low_perf_mode;
+    } catch {
+      return false;
+    }
+  }, []);
 
   return (
     <div

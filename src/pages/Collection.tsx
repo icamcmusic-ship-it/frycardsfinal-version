@@ -34,6 +34,7 @@ export function Collection() {
   );
   const [keyword, setKeyword] = useState<string>(() => sessionStorage.getItem('col_keyword') || 'all');
   const [lowSerialOnly, setLowSerialOnly] = useState(false);
+  const [selectedSetId, setSelectedSetId] = useState<string>(() => sessionStorage.getItem('col_set_id') || 'all');
   const [viewSize, setViewSize] = useState<'normal' | 'large'>(() => 
     (localStorage.getItem('col_view_size') as any) || 'normal'
   );
@@ -68,6 +69,7 @@ export function Collection() {
     hasMore, 
     stats, 
     wishlistCardIds, 
+    setWishlistCardIds,
     fetchCollection, 
     fetchStats,
     setCards 
@@ -75,7 +77,7 @@ export function Collection() {
     rarity: filter,
     sortBy,
     cardType,
-    setId: 'all',
+    setId: selectedSetId,
     search: debouncedSearch,
     foilFilter,
     lowSerialOnly,
@@ -99,8 +101,9 @@ export function Collection() {
     sessionStorage.setItem('col_card_type', cardType);
     sessionStorage.setItem('col_foil_filter', foilFilter);
     sessionStorage.setItem('col_keyword', keyword);
+    sessionStorage.setItem('col_set_id', selectedSetId);
     localStorage.setItem('col_view_size', viewSize);
-  }, [activeTab, filter, sortBy, cardType, foilFilter, viewSize, keyword]);
+  }, [activeTab, filter, sortBy, cardType, foilFilter, viewSize, keyword, selectedSetId]);
 
   useEffect(() => {
     if (profile) {
@@ -153,21 +156,16 @@ export function Collection() {
       const newWishlist = new Set(wishlistCardIds);
       if (isCurrentlyWishlisted) newWishlist.delete(cardId);
       else newWishlist.add(cardId);
-      
-      // We need it to force a re-render if using useCollection hook's state
-      // But useCollection doesn't expose setWishlist. 
-      // I'll assume fetchCollection() is fine for now but I should really update the UI state if possible.
-      // Wait, useCollection manages wishlist internal to the hook (indirectly via RPC).
+      setWishlistCardIds(newWishlist);
       
       const { error } = await supabase.rpc('toggle_wishlist', { p_card_id: cardId });
       if (error) throw error;
       
-      fetchCollection(); // Still fetch to sync, but optimist reduces flicker if I could update the hook state.
       toast.success(isCurrentlyWishlisted ? 'Removed from wishlist' : 'Added to wishlist', { icon: '✨', id: `wish-${cardId}` });
     } catch (err) {
       console.error('Error toggling wishlist:', err);
       toast.error('Failed to update wishlist');
-      fetchCollection();
+      fetchCollection(); // Sync back if failed
     }
   };
 
@@ -298,7 +296,7 @@ export function Collection() {
     
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMoreRef.current) {
+        if (entries[0].isIntersecting && hasMore && !loading && !loadingMoreRef.current) {
           loadingMoreRef.current = true;
           fetchCollection(true);
         }
@@ -542,15 +540,15 @@ export function Collection() {
                 />
               </div>
 
-              {sets.length > 1 && (
+              {sets.length > 1 && (activeTab === 'collection') && (
                 <select
-                  value="all"
-                  onChange={() => {}}
-                  className="px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)] hidden"
+                  value={selectedSetId}
+                  onChange={(e) => setSelectedSetId(e.target.value)}
+                  className="px-4 py-2 bg-[var(--surface)] border-4 border-[var(--border)] rounded-xl text-[var(--text)] font-bold shadow-[4px_4px_0px_0px_var(--border)]"
                 >
                   <option value="all">All Sets</option>
                   {sets.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
+                    <option key={s.id} value={s.id}>{s.name} ({s.owned_count}/{s.total_count})</option>
                   ))}
                 </select>
               )}
@@ -632,6 +630,7 @@ export function Collection() {
                   setFoilFilter('all');
                   setKeyword('all');
                   setLowSerialOnly(false);
+                  setSelectedSetId('all');
                 }}
                 className="px-4 py-2 bg-white text-slate-500 font-bold rounded-xl border-4 border-slate-200 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors"
                 title="Clear all filters"
