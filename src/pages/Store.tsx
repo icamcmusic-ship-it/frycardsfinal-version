@@ -161,6 +161,7 @@ export function Store() {
   const [claimingStarter, setClaimingStarter] = useState(false);
   const [userCosmetics, setUserCosmetics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [packsError, setPacksError] = useState(false);
   const [opening, setOpening] = useState(false);
   const [openingPackImageUrl, setOpeningPackImageUrl] = useState<string>('');
   const [selectedCard, setSelectedCard] = useState<any>(null);
@@ -254,7 +255,7 @@ export function Store() {
     if (!profile) return;
     try {
       const { data } = await supabase.rpc('has_user_claimed_starter');
-      setStarterDeckClaimed(!!data);
+      setStarterDeckClaimed(data === true);
     } catch (err) {
       console.error('Error fetching starter deck status:', err);
     }
@@ -294,12 +295,14 @@ export function Store() {
   };
 
   const fetchPacks = async () => {
+    setPacksError(false);
     try {
       const { data, error } = await supabase.rpc('get_available_packs');
       if (error) throw error;
       setPacks(data || []);
     } catch (err) {
       console.error('Error fetching packs:', err);
+      setPacksError(true);
       toast.error('Failed to load packs');
     }
   };
@@ -1095,6 +1098,28 @@ export function Store() {
       {/* Content based on activeTab */}
       {activeTab === 'packs' && (
         <div className="space-y-12">
+          {/* Collection Summary Banner (Mismatch Fix) */}
+          {collectionStats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-indigo-600 border-4 border-black rounded-2xl shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] text-white">
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black uppercase opacity-70">Total Cards</span>
+                <span className="text-2xl font-black">{collectionStats.total_cards}</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black uppercase opacity-70">Completion</span>
+                <span className="text-2xl font-black">{Math.round(collectionStats.completion_pct || 0)}%</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black uppercase opacity-70">Unique Cards</span>
+                <span className="text-2xl font-black">{collectionStats.unique_cards}</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[10px] font-black uppercase opacity-70">Foils Found</span>
+                <span className="text-2xl font-black">{collectionStats.foil_cards}</span>
+              </div>
+            </div>
+          )}
+
           {/* New Player Bundle Section */}
           {shopItems.some(i => i.item_type === 'starter_deck') && (
             <div className="space-y-6">
@@ -1228,7 +1253,19 @@ export function Store() {
             )}
           </AnimatePresence>
 
-          {packs.length === 0 ? (
+          {packsError ? (
+            <div className="bg-red-50 border-4 border-red-200 rounded-2xl p-12 text-center">
+              <Package className="w-16 h-16 text-red-400 mx-auto mb-4" />
+              <h3 className="text-2xl font-black text-red-900 uppercase tracking-tight">Failed to load packs</h3>
+              <p className="text-red-700 font-bold mb-6">There was a problem connecting to the pack server.</p>
+              <button 
+                onClick={fetchPacks}
+                className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-y-1 active:shadow-none uppercase"
+              >
+                Retry Connection
+              </button>
+            </div>
+          ) : packs.length === 0 ? (
             <div className="col-span-full">
               <EmptyState 
                 icon={PackageOpen}

@@ -58,6 +58,7 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
 
       const { data, error } = await supabase.rpc('get_user_collection', {
         p_user_id: profile.id,
+        p_set_id: filters.setId === 'all' ? null : filters.setId,
         p_rarity: rarityForApi,
         p_sort_by: filters.sortBy,
         p_card_type_filter: capitalizedCardType,
@@ -67,7 +68,8 @@ export function useCollection(activeTab: 'collection' | 'wishlist' | 'sets', fil
         p_search: filters.search || null,
         p_wishlist_only: activeTab === 'wishlist',
         p_low_serial_only: filters.lowSerialOnly || false,
-        p_keyword: filters.keyword === 'all' ? null : filters.keyword
+        p_keyword: filters.keyword === 'all' ? null : filters.keyword,
+        p_power_grade: null
       }).abortSignal(controller.signal);
       
       if (error) throw error;

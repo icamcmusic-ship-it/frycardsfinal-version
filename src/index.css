@@ -314,6 +314,28 @@ body { background-color: var(--bg); color: var(--text); }
   padding-bottom: calc(4rem + env(safe-area-inset-bottom)); 
 }
 
+@keyframes divine-border {
+  0%   { --border-angle: 0deg }
+  100% { --border-angle: 360deg }
+}
+
+@property --border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.divine-card {
+  background: conic-gradient(from var(--border-angle), #ef4444, #f97316, #facc15, #ef4444) border-box !important;
+  animation: divine-border 3s linear infinite !important;
+  border-color: transparent !important;
+}
+.mythic-card {
+  background: conic-gradient(from var(--border-angle), #eab308, #fde047, #fff, #eab308) border-box !important;
+  animation: divine-border 4s linear infinite !important;
+  border-color: transparent !important;
+}
+
 /* === SKELETON LOADERS === */
 .skeleton-card {
   width: 100%;

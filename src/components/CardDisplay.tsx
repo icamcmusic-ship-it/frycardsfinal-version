@@ -60,7 +60,7 @@ export function CardDisplay({
         'relative flex flex-col overflow-hidden rounded-lg border-4 brut-shadow transition-all duration-300',
         'group hover:-translate-y-2 hover:scale-[1.02] cursor-pointer',
         'aspect-[2/3]',
-        rStyle.border,
+        rarityKey === 'divine' ? 'divine-card' : rarityKey === 'mythic' ? 'mythic-card' : rStyle.border,
         rStyle.glow,
         isFoil && !lowPerf && 'foil-shine',
         className
@@ -119,29 +119,49 @@ export function CardDisplay({
       </div>
 
       {/* ── INFO AREA (remaining height) ────────────────── */}
-      <div className={cn(
-        'flex-1 flex flex-col justify-between px-2 pt-1.5 pb-1',
-        'bg-[var(--surface)] border-t-2 border-[var(--border)]'
-      )}>
-        {/* Name + rarity badge */}
-        <div className="flex items-start justify-between gap-1">
-          <span className="text-[11px] font-black uppercase leading-tight line-clamp-2 text-[var(--text)]">
-            {card.name}
-          </span>
-          <span className={cn(
-            'text-[8px] font-black uppercase px-1 py-0.5 rounded border border-current flex-shrink-0',
-            rStyle.badge
-          )}>
-            {(card.rarity || 'Common').replace('Super-Rare', 'SR')}
-          </span>
+      <div className="flex flex-col bg-white dark:bg-slate-900 flex-1 min-h-0 px-2 py-1.5 gap-0.5 border-t-2 border-[var(--border)]">
+        {/* Card name */}
+        <p className="text-[11px] font-black uppercase leading-tight truncate text-black dark:text-white">
+          {card.name}
+        </p>
+
+        {/* Stats row: cast cost + keyword + defense */}
+        <div className="flex items-center justify-between gap-1">
+          
+          {/* Cast cost (top-left) */}
+          {card.cast_cost != null && (
+            <div className="flex items-center gap-0.5 bg-yellow-400 text-black px-1.5 py-0.5 rounded-full border border-black text-[9px] font-black leading-none">
+              <Coins className="w-2.5 h-2.5" />
+              {card.cast_cost}
+            </div>
+          )}
+
+          {/* Keyword pill (center) */}
+          {card.keyword && (
+            <span className="text-[8px] font-black uppercase bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full border border-indigo-300 leading-none truncate max-w-[60px]">
+              {card.keyword}
+            </span>
+          )}
+
+          {/* Defense (bottom-right) */}
+          {card.defense != null && (
+            <div className="flex items-center gap-0.5 bg-slate-800 text-white px-1.5 py-0.5 rounded-full border border-black text-[9px] font-black leading-none">
+              <Shield className="w-2.5 h-2.5" />
+              {card.defense}
+            </div>
+          )}
         </div>
 
-        {/* Type line + keyword */}
-        <div className="flex items-center justify-between mt-0.5">
-          <span className="text-[9px] font-bold text-slate-500 uppercase">
-            {card.card_type || ''}
-            {card.keyword ? ` · ${card.keyword} ${card.keyword_tier ? ['I','II','III'][card.keyword_tier - 1] : ''}` : ''}
+        {/* Rarity badge + foil/serial / set info */}
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className={cn("text-[8px] font-black px-1.5 py-0.5 rounded-full border leading-none", rStyle.badge)}>
+            {isFoil ? '✨ ' : ''}{card.rarity}
           </span>
+          {card.serial_number && (
+            <span className="text-[8px] font-black text-yellow-600 leading-none">
+              #{card.serial_number}
+            </span>
+          )}
           {card.set_name && (
             <span
               className="text-[8px] font-bold uppercase px-1 py-0.5 rounded"
@@ -152,25 +172,9 @@ export function CardDisplay({
           )}
         </div>
 
-        {/* Stats row (defense + cast cost) */}
-        {(card.defense != null || card.cast_cost != null) && (
-          <div className="flex items-center justify-between mt-0.5">
-            {card.defense != null && (
-              <span className="text-[10px] font-black text-blue-600 flex items-center gap-0.5">
-                <Shield className="w-2.5 h-2.5" />{card.defense}
-              </span>
-            )}
-            {card.cast_cost != null && card.cast_cost > 0 && (
-              <span className="text-[10px] font-black text-amber-600 flex items-center gap-0.5">
-                <Zap className="w-2.5 h-2.5" />{card.cast_cost}
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Quantity */}
         {showQuantity && card.quantity != null && card.quantity > 0 && (
-          <div className="flex items-center gap-1 mt-0.5">
+          <div className="flex items-center gap-1 mt-auto pb-0.5">
             <span className="text-[9px] font-bold bg-[var(--border)] text-[var(--text)] px-1.5 py-0.5 rounded">
               ×{card.quantity}
             </span>
