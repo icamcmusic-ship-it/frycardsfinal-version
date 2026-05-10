@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useProfileStore } from '../stores/profileStore';
-import { PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon, LayoutGrid, Star, Zap, Plus, Target, Award, Package } from 'lucide-react';
+import { 
+  PackageOpen, Sparkles, Loader2, Coins, Gem, Shirt, Store as StoreIcon, LayoutGrid, Star, Zap, Plus, Target, Award, Package,
+  Crown, MapPin, Swords, Gift, CheckCircle
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, getRarityStyles } from '../lib/utils';
 import toast from 'react-hot-toast';
@@ -66,6 +69,79 @@ function SlotBreakdown({ slotConfig }: { slotConfig: any[] }) {
   );
 }
 
+function StarterDeckCard({ item, claimed, onClaim, loading }: { item: any, claimed: boolean, onClaim: () => any, loading: boolean, key?: any }) {
+  return (
+    <motion.div
+      whileHover={{ y: -4 }}
+      className="bg-gradient-to-br from-indigo-600 to-purple-700 border-4 border-black rounded-3xl p-6 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-white relative overflow-hidden group"
+    >
+      {/* Background patterns */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 blur-3xl -translate-y-1/2 translate-x-1/2 rounded-full" />
+      <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400/20 blur-2xl rounded-full" />
+      
+      <div className="relative z-10">
+        <div className="flex justify-between items-start mb-6">
+          <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center border-2 border-white/20 rotate-3 group-hover:rotate-6 transition-transform">
+            <Gift className="w-8 h-8 text-yellow-400" />
+          </div>
+          <div className="bg-yellow-400 text-black text-[10px] font-black px-3 py-1 rounded-full border-2 border-black uppercase tracking-widest shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]">
+            New Player Special
+          </div>
+        </div>
+
+        <h3 className="text-3xl font-black uppercase italic tracking-tighter mb-2">
+          Starter Deck Bundle
+        </h3>
+        <p className="text-indigo-100 font-bold mb-6 text-sm leading-relaxed">
+          The perfect entry into Dead Man's Hand. Includes 20 curated cards to form a competitive legal deck.
+        </p>
+
+        <div className="space-y-3 mb-8">
+          <div className="flex items-center gap-3 text-xs font-black uppercase">
+            <div className="w-6 h-6 bg-yellow-400 text-black rounded-lg flex items-center justify-center border-2 border-black rotate-3">
+              <Crown className="w-3 h-3" />
+            </div>
+            <span>1 Exclusive Leader Card</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs font-black uppercase">
+            <div className="w-6 h-6 bg-blue-400 text-black rounded-lg flex items-center justify-center border-2 border-black -rotate-3">
+              <Swords className="w-3 h-3" />
+            </div>
+            <span>19 Competitive Units & Events</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs font-black uppercase">
+            <div className="w-6 h-6 bg-emerald-400 text-black rounded-lg flex items-center justify-center border-2 border-black rotate-6">
+              <MapPin className="w-3 h-3" />
+            </div>
+            <span>Ready-to-Play Deck Preset</span>
+          </div>
+        </div>
+
+        <button
+          onClick={onClaim}
+          disabled={claimed || loading}
+          className={cn(
+            "w-full py-4 rounded-2xl font-black uppercase text-lg border-4 border-black transition-all shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none",
+            claimed 
+              ? "bg-emerald-500 text-white cursor-default" 
+              : "bg-white text-indigo-700 hover:bg-yellow-400 hover:text-black cursor-pointer"
+          )}
+        >
+          {loading ? (
+            <Loader2 className="w-6 h-6 animate-spin mx-auto" />
+          ) : claimed ? (
+            <span className="flex items-center justify-center gap-2">
+              <CheckCircle className="w-6 h-6" /> Claimed
+            </span>
+          ) : (
+            "Claim Free Starter Deck"
+          )}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 export function Store() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -81,6 +157,8 @@ export function Store() {
   const [activeTab, setActiveTab] = useState<'packs' | 'inventory' | 'shop' | 'spark'>(initialTab);
   const [packs, setPacks] = useState<any[]>([]);
   const [shopItems, setShopItems] = useState<any[]>([]);
+  const [starterDeckClaimed, setStarterDeckClaimed] = useState(false);
+  const [claimingStarter, setClaimingStarter] = useState(false);
   const [userCosmetics, setUserCosmetics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [opening, setOpening] = useState(false);
@@ -160,8 +238,26 @@ export function Store() {
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchPacks(), fetchUserCosmetics(), fetchInventory(), fetchWishlistCardIds(), fetchShopItems(), fetchCollectionStats()]);
+    await Promise.all([
+      fetchPacks(), 
+      fetchUserCosmetics(), 
+      fetchInventory(), 
+      fetchWishlistCardIds(), 
+      fetchShopItems(), 
+      fetchCollectionStats(),
+      fetchStarterDeckStatus()
+    ]);
     setLoading(false);
+  };
+
+  const fetchStarterDeckStatus = async () => {
+    if (!profile) return;
+    try {
+      const { data } = await supabase.rpc('has_user_claimed_starter');
+      setStarterDeckClaimed(!!data);
+    } catch (err) {
+      console.error('Error fetching starter deck status:', err);
+    }
   };
 
   const fetchCollectionStats = async () => {
@@ -715,6 +811,38 @@ export function Store() {
     });
   };
 
+  const purchaseStarterDeck = async (itemId: string) => {
+    if (claimingStarter) return;
+    setClaimingStarter(true);
+    try {
+      const { data, error } = await supabase.rpc('purchase_starter_deck', {
+        p_shop_item_id: itemId
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || "Failed to claim deck");
+      }
+
+      toast.success("Starter Deck claimed! Check your collection.", { icon: '🎁' });
+      setStarterDeckClaimed(true);
+      useProfileStore.getState().refreshProfile();
+      
+      // Delay toast to avoid overlap
+      setTimeout(() => {
+        toast("Head to Deck Builder to customize your new deck!", {
+          icon: '🎴',
+          duration: 5000,
+          position: 'bottom-center'
+        });
+      }, 2000);
+
+    } catch (err: any) {
+      toast.error(err.message || "Failed to claim starter deck");
+    } finally {
+      setClaimingStarter(false);
+    }
+  };
+
   const renderPackCard = (pack: any) => {
     const isDualCost = (pack.cost_gold ?? 0) > 0 && (pack.cost_gems ?? 0) > 0;
     const useGems = isDualCost ? (cosmicUseGems[pack.id] ?? false) : (pack.cost_gems > 0 && !((pack.cost_gold ?? 0) > 0));
@@ -967,6 +1095,40 @@ export function Store() {
       {/* Content based on activeTab */}
       {activeTab === 'packs' && (
         <div className="space-y-12">
+          {/* New Player Bundle Section */}
+          {shopItems.some(i => i.item_type === 'starter_deck') && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+                <LayoutGrid className="w-6 h-6 text-indigo-500" />
+                New Player Bundle
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {shopItems
+                  .filter(i => i.item_type === 'starter_deck')
+                  .map(item => (
+                    <StarterDeckCard 
+                      key={item.id} 
+                      item={item} 
+                      claimed={starterDeckClaimed}
+                      loading={claimingStarter}
+                      onClaim={() => purchaseStarterDeck(item.id)}
+                    />
+                  ))
+                }
+                
+                {/* Secondary Bundle Card (Visual Anchor) */}
+                {!starterDeckClaimed && (
+                  <div className="hidden lg:flex bg-slate-100 border-4 border-dashed border-slate-300 rounded-3xl items-center justify-center p-8 text-center text-slate-400">
+                    <div className="max-w-[200px]">
+                      <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                      <p className="font-bold text-sm uppercase italic">More bundles coming in v1.1 update.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Global Pity Tracker Section */}
           <div className="bg-[var(--surface)] border-4 border-black rounded-2xl p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full" />

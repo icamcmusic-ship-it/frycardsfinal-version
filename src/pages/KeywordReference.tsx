@@ -32,7 +32,6 @@ interface KwRow {
   short_description: string;
   rules_text: string;
   example_card_name?: string;
-  power_grade?: "S" | "A" | "B" | "C" | "D" | null;
 }
 
 export default function KeywordReference() {
@@ -156,14 +155,6 @@ export default function KeywordReference() {
                               <span className="w-10 h-10 bg-amber-400 border-2 border-black rounded-lg flex items-center justify-center font-black text-black rotate-6">
                                 {t.tier}
                               </span>
-                              {t.power_grade && (
-                                <span className={cn(
-                                  "text-[10px] font-black px-1.5 py-0.5 rounded border border-black",
-                                  t.power_grade === 'S' ? 'bg-red-500 text-white' : 'bg-slate-200 text-black'
-                                )}>
-                                  {t.power_grade}
-                                </span>
-                              )}
                             </div>
                             <div className="flex-1">
                               <p className="text-black font-bold leading-tight">{t.rules_text}</p>
