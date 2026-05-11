@@ -86,6 +86,8 @@ export interface Seat {
   unit: Unit | null;
   locked: boolean;             // from fold penalty / Cursed III
   artifactOnEmptySeat?: string; // Cursed III, Sabotage on empty seat
+  _lockNextHand?: boolean;      // set during fold, applied at startNewHand
+  _exhaustNextHand?: boolean;   // set during post-flop fold, applied at startNewHand
 }
 
 export interface Player {
@@ -121,6 +123,9 @@ export interface Player {
   // Permanent
   cannotFold: boolean;         // Faustian III absolute drawback
   cannotBetOrRaise: boolean;   // Reckless III drawback
+  assassinationUsedThisHand: boolean; // §7: only 1 assassination per hand
+  firstCastDiscountUsed: boolean;      // Vanguard II: first cast -10 chips
+  cardBackImageUrl?: string;           // cosmetic
 }
 
 // ---- Match state ----------------------------------------------------------
@@ -157,6 +162,7 @@ export interface MatchState {
   // Pot
   pot: Pot;
   bigBlind: number;              // doubled by High Stakes
+  cardDefs: Record<string, CardDef>; // all card definitions by ID — needed by engine
   // Showdown
   winnerThisHand: PlayerSide | 'split' | null;
   // Logs

@@ -9,15 +9,21 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import toast from "react-hot-toast";
-import { Bot, Users, Trophy, Sparkles } from "lucide-react";
+import { Bot, Users, Trophy, Sparkles, Loader2, Crown } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../stores/authStore"; 
 import type { CpuDifficulty } from "../lib/dmh/cpu";
+import type { CardDef } from "../lib/dmh/types";
 
 interface DeckOption {
   id: string;
   name: string;
   is_legal: boolean;
+  leader?: {
+    id: string;
+    name: string;
+    image_url: string | null;
+  };
 }
 
 export default function PlayPage() {
@@ -38,28 +44,56 @@ export default function PlayPage() {
 
       const { data, error } = await supabase.rpc("list_my_decks");
       if (error) toast.error(error.message);
-      const legalDecks = ((data as DeckOption[]) ?? []).filter((d) => d.is_legal);
-      setDecks(legalDecks);
-      if (legalDecks.length > 0) setChosenDeckId(legalDecks[0].id);
+      const rawDecks = (data as any[]) ?? [];
+      
+      // Enhance decks with leader info if missing
+      const enhancedDecks = await Promise.all(rawDecks.map(async (d) => {
+        try {
+          const { data: detail } = await supabase.rpc("get_deck", { p_deck_id: d.id });
+          return { ...d, leader: (detail as any)?.leader };
+        } catch (e) {
+          return d;
+        }
+      }));
+
+      setDecks(enhancedDecks);
+      if (enhancedDecks.length > 0) setChosenDeckId(enhancedDecks[0].id);
       setLoading(false);
     })();
   }, []);
 
   async function startCpuMatch(difficulty: CpuDifficulty) {
     if (!user) return toast.error("Sign in first");
-    if (!chosenDeckId) return toast.error("Build a legal deck first");
+    if (!chosenDeckId) return toast.error("Select a deck first");
 
-    // Fetch full deck (leader + cards) — server-side aggregator
-    const { data: myDeck, error: e1 } = await supabase.rpc("get_deck", { p_deck_id: chosenDeckId });
-    if (e1 || !myDeck) return toast.error("Failed to load deck");
+    const currentDeck = decks.find(d => d.id === chosenDeckId);
+    if (currentDeck && !currentDeck.is_legal) {
+      return toast.error("This deck is not legal for tournament play. Please fix it in the Deck Builder.");
+    }
 
-    // Build CPU deck. For 1.0 we use the same deck for the CPU (mirror match).
-    const cpuDeck = myDeck;
+    const { data: myDeck, error: e1 } = await supabase.rpc("get_deck", {
+      p_deck_id: chosenDeckId
+    });
+    if (e1 || !myDeck) return toast.error("Failed to load deck data");
+
+    // Build CardDef arrays from the deck objects
+    const p1CardDefs: CardDef[] = [myDeck.leader, ...(myDeck.cards ?? [])].filter(Boolean);
+    // CPU mirrors player deck for now (see QOL note below)
+    const p2CardDefs: CardDef[] = p1CardDefs;
 
     nav("/play/match", {
       state: {
-        p1Deck: { leader: myDeck.leader, cards: myDeck.cards },
-        p2Deck: { leader: cpuDeck.leader, cards: cpuDeck.cards },
+        deckId: chosenDeckId,        // ← CRITICAL: real deck UUID (not card ID)
+        p1Deck: {
+          leader: myDeck.leader,
+          cards: myDeck.cards ?? [],
+        },
+        p2Deck: {
+          leader: myDeck.leader,     // Mirror match for now
+          cards: myDeck.cards ?? [],
+        },
+        p1CardDefs,
+        p2CardDefs,
         difficulty,
         seed: Date.now() & 0xffffffff,
         user_id: user.id,
@@ -73,30 +107,56 @@ export default function PlayPage() {
       <p className="text-gray-400 mb-6">Choose your deck, choose your stakes.</p>
 
       {/* Deck picker */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-6" id="deck-picker">
-        <h2 className="text-lg font-bold mb-2">Active Deck</h2>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8 shadow-2xl" id="deck-picker">
+        <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">Choose Your Arsenal</h2>
         {loading ? (
-          <p className="text-gray-400" id="loading-deck-choice">Loading…</p>
+          <div className="flex items-center gap-3 text-gray-400 py-4" id="loading-deck-choice">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>Syncing deck data...</span>
+          </div>
         ) : decks.length === 0 ? (
-          <div id="no-legal-decks">
-            <p className="text-gray-400">You don't have a legal deck yet.</p>
+          <div id="no-legal-decks" className="text-center py-6">
+            <p className="text-gray-400 mb-4 font-medium">You don't have a legal deck yet.</p>
             <button
               onClick={() => nav("/decks")}
-              className="mt-2 px-4 py-2 rounded bg-amber-500 text-black font-bold"
+              className="px-6 py-3 rounded-xl bg-amber-500 text-black font-black uppercase tracking-widest hover:bg-amber-400 transition-all shadow-[0_4px_15px_rgba(251,191,36,0.3)]"
               id="btn-goto-decks"
-            >Build a Deck</button>
+            >Forge a Deck</button>
           </div>
         ) : (
-          <select
-            value={chosenDeckId}
-            onChange={(e) => setChosenDeckId(e.target.value)}
-            className="w-full bg-gray-950 border border-gray-800 rounded p-2 text-white"
-            id="deck-select-dropdown"
-          >
-            {decks.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase text-amber-500/70">Select Deck</p>
+                <select
+                  value={chosenDeckId}
+                  onChange={(e) => setChosenDeckId(e.target.value)}
+                  className="w-full bg-black border-2 border-gray-800 rounded-xl p-4 text-white font-bold focus:border-amber-500 outline-none transition-colors cursor-pointer"
+                  id="deck-select-dropdown"
+                >
+                  {decks.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name} ({d.is_legal ? 'Legal' : 'Invalid'})</option>
+                  ))}
+                </select>
+             </div>
+
+             {/* Selected Deck Preview */}
+             {decks.find(d => d.id === chosenDeckId) && (
+               <div className="bg-black/40 border-2 border-amber-900/30 rounded-xl p-4 flex gap-4 items-center animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="w-16 h-16 rounded-full bg-amber-900/20 border-2 border-amber-500 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {decks.find(d => d.id === chosenDeckId)?.leader?.image_url ? (
+                      <img src={decks.find(d => d.id === chosenDeckId)!.leader!.image_url!} alt="Leader" className="w-full h-full object-cover" />
+                    ) : (
+                      <Crown className="w-8 h-8 text-amber-500" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-amber-500/70">Leader</p>
+                    <p className="text-lg font-black text-white uppercase tracking-tight">{decks.find(d => d.id === chosenDeckId)?.leader?.name || 'Unknown'}</p>
+                    <p className="text-[10px] font-bold text-gray-500 italic">"The cards are dealt, the stakes are set."</p>
+                  </div>
+               </div>
+             )}
+          </div>
         )}
       </div>
 

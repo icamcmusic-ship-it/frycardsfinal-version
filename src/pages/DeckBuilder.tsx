@@ -16,9 +16,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import toast from "react-hot-toast";
-import { Trash2, Save, ChevronLeft, Search, Filter, AlertTriangle, Crown, MapPin, Swords, Sparkles, Package, Shield, Info, Zap } from "lucide-react";
+import { Trash2, Save, ChevronLeft, Search, Filter, AlertTriangle, Crown, MapPin, Sword, Sparkles, Package, Shield, Info, Zap, LayoutGrid, List } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { cn } from "../lib/utils";
+import { CardDisplay } from "../components/CardDisplay";
 
 // ──────────────────────────────────────────────────────────────────────────
 // TYPES (mirrors 04_types.ts but kept local to avoid pulling engine into UI)
@@ -72,7 +73,7 @@ const RARITY_COLOR: Record<string, string> = {
 const TYPE_ICON: Record<CardType, React.ReactNode> = {
   Leader:   <Crown className="w-4 h-4" />,
   Location: <MapPin className="w-4 h-4" />,
-  Unit:     <Swords className="w-4 h-4" />,
+  Unit:     <Sword className="w-4 h-4" />,
   Event:    <Sparkles className="w-4 h-4" />,
   Artifact: <Package className="w-4 h-4" />,
 };
@@ -126,6 +127,24 @@ export default function DeckBuilder() {
     void loadDecks();
   }
 
+  async function copyDeck(id: string) {
+    const { data: deckDetail, error: loadError } = await supabase.rpc("get_deck", { p_deck_id: id });
+    if (loadError) return toast.error("Could not load deck to copy: " + loadError.message);
+    
+    const d = deckDetail as DeckDetail;
+    const { data: newId, error: saveError } = await supabase.rpc("upsert_deck", {
+      p_deck_id: null,
+      p_name: `${d.name} (Copy)`,
+      p_leader_id: d.leader?.id,
+      p_card_ids: d.cards.map(c => c.id),
+      p_format: "standard",
+    });
+
+    if (saveError) return toast.error("Copy failed: " + saveError.message);
+    toast.success("Deck copied!");
+    void loadDecks();
+  }
+
   if (view === "edit" && editing) {
     return (
       <DeckEditor
@@ -170,13 +189,22 @@ export default function DeckBuilder() {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-white">{d.name}</h3>
-                  <p className="text-sm text-gray-400">{d.card_count} cards</p>
+                  <p className="text-sm text-gray-400">1 Leader + {d.card_count} cards</p>
                 </div>
-                {d.is_legal ? (
-                  <span className="px-2 py-1 rounded text-xs bg-emerald-900 text-emerald-300">Legal</span>
-                ) : (
-                  <span className="px-2 py-1 rounded text-xs bg-red-900 text-red-300">Illegal</span>
-                )}
+                <div className="flex gap-2 items-center">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); copyDeck(d.id); }}
+                    className="p-1 px-2 rounded bg-gray-800 text-amber-400 text-[10px] font-black uppercase hover:bg-gray-700 border border-amber-900"
+                    title="Copy Deck"
+                  >
+                    Copy
+                  </button>
+                  {d.is_legal ? (
+                    <span className="px-2 py-1 rounded text-xs bg-emerald-900 text-emerald-300">Legal</span>
+                  ) : (
+                    <span className="px-2 py-1 rounded text-xs bg-red-900 text-red-300">Illegal</span>
+                  )}
+                </div>
               </div>
               <div className="mt-2 flex justify-between items-center">
                 <p className="text-xs text-gray-500">Updated {new Date(d.updated_at).toLocaleDateString()}</p>
@@ -212,6 +240,9 @@ function DeckEditor({
   const [collection, setCollection] = useState<OwnedCard[]>([]);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<CardType | "All">("All");
+  const [filterRarity, setFilterRarity] = useState<Rarity | "All">("All");
+  const [sortBy, setSortBy] = useState<"cost-asc" | "cost-desc" | "rarity" | "name">("cost-asc");
+  const [viewSize, setViewSize] = useState<"grid" | "list">("grid");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -231,7 +262,7 @@ function DeckEditor({
   const legalityReasons = useMemo(() => {
     const reasons: string[] = [];
     if (!leader) reasons.push("Deck must have exactly 1 Leader");
-    if (cards.length < 20) reasons.push(`Main deck must have at least 20 non-Leader cards (currently ${cards.length})`);
+    if (cards.length !== 19) reasons.push(`Main deck must be exactly 19 cards (currently ${cards.length}) — total with Leader is 20`);
     
     const locs = cards.filter((c) => c.card_type === "Location").length;
     if (locs < 1) reasons.push("Deck must contain at least 1 Location");
@@ -270,15 +301,29 @@ function DeckEditor({
 
   // ── filters ──────────────────────────────────────────────────────────────
   const visibleCollection = useMemo(() => {
-    return collection.filter((c) => {
+    let list = [...collection];
+    
+    // Sort
+    list.sort((a, b) => {
+      if (sortBy === 'cost-asc') return (a.cast_cost ?? 0) - (b.cast_cost ?? 0);
+      if (sortBy === 'cost-desc') return (b.cast_cost ?? 0) - (a.cast_cost ?? 0);
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'rarity') {
+        const order = ["Common", "Uncommon", "Rare", "Super-Rare", "Mythic", "Divine"];
+        return order.indexOf(b.rarity) - order.indexOf(a.rarity);
+      }
+      return 0;
+    });
+
+    return list.filter((c) => {
       if (filterType !== "All" && c.card_type !== filterType) return false;
       if (filterType === "All" && c.card_type === "Leader") return false; // leaders picked separately
+      if (filterRarity !== "All" && c.rarity !== filterRarity) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-      const ownedTotal = c.quantity + c.foil_quantity;
-      const inDeck = cards.filter((x) => x.id === c.id).length;
-      return inDeck < ownedTotal;
+      
+      return true; // Show all, including maxed (we'll grey them out in the grid)
     });
-  }, [collection, filterType, search, cards]);
+  }, [collection, filterType, filterRarity, search, sortBy]);
 
   const leaderOptions = useMemo(
     () => collection.filter((c) => c.card_type === "Leader"),
@@ -396,9 +441,12 @@ function DeckEditor({
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 8 }}
-                  className="flex items-center gap-2 bg-gray-900 rounded p-2"
+                  className="flex items-center gap-2 bg-gray-900 rounded p-2 group relative"
                   id={`card-in-deck-${c.id}-${idx}`}
                 >
+                  <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 z-[100] scale-0 group-hover:scale-100 transition-transform origin-left pointer-events-none w-48 shadow-2xl">
+                    <CardDisplay card={c} showQuantity={false} />
+                  </div>
                   {TYPE_ICON[c.card_type]}
                   <span className={`flex-1 truncate text-sm font-bold ${RARITY_COLOR[c.rarity]}`}>{c.name}</span>
                   <span className="text-xs bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded font-black">{c.cast_cost ?? "0"}</span>
@@ -438,35 +486,113 @@ function DeckEditor({
 
         {/* ── Collection panel ── */}
         <div className="lg:col-span-2 bg-gray-950 border border-gray-800 rounded-xl p-4 max-h-[80vh] overflow-y-auto" id="collection-panel">
-          <div className="flex gap-2 mb-3" id="collection-filters">
-            <div className="flex-1 relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search collection…"
-                className="w-full pl-9 pr-3 py-2 bg-gray-900 border border-gray-800 rounded text-white"
-                id="collection-search"
-              />
+          <div className="space-y-3 mb-4" id="collection-controls">
+            <div className="flex gap-2" id="collection-filters">
+              <div className="flex-1 relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search collection…"
+                  className="w-full pl-9 pr-3 py-2 bg-gray-900 border border-gray-800 rounded text-white text-sm"
+                  id="collection-search"
+                />
+              </div>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as CardType | "All")}
+                className="bg-gray-900 border border-gray-800 rounded px-2 text-white text-sm"
+                id="type-filter"
+              >
+                <option value="All">All types</option>
+                <option value="Unit">Units</option>
+                <option value="Event">Events</option>
+                <option value="Artifact">Artifacts</option>
+                <option value="Location">Locations</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-gray-900 border border-gray-800 rounded px-2 text-white text-sm"
+                id="sort-filter"
+              >
+                <option value="cost-asc">Cost: Low-High</option>
+                <option value="cost-desc">Cost: High-Low</option>
+                <option value="rarity">Rarity</option>
+                <option value="name">Name</option>
+              </select>
+              <div className="flex bg-gray-900 border border-gray-800 rounded p-1">
+                <button 
+                  onClick={() => setViewSize('grid')}
+                  className={cn("p-1 rounded", viewSize === 'grid' ? "bg-amber-500 text-black" : "text-gray-400")}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => setViewSize('list')}
+                  className={cn("p-1 rounded", viewSize === 'list' ? "bg-amber-500 text-black" : "text-gray-400")}
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as CardType | "All")}
-              className="bg-gray-900 border border-gray-800 rounded px-3 text-white"
-              id="type-filter"
-            >
-              <option value="All">All</option>
-              <option value="Unit">Units</option>
-              <option value="Event">Events</option>
-              <option value="Artifact">Artifacts</option>
-              <option value="Location">Locations</option>
-            </select>
+
+            {/* Rarity Chips */}
+            <div className="flex flex-wrap gap-2" id="rarity-filters">
+              {(["All", "Common", "Uncommon", "Rare", "Super-Rare", "Mythic", "Divine"] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setFilterRarity(r)}
+                  className={cn(
+                    "px-3 py-1 rounded-full text-[10px] font-black uppercase border transition-all",
+                    filterRarity === r 
+                      ? "bg-amber-500 text-black border-black shadow-[2px_2px_0px_rgba(0,0,0,1)]" 
+                      : "bg-gray-900 text-gray-400 border-gray-800 hover:border-gray-600"
+                  )}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2" id="collection-grid">
+          <div className={cn(
+            "gap-2",
+            viewSize === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "flex flex-col"
+          )} id="collection-grid">
             {visibleCollection.map((c) => {
               const inDeck = cards.filter((x) => x.id === c.id).length;
               const owned = c.quantity + c.foil_quantity;
+              const isDivine = c.rarity === 'Divine';
+              const limit = isDivine ? 1 : 2;
+              const isMaxed = inDeck >= Math.min(limit, owned);
+              const notOwnedEnough = inDeck >= owned;
+
+              if (viewSize === 'grid') {
+                return (
+                  <div key={c.id} className="relative group">
+                    <CardDisplay card={c} showQuantity={false} className={cn("w-full transition-opacity", (isMaxed || notOwnedEnough) && "grayscale-[0.5] opacity-60")} />
+                    {(isMaxed || notOwnedEnough) && (
+                      <div className="absolute top-2 right-2 bg-black/80 text-amber-400 border border-amber-500 rounded px-1.5 py-0.5 text-[8px] font-black uppercase z-10">
+                        {notOwnedEnough ? "✓ Max Owned" : "✓ In Deck"}
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2 rounded-lg gap-2">
+                       <span className="text-[10px] font-black uppercase text-white bg-black/80 px-2 py-1 rounded">
+                         In Deck: {inDeck}/{Math.min(limit, owned)}
+                       </span>
+                       <button
+                         onClick={() => addCard(c)}
+                         disabled={isMaxed || notOwnedEnough}
+                         className="w-full py-2 bg-amber-500 text-black font-black uppercase text-xs rounded hover:bg-amber-400 disabled:opacity-50 disabled:bg-gray-600 shadow-xl"
+                       >
+                         {notOwnedEnough ? "Max Owned" : "Add to Deck"}
+                       </button>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <button
                   key={c.id}

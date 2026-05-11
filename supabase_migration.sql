@@ -22,14 +22,14 @@ BEGIN
         v_reasons := v_reasons || format('Deck must have exactly 1 Leader (currently %s)', v_leader_count);
     END IF;
 
-    -- 20 non-Leader cards minimum
+    -- Exactly 19 non-Leader cards (1 Leader + 19 Cards = 20 Total)
     SELECT count(*) INTO v_card_count
     FROM deck_cards dc JOIN cards c ON dc.card_id = c.id
     WHERE dc.deck_id = p_deck_id AND c.card_type != 'Leader';
     
-    IF v_card_count < 20 THEN
+    IF v_card_count != 19 THEN
         v_is_legal := false;
-        v_reasons := v_reasons || format('Main deck must be at least 20 cards (currently %s)', v_card_count);
+        v_reasons := v_reasons || format('Main deck must be exactly 19 cards (currently %s)', v_card_count);
     END IF;
 
     -- At least 1 Location
@@ -59,6 +59,139 @@ BEGIN
     WHERE id = p_deck_id;
 
     RETURN jsonb_build_object('is_legal', v_is_legal, 'reasons', v_reasons);
+END;
+$$;
+
+-- 1.1 DECK RPCs
+CREATE OR REPLACE FUNCTION public.get_deck(p_deck_id uuid)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+    v_deck record;
+    v_leader jsonb;
+    v_cards jsonb;
+BEGIN
+    SELECT * INTO v_deck FROM public.decks WHERE id = p_deck_id;
+    IF NOT FOUND THEN RETURN NULL; END IF;
+
+    -- Leader
+    SELECT jsonb_build_object(
+        'id', c.id, 'name', c.name, 'card_type', c.card_type, 'rarity', c.rarity,
+        'cast_cost', c.cast_cost, 'defense', c.defense, 'keyword', c.keyword,
+        'keyword_tier', c.keyword_tier, 'effect_text', c.effect_text, 'image_url', c.image_url,
+        'quantity', COALESCE(uc.quantity, 0), 'foil_quantity', COALESCE(uc.foil_quantity, 0)
+    ) INTO v_leader
+    FROM deck_cards dc
+    JOIN cards c ON dc.card_id = c.id
+    LEFT JOIN user_collection uc ON uc.card_id = c.id AND uc.user_id = auth.uid()
+    WHERE dc.deck_id = p_deck_id AND c.card_type = 'Leader'
+    LIMIT 1;
+
+    -- Main Deck Cards
+    WITH deck_list AS (
+      SELECT c.*, dc.id as dc_id
+      FROM deck_cards dc
+      JOIN cards c ON dc.card_id = c.id
+      WHERE dc.deck_id = p_deck_id AND c.card_type != 'Leader'
+      ORDER BY dc.id ASC 
+    )
+    SELECT jsonb_agg(
+        jsonb_build_object(
+            'id', dl.id, 'name', dl.name, 'card_type', dl.card_type, 'rarity', dl.rarity,
+            'cast_cost', dl.cast_cost, 'defense', dl.defense, 'keyword', dl.keyword,
+            'keyword_tier', dl.keyword_tier, 'effect_text', dl.effect_text, 'image_url', dl.image_url,
+            'quantity', COALESCE(uc.quantity, 0), 'foil_quantity', COALESCE(uc.foil_quantity, 0)
+        )
+    ) INTO v_cards
+    FROM deck_list dl
+    LEFT JOIN user_collection uc ON uc.card_id = dl.id AND uc.user_id = auth.uid();
+
+    RETURN jsonb_build_object(
+        'id', v_deck.id,
+        'name', v_deck.name,
+        'format', v_deck.format,
+        'is_legal', v_deck.is_legal,
+        'legality_reasons', v_deck.legality_reasons,
+        'leader', v_leader,
+        'cards', COALESCE(v_cards, '[]'::jsonb)
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.list_my_decks()
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+    RETURN (
+        SELECT jsonb_agg(d)
+        FROM (
+            SELECT 
+                id, name, is_legal, legality_reasons, updated_at,
+                (SELECT count(*) FROM deck_cards dc1 JOIN cards c1 ON dc1.card_id = c1.id WHERE dc1.deck_id = decks.id AND c1.card_type != 'Leader') as card_count
+            FROM public.decks
+            WHERE user_id = auth.uid()
+            ORDER BY updated_at DESC
+        ) d
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.upsert_deck(
+  p_deck_id uuid,
+  p_name text,
+  p_leader_id uuid,
+  p_card_ids uuid[],
+  p_format text DEFAULT 'standard'
+)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+DECLARE
+    v_id uuid := p_deck_id;
+    v_card_id uuid;
+BEGIN
+    IF v_id IS NULL THEN
+        INSERT INTO public.decks (name, user_id, format)
+        VALUES (p_name, auth.uid(), p_format)
+        RETURNING id INTO v_id;
+    ELSE
+        UPDATE public.decks SET name = p_name, updated_at = NOW() WHERE id = v_id AND user_id = auth.uid();
+    END IF;
+
+    DELETE FROM public.deck_cards WHERE deck_id = v_id;
+    
+    IF p_leader_id IS NOT NULL THEN
+      INSERT INTO public.deck_cards (deck_id, card_id) VALUES (v_id, p_leader_id);
+    END IF;
+    
+    FOREACH v_card_id IN ARRAY p_card_ids LOOP
+        INSERT INTO public.deck_cards (deck_id, card_id) VALUES (v_id, v_card_id);
+    END LOOP;
+
+    PERFORM public.validate_deck(v_id);
+
+    RETURN v_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.delete_deck(p_deck_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+  DELETE FROM public.decks WHERE id = p_deck_id AND user_id = auth.uid();
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_my_buildable_cards()
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+BEGIN
+    RETURN (
+        SELECT jsonb_agg(c)
+        FROM (
+            SELECT 
+                c.*, 
+                COALESCE(uc.quantity, 0) as quantity,
+                COALESCE(uc.foil_quantity, 0) as foil_quantity
+            FROM public.cards c
+            LEFT JOIN public.user_collection uc ON uc.card_id = c.id AND uc.user_id = auth.uid()
+            ORDER BY c.cast_cost ASC, c.name ASC
+        ) c
+    );
 END;
 $$;
 
