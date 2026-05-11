@@ -16,7 +16,7 @@ import { Card3DModal } from '../components/Card3DModal';
 import { FlipCard } from '../components/FlipCard';
 import { EmptyState } from '../components/EmptyState';
 import { ShopSection } from '../components/ShopSection';
-import { PackOpeningFan } from '../components/PackOpeningFan';
+import { PackOpeningStack } from '../components/PackOpeningStack';
 
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { audioService } from '../services/AudioService';
@@ -427,6 +427,12 @@ export function Store() {
             pack_points_earned: totalPoints
           });
           
+          // Sync collection and check achievements after bulk opening
+          await supabase.rpc('sync_user_collection');
+          supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
+            if (error) console.error('Achievement check failed:', error);
+          });
+          
           // Auto-transition after 1s if cards are ready, enough for some shake
           setTimeout(() => {
             setPackOpeningStep(current => current === 'shaking' ? 'revealing' : current);
@@ -529,7 +535,8 @@ export function Store() {
         pack_points_earned: data.pack_points_earned
       });
       
-      // Check achievements after pack open
+      // Sync and check achievements after pack open
+      await supabase.rpc('sync_user_collection');
       supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
         if (error) console.error('Achievement check failed:', error);
       });
@@ -605,6 +612,7 @@ export function Store() {
         pack_points_earned: totalPoints
       });
 
+      await supabase.rpc('sync_user_collection');
       supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
         if (error) console.error('Achievement check failed:', error);
       });
@@ -696,7 +704,8 @@ export function Store() {
         } 
       });
       
-      // Check achievements after bulk open
+      // Sync and check achievements after bulk open
+      await supabase.rpc('sync_user_collection');
       supabase.rpc('check_and_unlock_achievements').then(({ error }) => {
         if (error) console.error('Achievement check failed:', error);
       });
@@ -1666,8 +1675,7 @@ export function Store() {
           )}
 
           {packOpeningStep === 'revealing' && openedCards && (
-            <PackOpeningFan
-              isOpen={true}
+            <PackOpeningStack
               cards={openedCards}
               summary={openingSummary}
               onClose={() => {

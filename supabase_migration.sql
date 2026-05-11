@@ -5,6 +5,7 @@
 CREATE OR REPLACE FUNCTION public.validate_deck(p_deck_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
+    v_deck record;
     v_leader_count int;
     v_card_count int;
     v_location_count int;
@@ -12,10 +13,12 @@ DECLARE
     v_is_legal boolean := true;
     v_reasons text[] := ARRAY[]::text[];
 BEGIN
+    SELECT * INTO v_deck FROM public.decks WHERE id = p_deck_id;
+    
     -- Exactly 1 Leader
     SELECT count(*) INTO v_leader_count 
-    FROM deck_cards dc JOIN cards c ON dc.card_id = c.id
-    WHERE dc.deck_id = p_deck_id AND c.card_type = 'Leader';
+    FROM cards c 
+    WHERE c.id = (SELECT leader_id FROM decks WHERE id = p_deck_id) AND c.card_type = 'Leader';
     
     IF v_leader_count != 1 THEN
         v_is_legal := false;
@@ -24,8 +27,8 @@ BEGIN
 
     -- Exactly 19 non-Leader cards (1 Leader + 19 Cards = 20 Total)
     SELECT count(*) INTO v_card_count
-    FROM deck_cards dc JOIN cards c ON dc.card_id = c.id
-    WHERE dc.deck_id = p_deck_id AND c.card_type != 'Leader';
+    FROM cards c
+    WHERE c.id = ANY(v_deck.card_ids) AND c.card_type != 'Leader';
     
     IF v_card_count != 19 THEN
         v_is_legal := false;
@@ -34,8 +37,8 @@ BEGIN
 
     -- Exactly 1 Location
     SELECT count(*) INTO v_location_count
-    FROM deck_cards dc JOIN cards c ON dc.card_id = c.id
-    WHERE dc.deck_id = p_deck_id AND c.card_type = 'Location';
+    FROM cards c
+    WHERE c.id = ANY(v_deck.card_ids) AND c.card_type = 'Location';
     
     IF v_location_count != 1 THEN
         v_is_legal := false;
@@ -44,8 +47,9 @@ BEGIN
 
     -- Max 2 copies (1 for Divine)
     SELECT array_agg(c.name) INTO v_illegal_copies
-    FROM deck_cards dc JOIN cards c ON dc.card_id = c.id
-    WHERE dc.deck_id = p_deck_id AND c.card_type != 'Leader'
+    FROM (SELECT unnest(v_deck.card_ids) as cid) dj
+    JOIN cards c ON dj.cid = c.id
+    WHERE c.card_type != 'Leader'
     GROUP BY c.id, c.name, c.rarity
     HAVING (c.rarity = 'Divine' AND count(*) > 1) OR (c.rarity != 'Divine' AND count(*) > 2);
 
@@ -80,30 +84,23 @@ BEGIN
         'keyword_tier', c.keyword_tier, 'effect_text', c.effect_text, 'image_url', c.image_url,
         'quantity', COALESCE(uc.quantity, 0), 'foil_quantity', COALESCE(uc.foil_quantity, 0)
     ) INTO v_leader
-    FROM deck_cards dc
-    JOIN cards c ON dc.card_id = c.id
+    FROM cards c
     LEFT JOIN user_collection uc ON uc.card_id = c.id AND uc.user_id = auth.uid()
-    WHERE dc.deck_id = p_deck_id AND c.card_type = 'Leader'
+    WHERE c.id = v_deck.leader_id
     LIMIT 1;
 
     -- Main Deck Cards
-    WITH deck_list AS (
-      SELECT c.*, dc.id as dc_id
-      FROM deck_cards dc
-      JOIN cards c ON dc.card_id = c.id
-      WHERE dc.deck_id = p_deck_id AND c.card_type != 'Leader'
-      ORDER BY dc.id ASC 
-    )
     SELECT jsonb_agg(
         jsonb_build_object(
-            'id', dl.id, 'name', dl.name, 'card_type', dl.card_type, 'rarity', dl.rarity,
-            'cast_cost', dl.cast_cost, 'defense', dl.defense, 'keyword', dl.keyword,
-            'keyword_tier', dl.keyword_tier, 'effect_text', dl.effect_text, 'image_url', dl.image_url,
+            'id', c.id, 'name', c.name, 'card_type', c.card_type, 'rarity', c.rarity,
+            'cast_cost', c.cast_cost, 'defense', c.defense, 'keyword', c.keyword,
+            'keyword_tier', c.keyword_tier, 'effect_text', c.effect_text, 'image_url', c.image_url,
             'quantity', COALESCE(uc.quantity, 0), 'foil_quantity', COALESCE(uc.foil_quantity, 0)
         )
     ) INTO v_cards
-    FROM deck_list dl
-    LEFT JOIN user_collection uc ON uc.card_id = dl.id AND uc.user_id = auth.uid();
+    FROM (SELECT unnest(v_deck.card_ids) as cid) dj
+    JOIN cards c ON dj.cid = c.id
+    LEFT JOIN user_collection uc ON uc.card_id = c.id AND uc.user_id = auth.uid();
 
     RETURN jsonb_build_object(
         'id', v_deck.id,
@@ -125,16 +122,18 @@ BEGIN
         FROM (
             SELECT 
                 d.id, d.name, d.is_legal, d.legality_reasons, d.updated_at,
-                (SELECT count(*) FROM deck_cards dc1 JOIN cards c1 ON dc1.card_id = c1.id WHERE dc1.deck_id = d.id AND c1.card_type != 'Leader') as card_count,
+                card_count_sub.cnt as card_count,
                 l.id as leader_id,
                 l.name as leader_name,
                 l.image_url as leader_image
             FROM public.decks d
             LEFT JOIN LATERAL (
+                SELECT count(*) as cnt FROM unnest(d.card_ids)
+            ) card_count_sub ON true
+            LEFT JOIN LATERAL (
                 SELECT c.id, c.name, c.image_url
-                FROM deck_cards dc
-                JOIN cards c ON dc.card_id = c.id
-                WHERE dc.deck_id = d.id AND c.card_type = 'Leader'
+                FROM cards c
+                WHERE c.id = d.leader_id
                 LIMIT 1
             ) l ON true
             WHERE d.user_id = auth.uid()
@@ -154,25 +153,19 @@ CREATE OR REPLACE FUNCTION public.upsert_deck(
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE
     v_id uuid := p_deck_id;
-    v_card_id uuid;
 BEGIN
     IF v_id IS NULL THEN
-        INSERT INTO public.decks (name, user_id, format)
-        VALUES (p_name, auth.uid(), p_format)
+        INSERT INTO public.decks (name, user_id, leader_id, card_ids, format)
+        VALUES (p_name, auth.uid(), p_leader_id, p_card_ids, p_format)
         RETURNING id INTO v_id;
     ELSE
-        UPDATE public.decks SET name = p_name, updated_at = NOW() WHERE id = v_id AND user_id = auth.uid();
+        UPDATE public.decks SET 
+          name = p_name, 
+          leader_id = p_leader_id,
+          card_ids = p_card_ids,
+          updated_at = NOW() 
+        WHERE id = v_id AND user_id = auth.uid();
     END IF;
-
-    DELETE FROM public.deck_cards WHERE deck_id = v_id;
-    
-    IF p_leader_id IS NOT NULL THEN
-      INSERT INTO public.deck_cards (deck_id, card_id) VALUES (v_id, p_leader_id);
-    END IF;
-    
-    FOREACH v_card_id IN ARRAY p_card_ids LOOP
-        INSERT INTO public.deck_cards (deck_id, card_id) VALUES (v_id, v_card_id);
-    END LOOP;
 
     PERFORM public.validate_deck(v_id);
 
@@ -198,7 +191,7 @@ BEGIN
                 COALESCE(uc.quantity, 0) as quantity,
                 COALESCE(uc.foil_quantity, 0) as foil_quantity
             FROM public.cards c
-            LEFT JOIN public.user_collection uc ON uc.card_id = c.id AND uc.user_id = auth.uid()
+            LEFT JOIN public.user_cards uc ON uc.card_id = c.id AND uc.user_id = auth.uid()
             ORDER BY c.cast_cost ASC, c.name ASC
         ) c
     );
@@ -206,12 +199,12 @@ END;
 $$;
 
 -- 2. QUEST PROGRESS TRACKING
-CREATE OR REPLACE FUNCTION public.increment_quest_progress(p_user_id uuid, p_quest_type text, p_amount int DEFAULT 1)
+CREATE OR REPLACE FUNCTION public.increment_quest_progress(p_quest_type text, p_amount int DEFAULT 1)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS $$
 BEGIN
     UPDATE public.user_quests
     SET progress = progress + p_amount, updated_at = NOW()
-    WHERE user_id = p_user_id 
+    WHERE user_id = auth.uid() 
       AND status = 'active'
       AND quest_id IN (SELECT id FROM quests WHERE quest_type = p_quest_type);
 END;
