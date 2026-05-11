@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { Bot, Users, Trophy, Sparkles, Loader2, Crown } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuthStore } from "../stores/authStore"; 
+import { cn } from "../lib/utils";
 import type { CpuDifficulty } from "../lib/dmh/cpu";
 import type { CardDef } from "../lib/dmh/types";
 
@@ -19,11 +20,9 @@ interface DeckOption {
   id: string;
   name: string;
   is_legal: boolean;
-  leader?: {
-    id: string;
-    name: string;
-    image_url: string | null;
-  };
+  leader_id: string | null;
+  leader_name: string | null;
+  leader_image: string | null;
 }
 
 export default function PlayPage() {
@@ -44,20 +43,15 @@ export default function PlayPage() {
 
       const { data, error } = await supabase.rpc("list_my_decks");
       if (error) toast.error(error.message);
-      const rawDecks = (data as any[]) ?? [];
+      const decksFromDB = (data as DeckOption[]) ?? [];
       
-      // Enhance decks with leader info if missing
-      const enhancedDecks = await Promise.all(rawDecks.map(async (d) => {
-        try {
-          const { data: detail } = await supabase.rpc("get_deck", { p_deck_id: d.id });
-          return { ...d, leader: (detail as any)?.leader };
-        } catch (e) {
-          return d;
-        }
-      }));
+      setDecks(decksFromDB);
+      
+      // Default to first legal deck, falling back to any deck
+      const firstLegal = decksFromDB.find(d => d.is_legal);
+      if (firstLegal) setChosenDeckId(firstLegal.id);
+      else if (decksFromDB.length > 0) setChosenDeckId(decksFromDB[0].id);
 
-      setDecks(enhancedDecks);
-      if (enhancedDecks.length > 0) setChosenDeckId(enhancedDecks[0].id);
       setLoading(false);
     })();
   }, []);
@@ -68,7 +62,7 @@ export default function PlayPage() {
 
     const currentDeck = decks.find(d => d.id === chosenDeckId);
     if (currentDeck && !currentDeck.is_legal) {
-      return toast.error("This deck is not legal for tournament play. Please fix it in the Deck Builder.");
+      return toast.error("This deck isn't legal — check the Deck Builder for what to fix.");
     }
 
     const { data: myDeck, error: e1 } = await supabase.rpc("get_deck", {
@@ -84,6 +78,7 @@ export default function PlayPage() {
     nav("/play/match", {
       state: {
         deckId: chosenDeckId,        // ← CRITICAL: real deck UUID (not card ID)
+        deckName: currentDeck?.name, // QOL 5: Pass deck name
         p1Deck: {
           leader: myDeck.leader,
           cards: myDeck.cards ?? [],
@@ -115,43 +110,70 @@ export default function PlayPage() {
             <span>Syncing deck data...</span>
           </div>
         ) : decks.length === 0 ? (
-          <div id="no-legal-decks" className="text-center py-6">
-            <p className="text-gray-400 mb-4 font-medium">You don't have a legal deck yet.</p>
+          <div id="no-decks" className="text-center py-6">
+            <p className="text-gray-400 mb-4 font-medium">No decks found. Build one to play!</p>
             <button
               onClick={() => nav("/decks")}
               className="px-6 py-3 rounded-xl bg-amber-500 text-black font-black uppercase tracking-widest hover:bg-amber-400 transition-all shadow-[0_4px_15px_rgba(251,191,36,0.3)]"
               id="btn-goto-decks"
-            >Forge a Deck</button>
+            >Go to Deck Builder</button>
+          </div>
+        ) : decks.every(d => !d.is_legal) ? (
+          <div id="no-legal-decks" className="text-center py-6">
+            <p className="text-amber-400 mb-2 font-bold">⚠️ None of your decks are legal yet.</p>
+            <p className="text-gray-400 mb-4 text-sm">A legal deck needs: 1 Leader + exactly 19 main deck cards + exactly 1 Location.</p>
+            <button
+              onClick={() => nav("/decks")}
+              className="px-6 py-3 rounded-xl bg-amber-500 text-black font-black uppercase tracking-widest hover:bg-amber-400 transition-all shadow-[0_4px_15px_rgba(251,191,36,0.3)]"
+              id="btn-fix-decks"
+            >Fix in Deck Builder</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <div className="space-y-2">
+             <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                 <p className="text-[10px] font-black uppercase text-amber-500/70">Select Deck</p>
-                <select
-                  value={chosenDeckId}
-                  onChange={(e) => setChosenDeckId(e.target.value)}
-                  className="w-full bg-black border-2 border-gray-800 rounded-xl p-4 text-white font-bold focus:border-amber-500 outline-none transition-colors cursor-pointer"
-                  id="deck-select-dropdown"
-                >
-                  {decks.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name} ({d.is_legal ? 'Legal' : 'Invalid'})</option>
-                  ))}
-                </select>
+                {decks.map((d) => (
+                  <button
+                    key={d.id}
+                    onClick={() => setChosenDeckId(d.id)}
+                    className={cn(
+                      "w-full p-4 rounded-xl border-2 text-left transition-all group relative overflow-hidden",
+                      d.id === chosenDeckId 
+                        ? "border-amber-500 bg-amber-900/20 shadow-[0_0_20px_rgba(245,158,11,0.1)]" 
+                        : "border-gray-800 bg-black/40 hover:border-gray-600",
+                      !d.is_legal && "opacity-60"
+                    )}
+                    id={`deck-option-${d.id}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="font-bold text-white block">{d.name}</span>
+                        {d.leader_name && <span className="text-gray-500 text-[10px] uppercase font-black tracking-tight">{d.leader_name}</span>}
+                      </div>
+                      <span className={cn(
+                        "text-[10px] font-black uppercase px-2 py-0.5 rounded",
+                        d.is_legal ? "bg-emerald-900/50 text-emerald-400" : "bg-red-900/50 text-red-400"
+                      )}>
+                        {d.is_legal ? "Legal" : "Invalid"}
+                      </span>
+                    </div>
+                  </button>
+                ))}
              </div>
 
              {/* Selected Deck Preview */}
              {decks.find(d => d.id === chosenDeckId) && (
                <div className="bg-black/40 border-2 border-amber-900/30 rounded-xl p-4 flex gap-4 items-center animate-in fade-in slide-in-from-right-4 duration-500">
                   <div className="w-16 h-16 rounded-full bg-amber-900/20 border-2 border-amber-500 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {decks.find(d => d.id === chosenDeckId)?.leader?.image_url ? (
-                      <img src={decks.find(d => d.id === chosenDeckId)!.leader!.image_url!} alt="Leader" className="w-full h-full object-cover" />
+                    {decks.find(d => d.id === chosenDeckId)?.leader_image ? (
+                      <img src={decks.find(d => d.id === chosenDeckId)!.leader_image!} alt="Leader" className="w-full h-full object-cover" />
                     ) : (
                       <Crown className="w-8 h-8 text-amber-500" />
                     )}
                   </div>
                   <div>
                     <p className="text-[10px] font-black uppercase text-amber-500/70">Leader</p>
-                    <p className="text-lg font-black text-white uppercase tracking-tight">{decks.find(d => d.id === chosenDeckId)?.leader?.name || 'Unknown'}</p>
+                    <p className="text-lg font-black text-white uppercase tracking-tight">{decks.find(d => d.id === chosenDeckId)?.leader_name || 'Unknown'}</p>
                     <p className="text-[10px] font-bold text-gray-500 italic">"The cards are dealt, the stakes are set."</p>
                   </div>
                </div>

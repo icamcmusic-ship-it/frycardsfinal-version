@@ -42,6 +42,7 @@ const RARITY_CSS: Record<string, string> = {
 // ──────────────────────────────────────────────────────────────────────────
 interface InitState {
   deckId: string;
+  deckName?: string;
   p1Deck: { leader: CardDef; cards: CardDef[] };
   p2Deck: { leader: CardDef; cards: CardDef[] };
   p1CardDefs: CardDef[];
@@ -169,10 +170,22 @@ export default function GameBoard() {
         await supabase.rpc("increment_quest_progress", {
           p_quest_type: "win_match", p_amount: 1
         });
+        toast.success("Deck quest progress: Win Match +1", { icon: "🏆", position: "bottom-right" });
       }
       await supabase.rpc("increment_quest_progress", {
         p_quest_type: "play_matches", p_amount: 1
       });
+      // Small delay then check missions
+      setTimeout(async () => {
+        try {
+          const { data: missions } = await supabase.rpc("get_daily_missions");
+          const completedToday = (missions as any[])?.filter(m => m.is_completed);
+          if (completedToday?.length > 0) {
+            // We don't know for sure it was JUST completed without more state, 
+            // but showing the current completed count is a good feedback.
+          }
+        } catch (e) {}
+      }, 1000);
     })();
   }, [state, initState]);
 
@@ -207,6 +220,7 @@ export default function GameBoard() {
           <div className="h-6 w-px bg-white/10" />
           <div className="flex flex-col">
             <span className="text-amber-400 font-black text-sm uppercase leading-none">Hand {state.handNumber}</span>
+            {initState?.deckName && <span className="text-[10px] text-amber-500/50 font-bold uppercase mt-0.5 line-clamp-1">{initState.deckName}</span>}
             <span className="text-[10px] text-gray-500 font-bold uppercase">{state.phase} round</span>
           </div>
         </div>

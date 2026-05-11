@@ -15,6 +15,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Trash2, Save, ChevronLeft, Search, Filter, AlertTriangle, Crown, MapPin, Sword, Sparkles, Package, Shield, Info, Zap, LayoutGrid, List } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -49,6 +50,9 @@ interface DeckSummary {
   legality_reasons: string[];
   card_count: number;
   updated_at: string;
+  leader_id: string | null;
+  leader_name: string | null;
+  leader_image: string | null;
 }
 
 interface DeckDetail {
@@ -187,10 +191,16 @@ export default function DeckBuilder() {
               id={`deck-card-${d.id}`}
             >
               <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-white">{d.name}</h3>
-                  <p className="text-sm text-gray-400">1 Leader + {d.card_count} cards</p>
-                </div>
+                  {d.leader_image && (
+                    <img src={d.leader_image} className="w-10 h-10 rounded-full object-cover border-2 border-amber-500 flex-shrink-0" alt="Leader" />
+                  )}
+                  <div>
+                    <h3 className="text-lg font-bold text-white">{d.name}</h3>
+                    {d.leader_name && (
+                      <p className="text-xs text-amber-500/80 font-black uppercase tracking-tight">Leader: {d.leader_name}</p>
+                    )}
+                    <p className="text-sm text-gray-400">1 Leader + {d.card_count} cards</p>
+                  </div>
                 <div className="flex gap-2 items-center">
                   <button
                     onClick={(e) => { e.stopPropagation(); copyDeck(d.id); }}
@@ -234,6 +244,7 @@ function DeckEditor({
   onSaved: (d: DeckDetail) => void;
   onClose: () => void;
 }) {
+  const nav = useNavigate();
   const [name, setName] = useState(deck.name);
   const [leader, setLeader] = useState<OwnedCard | null>(deck.leader);
   const [cards, setCards] = useState<OwnedCard[]>(deck.cards);
@@ -266,6 +277,7 @@ function DeckEditor({
     
     const locs = cards.filter((c) => c.card_type === "Location").length;
     if (locs < 1) reasons.push("Deck must contain at least 1 Location");
+    if (locs > 1) reasons.push(`Deck can only have 1 Location card (currently ${locs})`);
     
     const dupCounts = cards.reduce<Record<string, number>>((acc, c) => {
       acc[c.id] = (acc[c.id] || 0) + 1;
@@ -332,6 +344,17 @@ function DeckEditor({
 
   // ── add / remove ─────────────────────────────────────────────────────────
   function addCard(card: OwnedCard) {
+    if (card.card_type === "Leader") {
+      setLeader(card);
+      return;
+    }
+
+    // Max 1 Location
+    if (card.card_type === "Location") {
+      const locsInDeck = cards.filter(c => c.card_type === "Location").length;
+      if (locsInDeck >= 1) return toast.error("Deck can only contain 1 Location card — remove the existing one first.");
+    }
+
     const inDeck = cards.filter((c) => c.id === card.id).length;
     const isDivine = card.rarity === 'Divine';
     const limit = isDivine ? 1 : 2;
@@ -430,9 +453,25 @@ function DeckEditor({
             </select>
           )}
 
-          <h2 className="text-lg font-bold text-amber-400 mb-2 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-amber-400 mb-1 flex items-center gap-2">
             Main Deck ({cards.length})
           </h2>
+          <div className="flex flex-wrap gap-2 mb-4 text-[10px] font-black uppercase text-gray-500">
+            {(() => {
+              const counts = cards.reduce((acc, c) => {
+                acc[c.card_type] = (acc[c.card_type] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>);
+              return (
+                <>
+                  <span className={cn(counts.Location ? "text-amber-500" : "")}>📍 {counts.Location || 0} Loc</span>
+                  <span className={cn(counts.Unit ? "text-emerald-500" : "")}>⚔️ {counts.Unit || 0} Unit</span>
+                  <span className={cn(counts.Event ? "text-sky-500" : "")}>✨ {counts.Event || 0} Evt</span>
+                  <span className={cn(counts.Artifact ? "text-rose-500" : "")}>📦 {counts.Artifact || 0} Art</span>
+                </>
+              );
+            })()}
+          </div>
           <div className="space-y-1" id="main-deck-list">
             <AnimatePresence>
               {cards.map((c, idx) => (
@@ -560,7 +599,19 @@ function DeckEditor({
             "gap-2",
             viewSize === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4" : "flex flex-col"
           )} id="collection-grid">
-            {visibleCollection.map((c) => {
+            {collection.length === 0 ? (
+              <div className="col-span-full text-center py-12 border-2 border-dashed border-gray-800 rounded-2xl bg-gray-900/20" id="empty-collection-state">
+                <Package className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-400">Your collection is empty!</h3>
+                <p className="text-gray-500 mb-6 max-w-xs mx-auto">Build your collection by opening packs in the store.</p>
+                <button 
+                  onClick={() => nav('/store')}
+                  className="px-6 py-2 rounded-xl bg-amber-500 text-black font-black uppercase tracking-widest hover:bg-amber-400 transition-all shadow-lg"
+                >
+                  Visit Store →
+                </button>
+              </div>
+            ) : visibleCollection.map((c) => {
               const inDeck = cards.filter((x) => x.id === c.id).length;
               const owned = c.quantity + c.foil_quantity;
               const isDivine = c.rarity === 'Divine';
@@ -605,7 +656,7 @@ function DeckEditor({
                       {TYPE_ICON[c.card_type]}
                       <span className={cn("font-bold", RARITY_COLOR[c.rarity])}>{c.name}</span>
                     </span>
-                    <span className="text-xs text-gray-500">{inDeck}/{Math.min(2, owned)}</span>
+                    <span className="text-xs text-gray-500">{inDeck}/{Math.min(limit, owned)}</span>
                   </div>
                   <div className="text-[10px] sm:text-xs text-gray-400 mt-2 flex flex-wrap gap-x-2 gap-y-1 items-center">
                     {c.cast_cost !== null && (
@@ -623,8 +674,9 @@ function DeckEditor({
                         {c.keyword} {romanize(c.keyword_tier)}
                       </span>
                     )}
+                    <span className="ml-auto text-[10px] font-bold text-gray-500">{owned} owned</span>
                     {c.effect_text && (
-                      <div className="group/effect relative ml-auto">
+                      <div className="group/effect relative">
                         <Info className="w-3.5 h-3.5 text-blue-400 cursor-help hover:text-blue-300" />
                         <div className="absolute bottom-full right-0 mb-3 w-56 p-3 bg-black/95 text-white text-[11px] font-bold rounded-xl border-2 border-slate-700 hidden group-hover/effect:block z-[60] shadow-2xl backdrop-blur-sm">
                           <p className="text-yellow-400 uppercase text-[9px] font-black mb-1">{c.keyword || 'Ability'}</p>
@@ -636,7 +688,7 @@ function DeckEditor({
                 </button>
               );
             })}
-            {visibleCollection.length === 0 && (
+            {collection.length > 0 && visibleCollection.length === 0 && (
               <p className="col-span-full text-center text-gray-500 py-8" id="no-cards-found">No cards match.</p>
             )}
           </div>

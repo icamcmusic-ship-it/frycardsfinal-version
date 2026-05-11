@@ -32,14 +32,14 @@ BEGIN
         v_reasons := v_reasons || format('Main deck must be exactly 19 cards (currently %s)', v_card_count);
     END IF;
 
-    -- At least 1 Location
+    -- Exactly 1 Location
     SELECT count(*) INTO v_location_count
     FROM deck_cards dc JOIN cards c ON dc.card_id = c.id
     WHERE dc.deck_id = p_deck_id AND c.card_type = 'Location';
     
-    IF v_location_count < 1 THEN
+    IF v_location_count != 1 THEN
         v_is_legal := false;
-        v_reasons := v_reasons || 'Deck must contain at least 1 Location';
+        v_reasons := v_reasons || format('Deck must have exactly 1 Location (currently %s)', v_location_count);
     END IF;
 
     -- Max 2 copies (1 for Divine)
@@ -124,11 +124,21 @@ BEGIN
         SELECT jsonb_agg(d)
         FROM (
             SELECT 
-                id, name, is_legal, legality_reasons, updated_at,
-                (SELECT count(*) FROM deck_cards dc1 JOIN cards c1 ON dc1.card_id = c1.id WHERE dc1.deck_id = decks.id AND c1.card_type != 'Leader') as card_count
-            FROM public.decks
-            WHERE user_id = auth.uid()
-            ORDER BY updated_at DESC
+                d.id, d.name, d.is_legal, d.legality_reasons, d.updated_at,
+                (SELECT count(*) FROM deck_cards dc1 JOIN cards c1 ON dc1.card_id = c1.id WHERE dc1.deck_id = d.id AND c1.card_type != 'Leader') as card_count,
+                l.id as leader_id,
+                l.name as leader_name,
+                l.image_url as leader_image
+            FROM public.decks d
+            LEFT JOIN LATERAL (
+                SELECT c.id, c.name, c.image_url
+                FROM deck_cards dc
+                JOIN cards c ON dc.card_id = c.id
+                WHERE dc.deck_id = d.id AND c.card_type = 'Leader'
+                LIMIT 1
+            ) l ON true
+            WHERE d.user_id = auth.uid()
+            ORDER BY d.updated_at DESC
         ) d
     );
 END;
