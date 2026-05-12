@@ -161,7 +161,12 @@ function startNewHand(s: MatchState): MatchState {
   if (s.handNumber % 2 === 1) {
     // Try to place the Location card from the deck of the non-dealer
     const locSide = s.dealer === "A" ? "B" : "A";
-    s.location = drawLocationFromDeck(s, locSide);
+    const p = s.players[locSide];
+    const hasLocationInDeck = p.deck.some(cid => s.cardDefs[cid]?.card_type === "Location");
+    if (hasLocationInDeck) {
+      s.waitingForLocation = locSide;
+      appendLog(s, "preflop", `[${p.name}] is selecting a new Location...`);
+    }
   }
 
   // Reset per-hand player state
@@ -284,6 +289,20 @@ function applyLeaderPreflop(s: MatchState, side: "A" | "B") {
 // ============================================================
 export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
   if (s.phase === "ended") return [];
+
+  // §8 Location Selection Turn
+  if (s.waitingForLocation) {
+    if (s.waitingForLocation !== actor) return [];
+    const p = s.players[actor];
+    const acts: Action[] = [];
+    const locationIdsInDeck = p.deck.filter(cid => s.cardDefs[cid]?.card_type === "Location");
+    for (const cid of locationIdsInDeck) {
+      acts.push({ type: "place_location", cardId: cid });
+    }
+    acts.push({ type: "pass" }); // Skip/Keep old
+    return acts;
+  }
+
   if (s.activePlayer !== actor) return [];
   const p = s.players[actor];
   if (p.hasFolded) return [];
@@ -294,9 +313,25 @@ export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
 
   // Betting
   if (owed === 0) acts.push({ type: "check" });
-  if (owed > 0 && p.stash >= owed) acts.push({ type: "call" });
+  if (owed > 0 && p.stash > 0) acts.push({ type: "call" });
+  
   if (p.stash > owed && !p.cannotBetOrRaise) {
-    acts.push({ type: "raise", amount: owed + s.bigBlind });
+    // Min raise
+    const minRaise = owed + s.bigBlind;
+    if (p.stash >= minRaise) {
+      acts.push({ type: "raise", amount: minRaise });
+    }
+    
+    // Pot raise (current pot + 2*owed)
+    const potRaise = owed + s.pot.main + s.pot.phantom + owed;
+    if (potRaise > minRaise && p.stash >= potRaise) {
+      acts.push({ type: "raise", amount: potRaise });
+    }
+
+    // All In
+    if (p.stash > minRaise && p.stash !== potRaise) {
+      acts.push({ type: "raise", amount: p.stash });
+    }
   }
   if (!p.cannotFold) acts.push({ type: "fold" });
 
@@ -387,7 +422,15 @@ export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
   }
 
   // Buyout — once per hand, destroy own unit to free a seat
-  // (Simplified: any time you have a unit you can buyout with a hole card)
+  if (s.phase !== "showdown" && s.phase !== "cleanup") {
+    for (let si = 0; si < 3; si++) {
+      if (p.seats[si].unit) {
+        for (let hi = 0; hi < p.holeCards.length; hi++) {
+          acts.push({ type: "buyout", targetSeat: si as 0|1|2, holeCardIndex: hi });
+        }
+      }
+    }
+  }
 
   return acts;
 }
@@ -446,6 +489,8 @@ function getSabotageCostForCast(s: MatchState, actor: "A" | "B", _cardId: string
 // ============================================================
 export function step(state: MatchState, action: Action): MatchState {
   let s = clone(state);
+  s.players.A.prevStash = state.players.A.stash;
+  s.players.B.prevStash = state.players.B.stash;
   const actor = s.activePlayer;
 
   switch (action.type) {
@@ -458,6 +503,7 @@ export function step(state: MatchState, action: Action): MatchState {
     case "assassinate": s = handleAssassinate(s, actor, action); break;
     case "ignite":    s = handleIgnite(s, actor); break;
     case "fuel":      s = handleFuel(s, actor, action.payload); break;
+    case "place_location": s = handlePlaceLocation(s, actor, action.cardId); break;
     case "pass":      s = handlePass(s, actor); break;
     case "buyout":    s = handleBuyout(s, actor, action.targetSeat, action.holeCardIndex); break;
     case "advancePhase": s = advancePhase(s); break;
@@ -516,28 +562,29 @@ function handleRaise(s: MatchState, actor: "A" | "B", amount: number): MatchStat
   const parryTier = getOpponentParryTier(s, actor);
   if (parryTier === 3) {
     appendLog(s, s.phase, `[${p.name}]'s raise is cancelled by Parry III! Must call or fold.`);
-    p.currentBet = oppP.currentBet; // treated as call
-    const paid = Math.min(p.stash, owed);
-    p.stash -= paid;
-    s.pot.main += paid;
-    p.hasActed = true;
-    return maybeAdvanceBettingRound(s, actor);
+    raiseAmount = owed; // treated as call
   } else if (parryTier === 2) {
-    raiseAmount = Math.min(amount, s.bigBlind);
-    appendLog(s, s.phase, `[${p.name}]'s raise capped to ${raiseAmount} by Parry II.`);
+    raiseAmount = Math.min(amount, owed + s.bigBlind);
+    if (amount > raiseAmount) appendLog(s, s.phase, `[${p.name}]'s raise capped by Parry II.`);
   } else if (parryTier === 1) {
-    raiseAmount = Math.min(amount, Math.floor((s.pot.main) / 2));
-    appendLog(s, s.phase, `[${p.name}]'s raise capped to ${raiseAmount} by Parry I.`);
+    raiseAmount = Math.min(amount, owed + Math.floor((s.pot.main) / 2));
+    if (amount > raiseAmount) appendLog(s, s.phase, `[${p.name}]'s raise capped by Parry I.`);
   }
 
-  const paid = Math.min(p.stash, owed + raiseAmount);
+  const paid = Math.min(p.stash, raiseAmount);
   p.stash -= paid;
   p.currentBet += paid;
   s.pot.main += paid;
   p.hasActed = true;
-  // Reset opponent's hasActed so they must respond
-  s.players[opp(actor)].hasActed = false;
-  appendLog(s, s.phase, `[${p.name}] raises to ${p.currentBet}.`);
+  
+  if (paid > owed) {
+    // Reset opponent's hasActed so they must respond
+    s.players[opp(actor)].hasActed = false;
+    appendLog(s, s.phase, `[${p.name}] raises to ${p.currentBet}.`);
+  } else {
+    appendLog(s, s.phase, `[${p.name}] calls ${paid}.`);
+    return maybeAdvanceBettingRound(s, actor);
+  }
 
   // Tell I: gain 15 chips when opponent raises
   for (const seat of s.players[opp(actor)].seats) {
@@ -1023,10 +1070,29 @@ function handleBuyout(s: MatchState, actor: "A" | "B", targetSeat: 0|1|2, holeCa
   return s;
 }
 
+function handlePlaceLocation(s: MatchState, actor: "A" | "B", cardId: string): MatchState {
+  const p = s.players[actor];
+  const idx = p.deck.indexOf(cardId);
+  if (idx !== -1) p.deck.splice(idx, 1);
+  const def = s.cardDefs[cardId];
+  if (def && def.keyword && def.keyword_tier) {
+    p.graveyard.push(cardId);
+    s.location = { cardId, keyword: def.keyword as Keyword, tier: def.keyword_tier as Tier };
+    appendLog(s, s.phase, `[${p.name}] places new Location: ${def.name}.`);
+  }
+  s.waitingForLocation = null;
+  return s;
+}
+
 // ============================================================
 // SECTION 10 — PHASE MANAGEMENT
 // ============================================================
 function handlePass(s: MatchState, actor: "A" | "B"): MatchState {
+  if (s.waitingForLocation === actor) {
+    s.waitingForLocation = null;
+    appendLog(s, s.phase, `[${s.players[actor].name}] chooses to keep the current Location.`);
+    return s;
+  }
   s.players[actor].hasActed = true;
   return maybeAdvanceBettingRound(s, actor);
 }

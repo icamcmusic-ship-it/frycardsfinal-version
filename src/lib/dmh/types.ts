@@ -97,6 +97,7 @@ export interface Player {
   isCpu: boolean;
   // Resources
   stash: number;               // chips
+  prevStash?: number;          // for UI animations
   reserve: number;             // Rule 1: Dead Man's Pockets
   vault: number;               // Vault keyword storage
   // Card zones
@@ -159,6 +160,7 @@ export interface MatchState {
   muck: PokerCard[];
   // Location card (single, persistent for the whole game)
   location: LocationCard | null;
+  waitingForLocation?: PlayerSide | null;
   // Pot
   pot: Pot;
   bigBlind: number;              // doubled by High Stakes
@@ -193,6 +195,7 @@ export type Action =
   | { type: 'ignite' }
   | { type: 'fuel'; payload: FuelPayload }
   | { type: 'buyout'; targetSeat: 0|1|2; holeCardIndex: number }
+  | { type: 'place_location'; cardId: string }
   | { type: 'pass' }
   | { type: 'startMatch' }
   | { type: 'startHand' }

@@ -24,7 +24,6 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, onSel
 
   return (
     <motion.div 
-      layout
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1, rotateX: tilt.x, rotateY: tilt.y }}
       onMouseMove={handleMouseMove}
@@ -53,6 +52,7 @@ export function CollectionCard({ card, className, isBatchMode, isSelected, onSel
         onToggleLock={!hideActions && onToggleLock ? () => onToggleLock() : undefined}
         onToggleWishlist={!hideActions && onToggleWishlist ? () => onToggleWishlist() : undefined}
         isWishlisted={isWishlisted}
+        expandable={false}
       />
 
       {/* Grid Quick Indicators */}

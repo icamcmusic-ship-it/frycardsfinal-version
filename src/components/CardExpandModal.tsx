@@ -6,6 +6,7 @@ import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Shield, Zap, Lock, Unlock, Star, Coins, Info, BookOpen, Sword, Crown } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useKeywordStore } from '../stores/keywordStore';
 
 // ── Keyword explanations (mirrors keyword_definitions table, front-end cache) ──
 const KEYWORD_EXPLAINERS: Record<string, { grade: string; tiers: string[]; avoid: string }> = {
@@ -56,6 +57,11 @@ interface CardExpandModalProps {
 
 export function CardExpandModal({ card, onClose, onToggleLock, onToggleWishlist, isWishlisted }: CardExpandModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const { fetchDefinitions, getDefinition } = useKeywordStore();
+
+  useEffect(() => {
+    fetchDefinitions();
+  }, [fetchDefinitions]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -67,10 +73,16 @@ export function CardExpandModal({ card, onClose, onToggleLock, onToggleWishlist,
 
   const rarity = card.rarity || 'Common';
   const rc = RARITY_CONFIG[rarity] ?? RARITY_CONFIG.Common;
-  const kwName = card.keyword as string | undefined;
+  const kwNameRaw = card.keyword as string | undefined;
+  // Normalize keyword lookup for case-insensitivity and minor character differences
+  const kwName = kwNameRaw ? (Object.keys(KEYWORD_EXPLAINERS).find(k => k.toLowerCase() === kwNameRaw.toLowerCase()) || kwNameRaw) : undefined;
+  
   const kwTier = card.keyword_tier as number | undefined;
   const kwInfo = kwName ? KEYWORD_EXPLAINERS[kwName] : null;
   const tierLabel = kwTier ? TIER_LABELS[kwTier] : null;
+
+  // DB-driven definition for the specific card tier
+  const dbDef = (kwNameRaw && kwTier) ? getDefinition(kwNameRaw, kwTier) : undefined;
 
   return (
     <AnimatePresence>
@@ -179,7 +191,17 @@ export function CardExpandModal({ card, onClose, onToggleLock, onToggleWishlist,
                 </div>
               )}
 
-              {/* Keyword ability */}
+              {/* Always show effect text if present */}
+              {card.effect_text && (
+                <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3 shadow-inner">
+                  <p className="text-sm text-amber-100/90 leading-relaxed font-bold italic">
+                    <span className="text-amber-500 uppercase text-[10px] not-italic mr-2 tracking-widest font-black">Ability:</span>
+                    {card.effect_text}
+                  </p>
+                </div>
+              )}
+
+              {/* Keyword ability explainer */}
               {kwName && (
                 <div className="rounded-xl border border-white/10 bg-black/30 overflow-hidden">
                   {/* Header */}
@@ -196,41 +218,44 @@ export function CardExpandModal({ card, onClose, onToggleLock, onToggleWishlist,
                     )}
                   </div>
 
-                  {/* This card's effect text */}
-                  {card.effect_text && (
-                    <div className="px-4 py-3 border-b border-white/10">
-                      <p className="text-sm text-white/80 italic leading-relaxed">{card.effect_text}</p>
-                    </div>
-                  )}
-
                   {/* Tier-by-tier explanation */}
-                  {kwInfo && (
-                    <div className="px-4 py-3 space-y-2">
-                      <p className="text-[9px] font-black uppercase text-white/30 tracking-widest flex items-center gap-1">
-                        <BookOpen className="w-3 h-3" /> Keyword Reference
-                      </p>
-                      {kwInfo.tiers.map((desc, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            'flex gap-2 rounded-lg px-3 py-2 text-xs',
-                            kwTier === i + 1
-                              ? 'bg-amber-500/15 border border-amber-500/40'
-                              : 'bg-white/5 border border-white/5 opacity-50'
-                          )}
-                        >
-                          <span className={cn('font-black flex-shrink-0 mt-0.5', TIER_COLORS[i + 1])}>
-                            {TIER_LABELS[i + 1]}
-                          </span>
-                          <p className="text-white/70 leading-snug">{desc}</p>
-                        </div>
-                      ))}
-                      <div className="rounded-lg px-3 py-2 bg-red-950/30 border border-red-800/30 text-xs">
-                        <p className="text-red-400 font-black text-[9px] uppercase tracking-widest mb-0.5">⚠ Anti-Synergy</p>
-                        <p className="text-red-300/60">{kwInfo.avoid}</p>
+                  <div className="px-4 py-3 space-y-2">
+                    <p className="text-[9px] font-black uppercase text-white/30 tracking-widest flex items-center gap-1">
+                      <BookOpen className="w-3 h-3" /> Keyword Codex
+                    </p>
+                    
+                    {/* If we have a DB definition for THIS tier, highlight it specially */}
+                    {dbDef && (
+                      <div className="bg-amber-500/20 border-2 border-amber-500/40 rounded-xl p-3 mb-2">
+                        <p className="text-amber-200 text-xs font-bold leading-relaxed">{dbDef.rules_text}</p>
                       </div>
-                    </div>
-                  )}
+                    )}
+
+                    {/* Standard fallback levels */}
+                    {kwInfo && kwInfo.tiers.map((desc, i) => (
+                      <div
+                        key={i}
+                        className={cn(
+                          'flex gap-2 rounded-lg px-3 py-1.5 text-[11px]',
+                          kwTier === i + 1
+                            ? 'bg-amber-500/10 border border-amber-500/20 hidden' // Hide if we already showed dbDef above
+                            : 'bg-white/5 border border-white/5 opacity-40'
+                        )}
+                      >
+                        <span className={cn('font-black flex-shrink-0 mt-0.5', TIER_COLORS[i + 1])}>
+                          {TIER_LABELS[i + 1]}
+                        </span>
+                        <p className="text-white/60 leading-snug">{desc}</p>
+                      </div>
+                    ))}
+
+                    {kwInfo && (
+                      <div className="rounded-lg px-3 py-2 bg-red-950/20 border border-red-800/20 text-[10px]">
+                        <p className="text-red-400 font-black text-[8px] uppercase tracking-widest mb-0.5">⚠ Anti-Synergy</p>
+                        <p className="text-red-300/40">{kwInfo.avoid}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -239,13 +264,6 @@ export function CardExpandModal({ card, onClose, onToggleLock, onToggleWishlist,
                 <p className="text-sm text-white/40 italic border-l-2 border-white/10 pl-3 leading-relaxed">
                   "{card.flavor_text}"
                 </p>
-              )}
-
-              {/* Effect text (if no keyword) */}
-              {card.effect_text && !kwName && (
-                <div className="rounded-xl bg-black/30 border border-white/10 px-4 py-3">
-                  <p className="text-sm text-white/70 leading-relaxed">{card.effect_text}</p>
-                </div>
               )}
 
               {/* Collection info */}
