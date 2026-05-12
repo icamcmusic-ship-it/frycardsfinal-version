@@ -262,6 +262,14 @@ function postBlind(s: MatchState, side: "A" | "B", amount: number) {
   s.pot.main += paid;
 }
 
+function findParryCardInHand(s: MatchState, side: PlayerSide): string | null {
+  const p = s.players[side];
+  return p.hand.find(cid => {
+    const def = s.cardDefs[cid];
+    return def?.keyword === 'Parry' || def?.keyword === 'Bribe';
+  }) ?? null;
+}
+
 function applyLeaderPreflop(s: MatchState, side: "A" | "B") {
   const p = s.players[side];
   const def = s.cardDefs[p.leaderCardId];
@@ -289,6 +297,17 @@ function applyLeaderPreflop(s: MatchState, side: "A" | "B") {
 // ============================================================
 export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
   if (s.phase === "ended") return [];
+
+  // §Reaction: Parry check
+  if (s.waitingForParry) {
+    if (s.waitingForParry.side !== actor) return [];
+    const p = s.players[actor];
+    const acts: Action[] = [];
+    const parryCid = findParryCardInHand(s, actor);
+    if (parryCid) acts.push({ type: 'parry', cardId: parryCid });
+    acts.push({ type: 'parryPass' });
+    return acts;
+  }
 
   // §8 Location Selection Turn
   if (s.waitingForLocation) {
@@ -392,14 +411,29 @@ export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
     s.phase !== "cleanup"
   ) {
     const oppSide = opp(actor);
+    const oppHasEnforcer = s.players[oppSide].seats.some(se => se.unit?.keyword === "Enforcer" && !se.unit.silenced);
+    const oppUnitCount = s.players[oppSide].seats.filter(se => se.unit).length;
+
     for (let si = 0; si < 3; si++) {
       const targetSeat = s.players[oppSide].seats[si];
       if (!targetSeat.unit) continue;
-      if (targetSeat.unit.keyword === "Ghost" && !targetSeat.unit.silenced) continue; // Ghost I immune
+      
+      // Enforcer
+      if (oppHasEnforcer && targetSeat.unit.keyword !== "Enforcer") continue;
+      
+      // Ghost II immune to Assassination
+      if (targetSeat.unit.keyword === "Ghost" && targetSeat.unit.keywordTier >= 2 && !targetSeat.unit.silenced) continue;
+      // Ghost I immune if not the only unit
+      if (targetSeat.unit.keyword === "Ghost" && targetSeat.unit.keywordTier === 1 && !targetSeat.unit.silenced && oppUnitCount > 1) continue;
+      
+      // High Roller III
+      if (targetSeat.unit.keyword === "High Roller" && targetSeat.unit.keywordTier >= 3 && !targetSeat.unit.silenced && s.players[oppSide].stash > p.stash) continue;
 
       for (let hi = 0; hi < p.holeCards.length; hi++) {
         const hole = p.holeCards[hi];
-        if (hole.faceUp && !(s.cardDefs[p.leaderCardId]?.keyword === "Vanguard" && s.cardDefs[p.leaderCardId]?.keyword_tier === 3)) continue; // can only use face-up if Vanguard III
+        const canUseFaceUp = (s.cardDefs[p.leaderCardId]?.keyword === "Vanguard" && s.cardDefs[p.leaderCardId]?.keyword_tier === 3) || 
+                             p.seats.some(se => se.unit?.keyword === "Sniper" && !se.unit.silenced);
+        if (hole.faceUp && !canUseFaceUp) continue;
         const effectiveDefense = getEffectiveDefense(s, oppSide, si);
         if (hole.rank >= effectiveDefense) {
           acts.push({ type: "assassinate", targetSide: oppSide, seat: si as 0 | 1 | 2, holeCardIndex: hi });
@@ -421,6 +455,22 @@ export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
     }
   }
 
+  // Nomad Move
+  if (s.phase !== "showdown" && s.phase !== "cleanup") {
+    for (let si = 0; si < 3; si++) {
+      const u = p.seats[si].unit;
+      if (u && u.keyword === "Nomad" && !u.silenced && !u.hasMovedThisHand && p.stash >= 10) {
+        // adjacent seats
+        const adj = [si - 1, si + 1].filter(x => x >= 0 && x <= 2);
+        for (const target of adj) {
+          if (!p.seats[target].unit && !p.seats[target].locked) {
+            acts.push({ type: "nomad_move", fromSeat: si as 0|1|2, toSeat: target as 0|1|2 });
+          }
+        }
+      }
+    }
+  }
+
   // Buyout — once per hand, destroy own unit to free a seat
   if (s.phase !== "showdown" && s.phase !== "cleanup") {
     for (let si = 0; si < 3; si++) {
@@ -430,6 +480,18 @@ export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
         }
       }
     }
+  }
+
+  if (ldef?.keyword === "Prophet" && s.phase !== "ended" && s.phase !== "cleanup") {
+    acts.push({ type: "prophet_peek" });
+  }
+
+  if (ldef?.keyword === "Ultimatum" && s.phase !== "ended" && s.phase !== "showdown" && s.phase !== "cleanup") {
+    acts.push({ type: "ultimatum" });
+  }
+
+  if (ldef?.keyword === "Desperado" && s.phase === "showdown") {
+    acts.push({ type: "desperado_fold" });
   }
 
   return acts;
@@ -491,7 +553,11 @@ export function step(state: MatchState, action: Action): MatchState {
   let s = clone(state);
   s.players.A.prevStash = state.players.A.stash;
   s.players.B.prevStash = state.players.B.stash;
-  const actor = s.activePlayer;
+  const actor = action.type === 'parry' || action.type === 'parryPass' 
+    ? s.waitingForParry?.side ?? s.activePlayer
+    : action.type === 'place_location'
+    ? s.waitingForLocation ?? s.activePlayer
+    : s.activePlayer;
 
   switch (action.type) {
     case "check":     s = handleCheck(s, actor); break;
@@ -500,6 +566,8 @@ export function step(state: MatchState, action: Action): MatchState {
     case "fold":      s = handleFold(s, actor); break;
     case "cast":      s = handleCast(s, actor, action.cardId, action.seat, action.targets); break;
     case "foldcast":  s = handleFoldCast(s, actor, action.cardId, action.targets); break;
+    case "parry":     s = handleParry(s, actor, action.cardId); break;
+    case "parryPass": s = handleParryPass(s, actor); break;
     case "assassinate": s = handleAssassinate(s, actor, action); break;
     case "ignite":    s = handleIgnite(s, actor); break;
     case "fuel":      s = handleFuel(s, actor, action.payload); break;
@@ -507,6 +575,10 @@ export function step(state: MatchState, action: Action): MatchState {
     case "pass":      s = handlePass(s, actor); break;
     case "buyout":    s = handleBuyout(s, actor, action.targetSeat, action.holeCardIndex); break;
     case "advancePhase": s = advancePhase(s); break;
+    case "prophet_peek": s = handleProphetPeek(s, actor); break;
+    case "ultimatum": s = handleUltimatum(s, actor); break;
+    case "desperado_fold": s = handleDesperadoFold(s, actor); break;
+    case "nomad_move": s = handleNomadMove(s, actor, action); break;
     default: break;
   }
 
@@ -665,8 +737,18 @@ function applyPostFlopFoldPenalty(s: MatchState, actor: "A" | "B") {
 }
 
 function getOpponentParryTier(s: MatchState, actor: "A" | "B"): number {
-  // Parry is an Event (instant); for simplicity, we check if they have a Parry card in hand
-  // In a full impl, this would be a reaction system. For now, return 0.
+  const oppSide = opp(actor);
+  const p = s.players[oppSide];
+  for (let i = 0; i < p.hand.length; i++) {
+    const cid = p.hand[i];
+    const def = s.cardDefs[cid];
+    if (def?.keyword === 'Parry' && def.keyword_tier) {
+      p.hand.splice(i, 1);
+      p.graveyard.push(cid);
+      appendLog(s, s.phase, `[${p.name}] uses ${def.name} (Parry ${def.keyword_tier}) to react!`);
+      return def.keyword_tier;
+    }
+  }
   return 0;
 }
 
@@ -716,12 +798,59 @@ function handleCast(
   switch (def.card_type) {
     case "Unit":   s = resolveUnitCast(s, actor, cardId, def, seatIndex ?? 0); break;
     case "Artifact": s = resolveArtifactCast(s, actor, cardId, def, seatIndex ?? 0); break;
-    case "Event":  s = resolveEventCast(s, actor, cardId, def, targets); break;
+    case "Event": {
+      const parryCid = findParryCardInHand(s, opp(actor));
+      if (parryCid) {
+        s.waitingForParry = { side: opp(actor), originalAction: { type: 'cast', cardId, targets, seat: seatIndex as 0|1|2 } };
+        appendLog(s, s.phase, `[${s.players[opp(actor)].name}] has a chance to Parry!`);
+      } else {
+        s = resolveEventCast(s, actor, cardId, def, targets);
+      }
+      break;
+    }
     case "Location": s = resolveLocationCast(s, actor, cardId, def); break;
     default: p.graveyard.push(cardId); break;
   }
 
   checkBankruptcy(s);
+  return s;
+}
+
+function handleParry(s: MatchState, actor: PlayerSide, cardId: string): MatchState {
+  if (!s.waitingForParry) return s;
+  const p = s.players[actor];
+  const idx = p.hand.indexOf(cardId);
+  if (idx !== -1) p.hand.splice(idx, 1);
+  p.graveyard.push(cardId);
+
+  const def = s.cardDefs[cardId];
+  if (def?.keyword === 'Bribe') {
+    const bribeCost = (def.keyword_tier ?? 1) === 1 ? 25 : 50;
+    const targetSide = opp(actor);
+    p.stash -= bribeCost;
+    s.players[targetSide].stash += bribeCost;
+    if (def.keyword_tier === 2) drawTcgCards(s, actor, 1);
+  }
+
+  appendLog(s, s.phase, `[${p.name}] uses ${s.cardDefs[cardId]?.name ?? 'Parry'} to counter the Event!`);
+  s.waitingForParry = null;
+  return s;
+}
+
+function handleParryPass(s: MatchState, actor: PlayerSide): MatchState {
+  if (!s.waitingForParry) return s;
+  const originalAction = s.waitingForParry.originalAction;
+  const originalActor = opp(s.waitingForParry.side);
+  s.waitingForParry = null;
+
+  appendLog(s, s.phase, `[${s.players[actor].name}] declines to Parry.`);
+
+  if (originalAction.type === 'cast') {
+    const def = s.cardDefs[originalAction.cardId];
+    if (def?.card_type === 'Event') {
+      s = resolveEventCast(s, originalActor, originalAction.cardId, def, originalAction.targets);
+    }
+  }
   return s;
 }
 
@@ -898,8 +1027,10 @@ function resolveEventCast(s: MatchState, actor: "A" | "B", cardId: string, def: 
     case "Sleight":
       if (def.keyword_tier === 1) {
         if (p.holeCards.length > 0 && s.muck.length > 0) {
-          const hIdx = Math.floor((s.rngState >>> 0) % p.holeCards.length);
-          const mIdx = Math.floor(((s.rngState * 1664525) >>> 0) % s.muck.length);
+          const r = lcg(s.rngState);
+          const hIdx = Math.floor(r.next() * p.holeCards.length);
+          const mIdx = Math.floor(r.next() * s.muck.length);
+          s.rngState = r.seed;
           const temp = p.holeCards[hIdx];
           p.holeCards[hIdx] = s.muck[mIdx];
           s.muck[mIdx] = temp;
@@ -1093,8 +1224,84 @@ function handlePass(s: MatchState, actor: "A" | "B"): MatchState {
     appendLog(s, s.phase, `[${s.players[actor].name}] chooses to keep the current Location.`);
     return s;
   }
+  if (s.waitingForParry?.side === actor) {
+    return handleParryPass(s, actor);
+  }
   s.players[actor].hasActed = true;
   return maybeAdvanceBettingRound(s, actor);
+}
+
+function handleProphetPeek(s: MatchState, actor: "A" | "B"): MatchState {
+  const p = s.players[actor];
+  const c1 = s.pokerDeck[s.pokerDeck.length - 1];
+  const c2 = s.pokerDeck[s.pokerDeck.length - 2];
+  if (c1 && c2) {
+    appendLog(s, s.phase, `[${p.name}] Prophet: peeks at top Poker Cards — ${c1.rank}${c1.suit} and ${c2.rank}${c2.suit}.`, actor);
+  } else if (c1) {
+    appendLog(s, s.phase, `[${p.name}] Prophet: peeks at top Poker Card — ${c1.rank}${c1.suit}.`, actor);
+  }
+  return s;
+}
+
+function handleUltimatum(s: MatchState, actor: "A" | "B"): MatchState {
+  const p = s.players[actor];
+  const oppSide = opp(actor);
+  const oppP = s.players[oppSide];
+  const t = s.cardDefs[p.leaderCardId]?.keyword_tier;
+  
+  if (t === 1) {
+    if (oppP.stash >= 100) {
+      oppP.stash -= 100;
+      appendLog(s, s.phase, `[${oppP.name}] Ultimatum I: pays 100 chips.`);
+    } else {
+      const seat = oppP.seats.find(se => se.unit);
+      if (seat) {
+        destroyUnit(s, oppSide, seat.index as 0|1|2);
+        appendLog(s, s.phase, `[${oppP.name}] Ultimatum I: sacrifices ${seat.unit?.name ?? 'a unit'}.`);
+      } else {
+        appendLog(s, s.phase, `[${oppP.name}] Ultimatum I: has no units to sacrifice and not enough chips!`);
+      }
+    }
+  } else if (t === 2) {
+    const seat = oppP.seats.find(se => !se.locked);
+    if (seat) {
+      seat._lockNextHand = true;
+      appendLog(s, s.phase, `[${oppP.name}] Ultimatum II: lock Seat ${seat.index + 1} next hand.`);
+    } else {
+      for (const h of oppP.holeCards) h.faceUp = true;
+      appendLog(s, s.phase, `[${oppP.name}] Ultimatum II: plays with Hole Cards face-up.`);
+    }
+  } else if (t === 3) {
+    oppP.stash = Math.floor(oppP.stash / 2);
+    appendLog(s, s.phase, `[${oppP.name}] Ultimatum III: surrenders half of Stash.`);
+  }
+  return s;
+}
+
+function handleDesperadoFold(s: MatchState, actor: "A" | "B"): MatchState {
+  return handleFold(s, actor);
+}
+
+function handleNomadMove(s: MatchState, actor: "A" | "B", action: Extract<Action, { type: "nomad_move" }>): MatchState {
+  const p = s.players[actor];
+  const from = p.seats[action.fromSeat];
+  const to = p.seats[action.toSeat];
+  
+  if (!from.unit || to.unit || to.locked || p.stash < 10) return s;
+  
+  p.stash -= 10;
+  from.unit.hasMovedThisHand = true;
+  to.unit = from.unit;
+  from.unit = null;
+  
+  appendLog(s, s.phase, `[${p.name}] Nomad I: moves ${to.unit.name} to seat ${action.toSeat + 1}.`, actor);
+  
+  if (to.unit.keyword === "Nomad" && to.unit.keywordTier === 2 && !to.unit.silenced) {
+    p.stash += 15;
+    appendLog(s, s.phase, `[${p.name}] Nomad II: gains 15 chips from moving.`, actor);
+  }
+  
+  return s;
 }
 
 function maybeAdvanceBettingRound(s: MatchState, lastActor: "A" | "B"): MatchState {

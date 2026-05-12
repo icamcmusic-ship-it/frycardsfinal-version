@@ -29,10 +29,10 @@ interface CpuSlot {
 }
 
 const CPU_NAMES = ['The Dealer', 'The Shark', 'The Ghost', 'The House'];
-const DIFFICULTY_CONFIG: Record<CpuDifficulty, { label: string; color: string; bg: string; desc: string; xp: number }> = {
-  easy:   { label: 'Easy',   color: 'text-emerald-400', bg: 'bg-emerald-900/30 border-emerald-700', desc: 'Beginner-friendly',            xp: 50  },
-  normal: { label: 'Normal', color: 'text-sky-400',     bg: 'bg-sky-900/30 border-sky-700',         desc: 'Pot odds + basic AI',          xp: 100 },
-  hard:   { label: 'Hard',   color: 'text-rose-400',    bg: 'bg-rose-900/30 border-rose-700',       desc: 'Bluffs, value bets, priority', xp: 200 },
+const DIFFICULTY_CONFIG: Record<CpuDifficulty, { label: string; color: string; bg: string; desc: string; xp: number; xp_loss: number }> = {
+  easy:   { label: 'Easy',   color: 'text-emerald-400', bg: 'bg-emerald-900/30 border-emerald-700', desc: 'Beginner-friendly',            xp: 150, xp_loss: 75  },
+  normal: { label: 'Normal', color: 'text-sky-400',     bg: 'bg-sky-900/30 border-sky-700',         desc: 'Pot odds + basic AI',          xp: 200, xp_loss: 125 },
+  hard:   { label: 'Hard',   color: 'text-rose-400',    bg: 'bg-rose-900/30 border-rose-700',       desc: 'Bluffs, value bets, priority', xp: 300, xp_loss: 225 },
 };
 
 type Step = 'deck' | 'opponents' | 'ready';
@@ -88,8 +88,18 @@ export default function PlayPage() {
     }
     if (enabledCpus.length === 0) return toast.error("Enable at least one CPU opponent.");
 
+    setLoading(true);
+    const { error: consumeErr } = await supabase.rpc("consume_energy", { p_amount: 1 });
+    if (consumeErr) {
+      setLoading(false);
+      return toast.error("Not enough energy! Wait for it to regenerate.");
+    }
+
     const { data: myDeck, error } = await supabase.rpc("get_deck", { p_deck_id: chosenDeckId });
-    if (error || !myDeck) return toast.error("Failed to load deck data");
+    if (error || !myDeck) {
+      setLoading(false);
+      return toast.error("Failed to load deck data");
+    }
 
     const p1CardDefs: CardDef[] = [myDeck.leader, ...(myDeck.cards ?? [])].filter(Boolean);
     let p2CardDefs: CardDef[] = [];
@@ -369,7 +379,7 @@ export default function PlayPage() {
                       {slot.enabled && (
                         <div className={cn('px-3 pb-3 flex items-center justify-between')}>
                           <p className="text-[10px] text-gray-500">{DIFFICULTY_CONFIG[slot.difficulty].desc}</p>
-                          <span className="text-[10px] font-black text-amber-400">+{DIFFICULTY_CONFIG[slot.difficulty].xp} XP base</span>
+                          <span className="text-[10px] font-black text-amber-400">Win: +{DIFFICULTY_CONFIG[slot.difficulty].xp} XP / Loss: +{DIFFICULTY_CONFIG[slot.difficulty].xp_loss} XP</span>
                         </div>
                       )}
                     </motion.div>

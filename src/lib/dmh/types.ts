@@ -79,6 +79,7 @@ export interface Unit {
   silenced: boolean;           // Cursed II; also seat-exhaustion silence
   wounds: number;              // for Reckless II "unkillable" tracking
   artifactCardId?: string;     // single equipped artifact (Encumbrance Limit)
+  hasMovedThisHand?: boolean;
 }
 
 export interface Seat {
@@ -161,6 +162,10 @@ export interface MatchState {
   // Location card (single, persistent for the whole game)
   location: LocationCard | null;
   waitingForLocation?: PlayerSide | null;
+  waitingForParry?: {
+    side: PlayerSide;
+    originalAction: Action;
+  } | null;
   // Pot
   pot: Pot;
   bigBlind: number;              // doubled by High Stakes
@@ -196,10 +201,16 @@ export type Action =
   | { type: 'fuel'; payload: FuelPayload }
   | { type: 'buyout'; targetSeat: 0|1|2; holeCardIndex: number }
   | { type: 'place_location'; cardId: string }
+  | { type: 'parry'; cardId: string }
+  | { type: 'parryPass' }
   | { type: 'pass' }
   | { type: 'startMatch' }
   | { type: 'startHand' }
-  | { type: 'advancePhase' };
+  | { type: 'advancePhase' }
+  | { type: 'prophet_peek' }
+  | { type: 'ultimatum' }
+  | { type: 'desperado_fold' }
+  | { type: 'nomad_move'; fromSeat: 0|1|2; toSeat: 0|1|2 };
 
 export type TargetRef =
   | { kind: 'unit'; side: PlayerSide; seat: 0|1|2 }

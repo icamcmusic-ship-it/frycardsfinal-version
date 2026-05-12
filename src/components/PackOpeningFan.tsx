@@ -130,7 +130,7 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
     for (let i = 0; i < cards.length; i++) {
       if (!isAutoOpeningRef.current) return;
       if (i === chaseIndex) continue;
-      if (revealed.has(i)) return; // Should check from state, but let's assume it's safe
+      if (revealed.has(i)) continue; // Check from state, continue instead of return
 
       revealCard(i);
       await new Promise(r => setTimeout(r, 150));

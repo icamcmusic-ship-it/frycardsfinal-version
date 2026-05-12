@@ -76,7 +76,9 @@ type UiMode =
   | { kind: "pick_cast_seat"; cardId: string; validSeats: number[] }
   | { kind: "pick_assassinate_target"; validActions: Extract<Action, { type: "assassinate" }>[] }
   | { kind: "pick_location"; validActions: Extract<Action, { type: "place_location" }>[] }
+  | { kind: "pick_parry_response"; side: "A" | "B"; validActions: Action[] }
   | { kind: "pick_fuel_card" }
+  | { kind: "pick_nomad_move"; validActions: Extract<Action, { type: "nomad_move" }>[] }
   | { kind: "confirm_quit" }
   | { kind: "expand_card"; card: CardDef };
 
@@ -187,7 +189,9 @@ export default function GameBoard() {
   useEffect(() => {
     if (!state || !initState || !tournament) return;
     if (state.phase === "ended") return;
-    if (state.activePlayer !== "B") return;
+    
+    const isCpuTurn = state.waitingForParry ? state.waitingForParry.side === "B" : state.activePlayer === "B";
+    if (!isCpuTurn) return;
     if (cpuBusy.current) return;
 
     cpuBusy.current = true;
@@ -224,6 +228,16 @@ export default function GameBoard() {
       if (locActs.length > 0) {
         setUiMode({ kind: 'pick_location', validActions: locActs });
       }
+    }
+
+    // Auto-trigger Parry if it's our turn
+    if (state.waitingForParry?.side === 'A' && uiMode.kind !== 'pick_parry_response') {
+      const parryActs = listLegalActions(state, 'A');
+      setUiMode({ kind: 'pick_parry_response', side: 'A', validActions: parryActs });
+    }
+
+    if (state.waitingForParry === null && uiMode.kind === 'pick_parry_response') {
+      setUiMode({ kind: 'default' });
     }
 
     // Phase Banner
@@ -341,15 +355,20 @@ export default function GameBoard() {
     if (won && !isLastRound) {
       // Player advances: carry their stash forward
       const carryStash = state.players.A.stash + 100; // +100 bonus per win
+      const nextRound = tournament.currentRound + 1;
+      const slots = tournament.cpuSlots;
       
-      // Update tournament state first to ensure startRound has correct values via closure or state
-      // Actually, we can just call startRound with next values.
-      setTournament(prev => prev ? { ...prev, currentRound: prev.currentRound + 1, wins: prev.wins + 1, playerStartStash: carryStash } : prev);
+      setTournament(prev => prev ? { 
+        ...prev, 
+        currentRound: nextRound, 
+        wins: prev.wins + 1, 
+        playerStartStash: carryStash 
+      } : prev);
       
       // Brief delay then start next round
       setTimeout(() => {
-        // Need to be careful about closure here. We can use the current tournament data and increment it.
-        startRound(tournament.cpuSlots, tournament.currentRound + 1, carryStash);
+        reportedRef.current = false;
+        startRound(slots, nextRound, carryStash);
       }, 3500);
     } else if (won && isLastRound) {
       setTournament(prev => prev ? { ...prev, wins: prev.wins + 1, complete: true } : prev);
@@ -379,6 +398,10 @@ export default function GameBoard() {
       case 'fuel': label = '🔥 Fuel'; variant = 'danger'; break;
       case 'buyout': label = '🗡️ Buyout'; variant = 'danger'; break;
       case 'place_location': label = '📍 Set Location'; variant = 'amber'; break;
+      case 'prophet_peek': label = '👁 Prophet Peek'; variant = 'info'; break;
+      case 'ultimatum': label = '👑 Ultimatum'; variant = 'danger'; break;
+      case 'desperado_fold': label = '🏃 Desperado Fold'; variant = 'danger'; break;
+      case 'nomad_move': label = '➡️ Nomad Move'; variant = 'info'; break;
     }
 
     if (label) {
@@ -576,8 +599,17 @@ export default function GameBoard() {
               reveal={reveal || state.phase === "showdown"}
               isOpponent
               state={state}
+              uiMode={uiMode}
               currentSlotName={currentSlot?.name}
               onCardExpand={(card: CardDef) => setUiMode({ kind: "expand_card", card })}
+              onSeatClick={(seatIdx: number) => {
+                if (uiMode.kind === "pick_assassinate_target") {
+                  const action = uiMode.validActions.find(a => a.seat === seatIdx);
+                  if (action) {
+                    act(action);
+                  }
+                }
+              }}
             />
           </section>
 
@@ -695,6 +727,11 @@ export default function GameBoard() {
           onSeatClick={(seatIdx: number) => {
             if (uiMode.kind === "pick_cast_seat" && uiMode.validSeats.includes(seatIdx)) {
               act({ type: "cast", cardId: uiMode.cardId, seat: seatIdx as 0|1|2 });
+            } else if (uiMode.kind === "pick_nomad_move") {
+              const action = uiMode.validActions.find(a => a.toSeat === seatIdx);
+              if (action) {
+                act(action);
+              }
             }
           }}
           onCardExpand={(card: CardDef) => setUiMode({ kind: "expand_card", card })}
@@ -720,6 +757,12 @@ export default function GameBoard() {
                   tournament={tournament}
                   isLastRound={!tournament || tournament.currentRound >= tournament.cpuSlots.length - 1}
                   onPlayAgain={() => nav("/play")}
+                />
+              ) : uiMode.kind === 'pick_parry_response' ? (
+                <ParryActionBar
+                  state={state}
+                  myActions={myActions}
+                  act={act}
                 />
               ) : (
                 <ActionBar
@@ -901,6 +944,7 @@ function EndScreen({ won, tournament, isLastRound, onPlayAgain }: { won: boolean
 // ── PLAYER PANEL ─────────────────────────────────────────────────────────────
 function PlayerPanel({ player, side, reveal, isOpponent = false, state, uiMode, onSeatClick, currentSlotName, onCardExpand }: any) {
   const leaderDef = state.cardDefs[player.leaderCardId];
+  const [isPeeking, setIsPeeking] = useState(false);
 
   return (
     <div className={cn("flex gap-3 items-start max-w-2xl mx-auto w-full", isOpponent ? "flex-row" : "flex-row-reverse")}>
@@ -1068,13 +1112,14 @@ function SeatCard({ seat, seatIndex, reveal, isOpponent, state, uiMode, onClick,
   const cardDef = unit ? state.cardDefs[unit.cardId] : null;
   const isPickTarget = uiMode?.kind === "pick_cast_seat" && uiMode.validSeats?.includes(seatIndex) && !isOpponent;
   const isAssTarget = uiMode?.kind === "pick_assassinate_target" && isOpponent;
+  const isNomadTarget = uiMode?.kind === "pick_nomad_move" && uiMode.validActions.some((a: any) => a.toSeat === seatIndex) && !isOpponent;
 
   return (
     <div
       className={cn(
         "flex-1 min-w-0 aspect-[2/3] max-h-[400px] rounded-xl border-2 transition-all relative group cursor-pointer overflow-hidden",
         seat.locked ? "border-red-900/40 bg-red-950/20 grayscale" :
-        isPickTarget ? "border-amber-400 bg-amber-900/30 animate-pulse shadow-[0_0_30px_rgba(251,191,36,0.6)] scale-[1.02] z-10" :
+        (isPickTarget || isNomadTarget) ? "border-amber-400 bg-amber-900/30 animate-pulse shadow-[0_0_30px_rgba(251,191,36,0.6)] scale-[1.02] z-10" :
         isAssTarget ? "border-rose-500 bg-rose-900/30 hover:shadow-[0_0_20px_rgba(244,63,94,0.4)]" :
         unit && unit.exhausted ? "border-gray-800 bg-gray-900 opacity-60" :
         (unit && cardDef) ? RARITY_CSS[cardDef.rarity] + " bg-black/40 shadow-xl" :
@@ -1402,6 +1447,52 @@ function TcgHandSection({ player, state, myActions, isMyTurn, uiMode, setUiMode,
   );
 }
 
+// ── PARRY ACTION BAR ───────────────────────────────────────────────────────
+function ParryActionBar({ state, myActions, act }: any) {
+  const parryAct = myActions.find((a: any) => a.type === 'parry');
+  const passAct  = myActions.find((a: any) => a.type === 'parryPass');
+  
+  if (!parryAct && !passAct) return null;
+
+  return (
+    <motion.div 
+      initial={{ y: 50, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="flex flex-col items-center gap-4 py-8 bg-slate-900 border border-rose-500/30 rounded-3xl mx-4 mb-4 shadow-[0_0_50px_rgba(225,29,72,0.2)]"
+    >
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-2">
+           <Zap className="w-5 h-5 text-rose-500 animate-pulse fill-rose-500" />
+           <h3 className="text-xl font-black text-white uppercase tracking-tighter italic">REACTION PHASE</h3>
+        </div>
+        <p className="text-gray-400 text-xs font-black uppercase tracking-widest leading-none">The opponent is casting an Event!</p>
+      </div>
+      
+      <div className="flex gap-4">
+        {parryAct && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => act(parryAct)}
+            className="px-10 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-2xl font-black uppercase text-lg shadow-[0_0_30px_rgba(225,29,72,0.4)] flex items-center gap-3 transition-colors"
+          >
+            <Shield className="w-6 h-6 fill-white" />
+            PARRY
+          </motion.button>
+        )}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => act(passAct)}
+          className="px-10 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-2xl font-black uppercase text-lg transition-colors"
+        >
+          IGNORE
+        </motion.button>
+      </div>
+    </motion.div>
+  );
+}
+
 // ── ACTION BAR ───────────────────────────────────────────────────────────────
 function ActionBar({ state, myActions, isMyTurn, uiMode, setUiMode, act }: any) {
   const checkAct = myActions.find((a: any) => a.type === 'check');
@@ -1410,6 +1501,10 @@ function ActionBar({ state, myActions, isMyTurn, uiMode, setUiMode, act }: any) 
   const raiseActs = myActions.filter((a: any) => a.type === 'raise');
   const igniteAct = myActions.find((a: any) => a.type === 'ignite');
   const assassinateActs = myActions.filter((a: any) => a.type === 'assassinate');
+  const prophetAct = myActions.find((a: any) => a.type === 'prophet_peek');
+  const ultimatumAct = myActions.find((a: any) => a.type === 'ultimatum');
+  const desperadoAct = myActions.find((a: any) => a.type === 'desperado_fold');
+  const nomadActs = myActions.filter((a: any) => a.type === 'nomad_move');
 
   if (!isMyTurn) {
     return (
@@ -1451,7 +1546,18 @@ function ActionBar({ state, myActions, isMyTurn, uiMode, setUiMode, act }: any) 
         );
       })}
       {foldAct  && <ActionBtn label="Fold" onClick={() => act(foldAct)} variant="danger" />}
+      {desperadoAct && <ActionBtn label="Desperado Fold" onClick={() => act(desperadoAct)} variant="danger" icon={<Skull className="w-4 h-4" />} />}
       {igniteAct && <ActionBtn label="Ignite" onClick={() => act(igniteAct)} variant="rose" icon={<Flame className="w-4 h-4" />} />}
+      {prophetAct && <ActionBtn label="Prophet: Peek" onClick={() => act(prophetAct)} variant="orange" icon={<BookOpen className="w-4 h-4" />} />}
+      {ultimatumAct && <ActionBtn label="Ultimatum" onClick={() => act(ultimatumAct)} variant="rose" icon={<Crown className="w-4 h-4" />} />}
+      {nomadActs.length > 0 && (
+        <ActionBtn
+          label="Nomad Move"
+          onClick={() => setUiMode({ kind: 'pick_nomad_move', validActions: nomadActs })}
+          variant="info"
+          icon={<ArrowRight className="w-4 h-4" />}
+        />
+      )}
       {assassinateActs.length > 0 && (
         <ActionBtn
           label="Assassinate"
@@ -1464,7 +1570,7 @@ function ActionBar({ state, myActions, isMyTurn, uiMode, setUiMode, act }: any) 
   );
 }
 
-function ActionBtn({ label, onClick, variant, icon }: { label: string; onClick: () => void; variant: string; icon?: React.ReactNode }) {
+function ActionBtn({ label, onClick, variant, icon }: { label: string; onClick: () => void; variant: string; icon?: React.ReactNode; key?: React.Key }) {
   const STYLES: Record<string, string> = {
     white:   'bg-white text-gray-900 hover:bg-gray-100',
     primary: 'bg-emerald-600 hover:bg-emerald-500 text-white',

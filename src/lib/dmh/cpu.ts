@@ -109,10 +109,6 @@ function scoreAction(a: Action, s: MatchState, side: PlayerSide, diff: CpuDiffic
         let val = 50;
         if (diff === "easy") return 80;
 
-        // If we are desperate for defense vs high attack units
-        const oppHighestAttack = Math.max(...opp.seats.map(se => (se.unit ? se.unit.baseAttack + se.unit.bonusAttack : 0)));
-        if (def.attack && def.attack > oppHighestAttack) val += 20;
-
         if (def.keyword === "Syndicate") {
             const counts = p.seats.filter(se => se.unit?.keyword === "Syndicate").length;
             val += 15 * counts;
@@ -124,17 +120,10 @@ function scoreAction(a: Action, s: MatchState, side: PlayerSide, diff: CpuDiffic
             const oppSeat = opp.seats[a.seat];
             if (def.keyword === "Enforcer") {
                 val += 30; // Great defense
-                // Enforcers want to block high-attack enemy units
-                if (oppSeat.unit) {
-                    val += oppSeat.unit.baseAttack * 5; 
-                }
-            } else if (def.keyword === "Assassin") {
-                // Assassins want to be in front of high-value targets to kill them
-                if (oppSeat.unit && oppSeat.unit.keyword === "Enforcer") val += 15;
             } else {
                 // If it's a weak unit, maybe don't place it in front of a massive enemy Enforcer
-                if (oppSeat.unit && oppSeat.unit.baseAttack > (def.defense ?? 0) + 5) {
-                    val -= 15; // We will just die instantly
+                if (oppSeat.unit && (oppSeat.unit.baseDefense ?? 0) > (def.defense ?? 0) + 5) {
+                    val -= 15; // Harder to kill them than they kill us
                 }
             }
         }
@@ -223,6 +212,23 @@ function scoreAction(a: Action, s: MatchState, side: PlayerSide, diff: CpuDiffic
       
       return raiseScore;
     }
+
+    case "desperado_fold":
+      return owed > 0 && eq < 0.3 ? 95 : -10;
+
+    case "prophet_peek":
+      return 150; // Always peek if possible
+
+    case "ultimatum":
+      return 190; // Use immediately
+
+    case "nomad_move":
+      return diff === "easy" ? -10 : 30; // Mild preference to move if they have cash
+
+    case "parry":
+      return 150; // Always parry if possible (reactive)
+    case "parryPass":
+      return 10;
 
     case "fold": {
       if (diff === "easy") return -100;
