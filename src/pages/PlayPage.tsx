@@ -13,6 +13,15 @@ import { cn } from "../lib/utils";
 import type { CpuDifficulty } from "../lib/dmh/cpu";
 import type { CardDef } from "../lib/dmh/types";
 
+const RARITY_COLOR: Record<string, string> = {
+  'Common': 'text-gray-400',
+  'Uncommon': 'text-emerald-400',
+  'Rare': 'text-blue-400',
+  'Super-Rare': 'text-purple-400',
+  'Mythic': 'text-amber-400',
+  'Divine': 'text-rose-400'
+};
+
 interface DeckOption {
   id: string;
   name: string;
@@ -45,6 +54,7 @@ export default function PlayPage() {
   const [chosenDeckId, setChosenDeckId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<Step>('deck');
+  const [cpuDeck, setCpuDeck] = useState<{ leader: CardDef; cards: CardDef[] } | null>(null);
 
   // CPU slots: up to 4 (total 5 players)
   const [cpuSlots, setCpuSlots] = useState<CpuSlot[]>([
@@ -79,6 +89,54 @@ export default function PlayPage() {
     setCpuSlots(prev => prev.map((s, idx) => idx === i ? { ...s, difficulty: d } : s));
   };
 
+  async function preloadCpuDeck() {
+    setLoading(true);
+    let p2DeckData: any = null;
+    try {
+      const { data: potentialDecks } = await supabase
+        .from('decks')
+        .select('id')
+        .ilike('name', '%CPU%')
+        .limit(3);
+
+      if (potentialDecks && potentialDecks.length > 0) {
+        const randomDeck = potentialDecks[Math.floor(Math.random() * potentialDecks.length)];
+        const { data: cDeck } = await supabase.rpc("get_deck", { p_deck_id: randomDeck.id });
+        if (cDeck && cDeck.leader && cDeck.cards) {
+          p2DeckData = { leader: cDeck.leader, cards: cDeck.cards };
+        }
+      }
+
+      if (!p2DeckData) {
+        const { data: allCards } = await supabase.from('cards').select('*');
+        if (allCards && allCards.length > 20) {
+          const leaders = allCards.filter((c: any) => c.card_type === 'Leader');
+          const locations = allCards.filter((c: any) => c.card_type === 'Location');
+          const mainPool = allCards.filter((c: any) => c.card_type !== 'Leader' && c.card_type !== 'Location');
+
+          const l = leaders[Math.floor(Math.random() * leaders.length)] || leaders[0];
+          let loc = locations[Math.floor(Math.random() * locations.length)];
+          
+          if (!loc) {
+            // Fallback: try to find ANY card if no locations exist, but engine needs a location
+            // Preferably we find the intended fallback, but any card is better than undefined
+            loc = allCards.find((c: any) => c.card_type === 'Location') || allCards[0];
+          }
+          
+          const selection: any[] = [loc];
+          while (selection.length < 19) {
+            const rc = mainPool[Math.floor(Math.random() * mainPool.length)];
+            selection.push(rc);
+          }
+          p2DeckData = { leader: l, cards: selection };
+        }
+      }
+    } catch {}
+    
+    setCpuDeck(p2DeckData);
+    setLoading(false);
+  }
+
   async function startMatch() {
     if (!user) return toast.error("Sign in first");
     if (!chosenDeckId) return toast.error("Select a deck first");
@@ -105,52 +163,10 @@ export default function PlayPage() {
     let p2CardDefs: CardDef[] = [];
     let p2DeckData: any = null;
 
-    try {
-      // 1. Try to find potential CPU decks (non-user decks if RLS allows, or decks with 'CPU' in name)
-      const { data: potentialDecks } = await supabase
-        .from('decks')
-        .select('id')
-        .ilike('name', '%CPU%')
-        .limit(3);
-
-      if (potentialDecks && potentialDecks.length > 0) {
-        const randomDeck = potentialDecks[Math.floor(Math.random() * potentialDecks.length)];
-        const { data: cpuDeck } = await supabase.rpc("get_deck", { p_deck_id: randomDeck.id });
-        if (cpuDeck && cpuDeck.leader && cpuDeck.cards) {
-          p2DeckData = { leader: cpuDeck.leader, cards: cpuDeck.cards };
-          p2CardDefs = [cpuDeck.leader, ...cpuDeck.cards].filter(Boolean);
-        }
-      }
-
-      // 2. Fallback: Generate a random legal-ish deck from all cards if possible
-      if (!p2DeckData) {
-        const { data: allCards } = await supabase.from('cards').select('*');
-        if (allCards && allCards.length > 20) {
-          const leaders = allCards.filter(c => c.card_type === 'Leader');
-          const locations = allCards.filter(c => c.card_type === 'Location');
-          const mainPool = allCards.filter(c => c.card_type !== 'Leader' && c.card_type !== 'Location');
-
-          const l = leaders[Math.floor(Math.random() * leaders.length)] || leaders[0];
-          const loc = locations[Math.floor(Math.random() * locations.length)] || locations[0];
-          
-          const selection: any[] = [loc];
-          while (selection.length < 19) {
-            const rc = mainPool[Math.floor(Math.random() * mainPool.length)];
-            const inCount = selection.filter(x => x.id === rc.id).length;
-            if (inCount < (rc.rarity === 'Divine' ? 1 : 2)) {
-              selection.push(rc);
-            }
-          }
-          p2DeckData = { leader: l, cards: selection };
-          p2CardDefs = [l, ...selection].filter(Boolean);
-        }
-      }
-    } catch (e) {
-      console.warn("Failed to build custom CPU deck", e);
-    }
-
-    // Ultimate fallback if everything failed: mirror player (original behavior)
-    if (!p2DeckData) {
+    if (cpuDeck) {
+      p2DeckData = cpuDeck;
+      p2CardDefs = [cpuDeck.leader, ...cpuDeck.cards].filter(Boolean);
+    } else {
       p2DeckData = { leader: myDeck.leader, cards: myDeck.cards ?? [] };
       p2CardDefs = p1CardDefs;
     }
@@ -402,7 +418,10 @@ export default function PlayPage() {
                 <ChevronLeft className="w-4 h-4" /> Back
               </button>
               <button
-                onClick={() => setStep('ready')}
+                onClick={() => {
+                  void preloadCpuDeck();
+                  setStep('ready');
+                }}
                 disabled={enabledCpus.length === 0}
                 className="flex-1 py-4 bg-amber-500 hover:bg-amber-400 text-black font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2"
               >
@@ -423,6 +442,37 @@ export default function PlayPage() {
               <p className="text-gray-500 text-sm mb-6">
                 {enabledCpus.length > 1 ? `Tournament: ${enabledCpus.length + 1} players · ${enabledCpus.length} rounds` : 'Single match · 2 players'}
               </p>
+
+              {cpuDeck && cpuDeck.leader && (
+                <div className="bg-gray-800 rounded-xl p-4 mb-6 text-left border border-amber-900/40">
+                  <span className="text-xs font-black uppercase text-gray-500 block mb-2">Opponent Leader preview</span>
+                  <div className="flex gap-4 items-center">
+                    <div className="w-16 h-24 shrink-0 rounded overflow-hidden shadow-lg border border-gray-700">
+                      {(enabledCpus[0]?.difficulty === 'hard' || enabledCpus[0]?.difficulty === 'normal') ? (
+                        <div className="w-full h-full bg-black flex items-center justify-center relative">
+                          {cpuDeck.leader.image_url && <img src={cpuDeck.leader.image_url} alt="?" className="w-full h-full object-cover opacity-20 grayscale" />}
+                          <span className="absolute font-black text-4xl text-gray-500 drop-shadow-md">?</span>
+                        </div>
+                      ) : (
+                        cpuDeck.leader.image_url ? 
+                        <img src={cpuDeck.leader.image_url} alt={cpuDeck.leader.name} className="w-full h-full object-cover" /> :
+                        <div className="w-full h-full border border-dashed border-gray-600 bg-gray-900" />
+                      )}
+                    </div>
+                    <div>
+                      {enabledCpus[0]?.difficulty === 'hard' ? (
+                        <h3 className="font-bold text-gray-300">Hidden Strategy (Hard)</h3>
+                      ) : (
+                        <>
+                          <h3 className={"font-bold " + RARITY_COLOR[cpuDeck.leader.rarity]}>{cpuDeck.leader.name}</h3>
+                          <div className="text-xs text-amber-400 font-bold">{cpuDeck.leader.keyword || 'No special keyword'}</div>
+                          {cpuDeck.leader.effect_text && <div className="text-xs text-gray-400 mt-1 line-clamp-2 italic">{cpuDeck.leader.effect_text}</div>}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Match summary */}
               <div className="bg-black/40 rounded-xl p-4 text-left space-y-2 mb-6">

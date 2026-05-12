@@ -252,6 +252,7 @@ function DeckEditor({
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<CardType | "All">("All");
   const [filterRarity, setFilterRarity] = useState<Rarity | "All">("All");
+  const [filterKeyword, setFilterKeyword] = useState<string | "All">("All");
   const [sortBy, setSortBy] = useState<"cost-asc" | "cost-desc" | "rarity" | "name">("cost-asc");
   const [viewSize, setViewSize] = useState<"grid" | "list">("grid");
   const [saving, setSaving] = useState(false);
@@ -331,11 +332,20 @@ function DeckEditor({
       if (filterType !== "All" && c.card_type !== filterType) return false;
       if (filterType === "All" && c.card_type === "Leader") return false; // leaders picked separately
       if (filterRarity !== "All" && c.rarity !== filterRarity) return false;
+      if (filterKeyword !== "All" && c.keyword !== filterKeyword) return false;
       if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
       
       return true; // Show all, including maxed (we'll grey them out in the grid)
     });
-  }, [collection, filterType, filterRarity, search, sortBy]);
+  }, [collection, filterType, filterRarity, filterKeyword, search, sortBy]);
+
+  const uniqueKeywords = useMemo(() => {
+    const kws = new Set<string>();
+    collection.forEach(c => {
+      if (c.keyword) kws.add(c.keyword);
+    });
+    return Array.from(kws).sort();
+  }, [collection]);
 
   const leaderOptions = useMemo(
     () => collection.filter((c) => c.card_type === "Leader"),
@@ -472,6 +482,35 @@ function DeckEditor({
               );
             })()}
           </div>
+
+          {/* Location Slot Indicator */}
+          {(() => {
+            const locCard = cards.find(c => c.card_type === "Location");
+            return (
+              <div className={cn(
+                "mb-4 p-2 rounded-lg border-2 flex items-center justify-between",
+                locCard ? "border-amber-500/50 bg-amber-950/20" : "border-red-900/50 bg-red-950/20 border-dashed"
+              )}>
+                <div className="flex items-center gap-2">
+                  <span className={cn("text-lg", locCard ? "" : "opacity-30")}>📍</span>
+                  <div className="flex flex-col">
+                    <span className={cn("text-[9px] font-black uppercase tracking-widest", locCard ? "text-amber-500" : "text-red-500")}>
+                      Location Slot {locCard ? "(Ready)" : "(Required)"}
+                    </span>
+                    <span className={cn("text-sm font-bold truncate max-w-[150px]", locCard ? RARITY_COLOR[locCard.rarity] : "text-red-400/50")}>
+                      {locCard ? locCard.name : "Missing Location"}
+                    </span>
+                  </div>
+                </div>
+                {locCard && (
+                  <button onClick={() => removeCard(cards.indexOf(locCard))} className="text-gray-500 hover:text-red-400 p-1">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+
           <div className="space-y-1" id="main-deck-list">
             <AnimatePresence>
               {cards.map((c, idx) => (
@@ -548,6 +587,17 @@ function DeckEditor({
                 <option value="Event">Events</option>
                 <option value="Artifact">Artifacts</option>
                 <option value="Location">Locations</option>
+              </select>
+              <select
+                value={filterKeyword}
+                onChange={(e) => setFilterKeyword(e.target.value)}
+                className="bg-gray-900 border border-gray-800 rounded px-2 text-white text-sm max-w-[120px]"
+                id="keyword-filter"
+              >
+                <option value="All">All keywords</option>
+                {uniqueKeywords.map((kw) => (
+                  <option key={kw} value={kw}>{kw}</option>
+                ))}
               </select>
               <select
                 value={sortBy}

@@ -205,10 +205,28 @@ export function Settings() {
             <button
               key={t.id}
               onClick={() => setTheme(t.id as any)}
-              className={`px-4 py-3 font-black rounded-xl border-4 border-[var(--border)] uppercase flex flex-col items-center gap-2 ${theme === t.id ? 'bg-black text-white' : 'bg-[var(--bg)] text-[var(--text)]'}`}
+              className={`p-3 font-black rounded-xl border-4 uppercase flex flex-col items-stretch gap-3 transition-transform hover:scale-105 active:scale-95 ${theme === t.id ? 'border-amber-500 shadow-[4px_4px_0_0_#f59e0b]' : 'border-[var(--border)] bg-[var(--bg)]'}`}
             >
-              <div className="w-6 h-6 rounded-full border-2 border-[var(--border)]" style={{ backgroundColor: t.preview }} />
-              <span className="text-xs">{t.label}</span>
+              <span className="text-xs text-center">{t.label}</span>
+              
+              {/* Mini Preview Swatch */}
+              <div 
+                data-theme={t.id} 
+                className="h-20 rounded-lg w-full p-2 flex flex-col gap-2 shadow-inner overflow-hidden border border-gray-500/20"
+                style={{
+                  backgroundColor: 'var(--bg)',
+                  borderColor: 'var(--border)'
+                }}
+              >
+                <div className="w-full h-8 rounded shrink-0 border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }}>
+                  <div className="h-2 w-1/2 rounded m-2" style={{ backgroundColor: 'var(--text)', opacity: 0.8 }} />
+                </div>
+                <div className="flex gap-1 mt-auto">
+                  <div className="h-4 flex-1 rounded border" style={{ backgroundColor: 'var(--accent)', borderColor: 'var(--border)' }} />
+                  <div className="h-4 flex-1 rounded border" style={{ backgroundColor: 'var(--surface)', borderColor: 'var(--border)' }} />
+                </div>
+              </div>
+
             </button>
           ))}
         </div>

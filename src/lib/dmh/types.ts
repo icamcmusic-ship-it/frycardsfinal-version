@@ -3,7 +3,7 @@
 
 // ---- Cards ----------------------------------------------------------------
 
-export type CardType = 'Unit' | 'Event' | 'Location' | 'Artifact' | 'Leader';
+export type CardType = 'Unit' | 'Event' | 'Location' | 'Artifact' | 'Leader' | 'Sacred';
 export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Super-Rare' | 'Mythic' | 'Divine';
 export type PowerGrade = 'S' | 'A' | 'B' | 'C';
 
@@ -195,10 +195,11 @@ export type Action =
   | { type: 'check' }
   | { type: 'call' }
   | { type: 'raise'; amount: number }
-  | { type: 'fold' }
+  | { type: 'fold'; seatToLock?: 0|1|2 }
   | { type: 'assassinate'; targetSide: PlayerSide; seat: 0|1|2; holeCardIndex: number; secondHoleCardIndex?: number }
   | { type: 'ignite' }
   | { type: 'fuel'; payload: FuelPayload }
+  | { type: 'sell_card'; cardId: string }
   | { type: 'buyout'; targetSeat: 0|1|2; holeCardIndex: number }
   | { type: 'place_location'; cardId: string }
   | { type: 'parry'; cardId: string }

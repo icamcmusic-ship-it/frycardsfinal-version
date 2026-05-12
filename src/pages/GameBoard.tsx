@@ -15,12 +15,13 @@ import {
   Crown, Coins, Flame, Skull, Sword, Shield, EyeOff,
   Zap, Package, Sparkles, MapPin, X, BookOpen,
   RotateCcw, Info, Ghost, Trophy, ChevronRight, Users,
-  Star
+  Star, ArrowRight
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useProfileStore } from "../stores/profileStore";
 import { newMatch, step, listLegalActions } from "../lib/dmh/engine";
 import { chooseAction, type CpuDifficulty } from "../lib/dmh/cpu";
+import { getKeyword } from "../lib/dmh/keywords-data";
 import type { Action, CardDef, MatchState, Player, PokerCard, Seat, Unit } from "../lib/dmh/types";
 import { rankToString, suitSymbol } from "../lib/dmh/types";
 import { cn } from "../lib/utils";
@@ -79,6 +80,7 @@ type UiMode =
   | { kind: "pick_parry_response"; side: "A" | "B"; validActions: Action[] }
   | { kind: "pick_fuel_card" }
   | { kind: "pick_nomad_move"; validActions: Extract<Action, { type: "nomad_move" }>[] }
+  | { kind: "pick_seat_to_lock"; validActions: Extract<Action, { type: "fold" }>[] }
   | { kind: "confirm_quit" }
   | { kind: "expand_card"; card: CardDef };
 
@@ -101,6 +103,7 @@ export default function GameBoard() {
   const [reveal, setReveal] = useState(false);
   const [uiMode, setUiMode] = useState<UiMode>({ kind: "default" });
   const [logOpen, setLogOpen] = useState(false);
+  const [hoverCard, setHoverCard] = useState<{def: CardDef, defStat?: number} | null>(null);
   const cpuBusy = useRef(false);
   const reportedRef = useRef(false);
   const logEndRef = useRef<HTMLDivElement>(null);
@@ -116,6 +119,14 @@ export default function GameBoard() {
   const [isPeeking, setIsPeeking] = useState(false);
   const prevPhaseRef = useRef<string | null>(null);
   const prevLocationId = useRef<string | null>(null);
+
+  const handleHover = useCallback((def: CardDef | null, defStat?: number) => {
+    if (def) {
+      setHoverCard({ def, defStat });
+    } else {
+      setHoverCard(null);
+    }
+  }, []);
   
   // ── KEYWORD & ACTION FEEDBACK ──
   const [keywordFeedbacks, setKeywordFeedbacks] = useState<KeywordFeedback[]>([]);
@@ -197,17 +208,20 @@ export default function GameBoard() {
     cpuBusy.current = true;
     const slot = tournament.cpuSlots[tournament.currentRound];
     
-    // Longer and variable delays for CPU
-    const minDelay = 1200;
-    const maxDelay = 2200;
-    const delay = Math.floor(Math.random() * (maxDelay - minDelay)) + minDelay;
+    const a = chooseAction(state, "B", slot.difficulty);
+    if (!a) {
+      cpuBusy.current = false;
+      return;
+    }
+
+    let delay = 800;
+    if (a.type === 'check' || a.type === 'call') delay = 400;
+    if (a.type === 'raise' || a.type === 'fold') delay = 800;
+    if (a.type === 'cast' || a.type === 'assassinate') delay = 1200;
 
     const t = setTimeout(() => {
-      const a = chooseAction(state, "B", slot.difficulty);
-      if (a) {
-        handleActionFeedback("B", a);
-        setState(cur => cur ? step(cur, a) : cur);
-      }
+      handleActionFeedback("B", a);
+      setState(cur => cur ? step(cur, a) : cur);
       cpuBusy.current = false;
     }, delay);
     return () => clearTimeout(t);
@@ -602,6 +616,7 @@ export default function GameBoard() {
               uiMode={uiMode}
               currentSlotName={currentSlot?.name}
               onCardExpand={(card: CardDef) => setUiMode({ kind: "expand_card", card })}
+              onHover={handleHover}
               onSeatClick={(seatIdx: number) => {
                 if (uiMode.kind === "pick_assassinate_target") {
                   const action = uiMode.validActions.find(a => a.seat === seatIdx);
@@ -693,6 +708,11 @@ export default function GameBoard() {
                       const def = state.cardDefs[state.location!.cardId];
                       if (def) setUiMode({ kind: 'expand_card', card: def });
                     }}
+                    onMouseEnter={() => {
+                      const def = state.cardDefs[state.location!.cardId];
+                      if (def) handleHover(def);
+                    }}
+                    onMouseLeave={() => handleHover(null)}
                   >
                     <div className="absolute inset-x-0 top-0 h-1 bg-amber-500 animate-pulse" />
                     <div className="p-3 h-full flex flex-col justify-center text-center items-center">
@@ -709,11 +729,44 @@ export default function GameBoard() {
               <div className="flex flex-col items-center">
                 <CommunityArea state={state} />
                 <PotDisplay pot={state.pot} state={state} winner={state.winner} />
+                
+                {/* 📍 PERSISTENT LOCATION RIBBON (QoL C) */}
+                {state.location && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 flex flex-col items-center gap-1 group cursor-help z-30"
+                    onMouseEnter={() => handleHover(state.location! as any)}
+                    onMouseLeave={() => handleHover(null)}
+                  >
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-900/40 border border-blue-500/40 rounded-full backdrop-blur-md shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                      <MapPin className="w-3.5 h-3.5 text-blue-400" />
+                      <span className="text-[10px] font-black text-blue-200 uppercase tracking-tighter">
+                        {state.location.name} — {state.location.keyword} {romanize(state.location.tier)}
+                      </span>
+                    </div>
+                    <div className="text-[9px] text-blue-400/60 font-medium uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity">
+                      Active for {3 - (state.handNumber % 2)} more hands
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
               {/* Just a balancer so community cards stay dead center */}
               {state.location && <div className="w-28 opacity-0 pointer-events-none" />}
             </div>
+
+            {/* Persistent Log Ticker */}
+            {state.log.length > 0 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[500px] h-12 overflow-hidden bg-black/60 border border-white/5 rounded-xl flex flex-col justify-end p-2 pointer-events-none fade-mask-top">
+                {state.log.slice(-2).map((l, i) => (
+                  <div key={state.log.length - 2 + i} className="text-[10px] text-gray-400 font-mono tracking-tighter shrink-0 truncate">
+                    <span className="opacity-40 mr-2">[{l.phase.toUpperCase()}]</span>
+                    {l.text}
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
       {/* ── PLAYER SIDE ── */}
@@ -724,6 +777,8 @@ export default function GameBoard() {
           reveal
           state={state}
           uiMode={uiMode}
+          onCardExpand={(card: CardDef) => setUiMode({ kind: "expand_card", card })}
+          onHover={handleHover}
           onSeatClick={(seatIdx: number) => {
             if (uiMode.kind === "pick_cast_seat" && uiMode.validSeats.includes(seatIdx)) {
               act({ type: "cast", cardId: uiMode.cardId, seat: seatIdx as 0|1|2 });
@@ -732,50 +787,55 @@ export default function GameBoard() {
               if (action) {
                 act(action);
               }
+            } else if (uiMode.kind === "pick_seat_to_lock") {
+              const action = uiMode.validActions[0];
+              if (action) {
+                act({ ...action, seatToLock: seatIdx as 0|1|2 });
+              }
             }
           }}
-          onCardExpand={(card: CardDef) => setUiMode({ kind: "expand_card", card })}
         />
       </section>
 
-          {/* ── HAND & ACTION BAR ── */}
-          <div className="flex-shrink-0 border-t-2 border-emerald-800/30 bg-black/30">
-            <TcgHandSection
-              player={me}
-              state={state}
-              myActions={myActions}
-              isMyTurn={isMyTurn}
-              uiMode={uiMode}
-              setUiMode={setUiMode}
-              act={act}
-              onExpandCard={(card: CardDef) => setUiMode({ kind: "expand_card", card })}
-            />
-            <div className="px-4 pb-4">
-              {state.phase === "ended" ? (
-                <EndScreen
-                  won={state.winner === "A"}
-                  tournament={tournament}
-                  isLastRound={!tournament || tournament.currentRound >= tournament.cpuSlots.length - 1}
-                  onPlayAgain={() => nav("/play")}
-                />
-              ) : uiMode.kind === 'pick_parry_response' ? (
-                <ParryActionBar
-                  state={state}
-                  myActions={myActions}
-                  act={act}
-                />
-              ) : (
-                <ActionBar
+              <div className="bg-black/60 backdrop-blur-xl border-t-2 border-emerald-800/20 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+                <TcgHandSection
+                  player={me}
                   state={state}
                   myActions={myActions}
                   isMyTurn={isMyTurn}
                   uiMode={uiMode}
                   setUiMode={setUiMode}
                   act={act}
+                  onExpandCard={(card: CardDef) => setUiMode({ kind: "expand_card", card })}
+                  onHover={handleHover}
                 />
-              )}
-            </div>
-          </div>
+                <div className="px-4 pb-6">
+                  {state.phase === "ended" ? (
+                    <EndScreen
+                      won={state.winner === "A"}
+                      tournament={tournament}
+                      isLastRound={!tournament || tournament.currentRound >= tournament.cpuSlots.length - 1}
+                      onPlayAgain={() => nav("/play")}
+                      state={state}
+                    />
+                  ) : uiMode.kind === 'pick_parry_response' ? (
+                    <ParryActionBar
+                      state={state}
+                      myActions={myActions}
+                      act={act}
+                    />
+                  ) : (
+                    <ActionBar
+                      state={state}
+                      myActions={myActions}
+                      isMyTurn={isMyTurn}
+                      uiMode={uiMode}
+                      setUiMode={setUiMode}
+                      act={act}
+                    />
+                  )}
+                </div>
+              </div>
         </div>
 
         {/* ── GAME LOG SIDEBAR ── */}
@@ -819,6 +879,27 @@ export default function GameBoard() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* ── HOVER TOOLTIP ── */}
+      <AnimatePresence>
+        {hoverCard && hoverCard.def.keyword && hoverCard.def.keyword_tier && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed bottom-4 left-4 z-50 w-64 bg-gray-900 border-2 border-gray-700/80 rounded-xl shadow-2xl p-4 pointer-events-none filter drop-shadow-xl backdrop-blur-md"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-amber-500 font-bold uppercase tracking-widest text-xs">
+                {hoverCard.def.keyword} {hoverCard.def.keyword_tier}
+              </span>
+            </div>
+            <p className="text-sm text-gray-300 leading-tight">
+              {getKeyword(hoverCard.def.keyword as any, hoverCard.def.keyword_tier as any)?.effect_text || "No effect text."}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── CARD EXPAND MODAL ── */}
       {uiMode.kind === "expand_card" && (
@@ -905,36 +986,61 @@ export default function GameBoard() {
 }
 
 // ── END SCREEN ───────────────────────────────────────────────────────────────
-function EndScreen({ won, tournament, isLastRound, onPlayAgain }: { won: boolean; tournament: TournamentState | null; isLastRound: boolean; onPlayAgain: () => void }) {
+function EndScreen({ won, tournament, isLastRound, onPlayAgain, state }: { won: boolean; tournament: TournamentState | null; isLastRound: boolean; onPlayAgain: () => void; state: MatchState }) {
   const isWinningTournament = won && isLastRound && tournament && tournament.wins > 0;
   const advancingToNext = won && !isLastRound;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
       className={cn(
-        "rounded-2xl p-4 flex flex-col items-center gap-3 border-2",
-        isWinningTournament ? "bg-amber-900/30 border-amber-600" :
-        advancingToNext ? "bg-emerald-900/30 border-emerald-600" :
-        won ? "bg-emerald-900/30 border-emerald-600" :
-        "bg-red-900/30 border-red-700"
+        "rounded-2xl p-6 flex flex-col items-center gap-4 border-2 shadow-2xl backdrop-blur-md",
+        isWinningTournament ? "bg-amber-950/60 border-amber-600 ring-2 ring-amber-500/20" :
+        advancingToNext ? "bg-emerald-950/60 border-emerald-600" :
+        won ? "bg-emerald-950/60 border-emerald-600" :
+        "bg-red-950/60 border-red-700"
       )}
     >
-      <div className="flex items-center gap-2">
-        {isWinningTournament ? <Trophy className="w-6 h-6 text-amber-400" /> :
-         advancingToNext ? <ChevronRight className="w-6 h-6 text-emerald-400" /> :
-         won ? <Trophy className="w-6 h-6 text-emerald-400" /> :
-         <Skull className="w-6 h-6 text-red-400" />}
-        <span className="font-black uppercase text-sm">
-          {isWinningTournament ? `Tournament Complete! ${tournament!.wins} wins!` :
-           advancingToNext ? `Victory! Advancing to next round...` :
+      <div className="flex flex-col items-center gap-2">
+        {isWinningTournament ? <Trophy className="w-12 h-12 text-amber-400 animate-bounce" /> :
+         advancingToNext ? <ChevronRight className="w-12 h-12 text-emerald-400" /> :
+         won ? <Trophy className="w-10 h-10 text-emerald-400" /> :
+         <Skull className="w-12 h-12 text-red-400" />}
+        <span className="font-black uppercase text-xl tracking-tighter text-white">
+          {isWinningTournament ? `Tournament Champion!` :
+           advancingToNext ? `Victory!` :
            won ? "Victory!" : "Defeated"}
         </span>
       </div>
+
+      {tournament && (
+        <div className="w-full bg-black/40 rounded-xl p-4 border border-white/5 space-y-3">
+           <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-500 font-bold uppercase">Tournament Progress</span>
+              <span className="text-amber-400 font-black tracking-widest">{tournament.wins} / {tournament.cpuSlots.length} Wins</span>
+           </div>
+           <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-500 font-bold uppercase">Stash Carry-over</span>
+              <span className="text-emerald-400 font-black tracking-widest">{state.players.A.stash} <Coins className="w-3 h-3 inline pb-0.5" /></span>
+           </div>
+           {!isLastRound && advancingToNext && (
+             <div className="pt-2 border-t border-white/5">
+                <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Next Opponent</p>
+                <div className="flex justify-between items-center">
+                   <span className="text-sm font-black text-white">{tournament.cpuSlots[tournament.currentRound + 1]?.name}</span>
+                   <span className="text-[10px] font-black text-rose-400 uppercase bg-rose-900/30 px-2 py-0.5 rounded tracking-tighter">
+                      {tournament.cpuSlots[tournament.currentRound + 1]?.difficulty}
+                   </span>
+                </div>
+             </div>
+           )}
+        </div>
+      )}
+
       {(!advancingToNext) && (
-        <button onClick={onPlayAgain} className="px-6 py-2 bg-amber-500 hover:bg-amber-400 text-black font-black uppercase rounded-xl text-sm transition-all">
-          Play Again
+        <button onClick={onPlayAgain} className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-black uppercase rounded-xl shadow-lg transform active:scale-95 transition-all">
+          Main Menu
         </button>
       )}
     </motion.div>
@@ -942,7 +1048,7 @@ function EndScreen({ won, tournament, isLastRound, onPlayAgain }: { won: boolean
 }
 
 // ── PLAYER PANEL ─────────────────────────────────────────────────────────────
-function PlayerPanel({ player, side, reveal, isOpponent = false, state, uiMode, onSeatClick, currentSlotName, onCardExpand }: any) {
+function PlayerPanel({ player, side, reveal, isOpponent = false, state, uiMode, onSeatClick, currentSlotName, onCardExpand, onHover }: any) {
   const leaderDef = state.cardDefs[player.leaderCardId];
   const [isPeeking, setIsPeeking] = useState(false);
 
@@ -957,6 +1063,8 @@ function PlayerPanel({ player, side, reveal, isOpponent = false, state, uiMode, 
             player.leaderIgnited ? "ring-4 ring-orange-500 ring-offset-2 ring-offset-black shadow-[0_0_30px_rgba(249,115,22,0.6)]" : "border-2 border-amber-500/40"
           )}
           onClick={() => leaderDef && onCardExpand?.(leaderDef)}
+          onMouseEnter={() => { if (leaderDef) onHover?.(leaderDef); }}
+          onMouseLeave={() => onHover?.(null)}
         >
           {leaderDef?.image_url ? (
             <img src={leaderDef.image_url} alt={leaderDef.name} className="w-full h-full object-cover rounded-lg" />
@@ -1055,6 +1163,7 @@ function PlayerPanel({ player, side, reveal, isOpponent = false, state, uiMode, 
             uiMode={uiMode}
             onClick={() => onSeatClick?.(i)}
             onExpand={(card: CardDef) => onCardExpand?.(card)}
+            onHover={onHover}
           />
         ))}
       </div>
@@ -1064,7 +1173,7 @@ function PlayerPanel({ player, side, reveal, isOpponent = false, state, uiMode, 
         <p className="text-[9px] text-gray-500 font-black uppercase text-center tracking-tighter">Hole Cards</p>
         <div className="flex gap-1.5 flex-wrap justify-center max-w-[120px]">
           {player.holeCards.map((card: PokerCard, i: number) => {
-            const isVisible = reveal || (!isOpponent && isPeeking);
+            const isVisible = reveal || (!isOpponent && isPeeking) || card.faceUp;
             return (
               <motion.div
                 key={i}
@@ -1107,25 +1216,28 @@ function PlayerPanel({ player, side, reveal, isOpponent = false, state, uiMode, 
 }
 
 // ── SEAT CARD ─────────────────────────────────────────────────────────────────
-function SeatCard({ seat, seatIndex, reveal, isOpponent, state, uiMode, onClick, onExpand }: any) {
+function SeatCard({ seat, seatIndex, reveal, isOpponent, state, uiMode, onClick, onExpand, onHover }: any) {
   const unit: Unit | null = seat.unit;
   const cardDef = unit ? state.cardDefs[unit.cardId] : null;
   const isPickTarget = uiMode?.kind === "pick_cast_seat" && uiMode.validSeats?.includes(seatIndex) && !isOpponent;
   const isAssTarget = uiMode?.kind === "pick_assassinate_target" && isOpponent;
   const isNomadTarget = uiMode?.kind === "pick_nomad_move" && uiMode.validActions.some((a: any) => a.toSeat === seatIndex) && !isOpponent;
+  const isFoldTarget = uiMode?.kind === "pick_seat_to_lock" && !isOpponent;
 
   return (
     <div
       className={cn(
         "flex-1 min-w-0 aspect-[2/3] max-h-[400px] rounded-xl border-2 transition-all relative group cursor-pointer overflow-hidden",
         seat.locked ? "border-red-900/40 bg-red-950/20 grayscale" :
-        (isPickTarget || isNomadTarget) ? "border-amber-400 bg-amber-900/30 animate-pulse shadow-[0_0_30px_rgba(251,191,36,0.6)] scale-[1.02] z-10" :
+        (isPickTarget || isNomadTarget || isFoldTarget) ? "border-amber-400 bg-amber-900/30 animate-pulse shadow-[0_0_30px_rgba(251,191,36,0.6)] scale-[1.02] z-10" :
         isAssTarget ? "border-rose-500 bg-rose-900/30 hover:shadow-[0_0_20px_rgba(244,63,94,0.4)]" :
         unit && unit.exhausted ? "border-gray-800 bg-gray-900 opacity-60" :
         (unit && cardDef) ? RARITY_CSS[cardDef.rarity] + " bg-black/40 shadow-xl" :
         "border-dashed border-white/10 bg-white/[0.03]"
       )}
       onClick={onClick}
+      onMouseEnter={() => { if (unit && cardDef && reveal) onHover?.(cardDef, unit.baseDefense + (unit.bonusDefense ?? 0)); }}
+      onMouseLeave={() => onHover?.(null)}
     >
       {seat.locked && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-950/40 backdrop-blur-[1px]">
@@ -1217,11 +1329,13 @@ function CommunityArea({ state }: { state: MatchState }) {
     <div className="flex gap-3 justify-center items-center mb-4">
       {[0, 1, 2, 3, 4].map(i => {
         const card = state.community[i];
+        const isFaceUp = card?.faceUp !== false; // handle undefined (back) and explicit face-down
+        
         return (
           <motion.div
             key={i}
             initial={false}
-            animate={card ? { 
+            animate={card && isFaceUp ? { 
               rotateY: 0, 
               scale: 1,
               x: [0, -2, 2, -2, 2, 0],
@@ -1234,22 +1348,28 @@ function CommunityArea({ state }: { state: MatchState }) {
               type: "spring", 
               damping: 12, 
               stiffness: 100, 
-              delay: card ? i * 0.35 : 0, // only stagger when appearing
+              delay: card ? i * 0.35 : 0,
               x: { duration: 0.4, delay: i * 0.35 }
             }}
             className={cn(
-              "w-14 h-20 rounded border-2 flex flex-col items-center justify-center font-black text-sm shadow preserve-3d transition-colors",
-              card ? "bg-white border-gray-200" : "bg-gray-800/50 border-dashed border-gray-700"
+              "w-14 h-20 rounded border-2 flex flex-col items-center justify-center font-black text-sm shadow preserve-3d transition-colors overflow-hidden",
+              card && isFaceUp ? "bg-white border-gray-200" : 
+              card ? "bg-emerald-950 border-emerald-800 shadow-[inset_0_0_15px_rgba(0,0,0,0.5)]" : 
+              "bg-gray-800/50 border-dashed border-gray-700"
             )}
             style={{ 
-              color: card && (card.suit === 'H' || card.suit === 'D') ? '#f87171' : card ? '#0f172a' : '#374151',
+              color: card && isFaceUp && (card.suit === 'H' || card.suit === 'D') ? '#f87171' : (card && isFaceUp) ? '#0f172a' : '#374151',
               transformStyle: 'preserve-3d'
             }}
           >
-            {card ? (
+            {card && isFaceUp ? (
               <div className="flex flex-col items-center justify-center leading-none pointer-events-none">
                 <span className="text-xl font-black">{rankToString(card.rank)}</span>
                 <span className="text-3xl">{suitSymbol(card.suit)}</span>
+              </div>
+            ) : card ? (
+              <div className="w-full h-full flex items-center justify-center pointer-events-none" style={{ transform: 'rotateY(180deg)' }}>
+                <Skull className="w-8 h-8 text-emerald-900/40" />
               </div>
             ) : (
               <span className="text-gray-700 text-[10px]">{['F','F','F','T','R'][i]}</span>
@@ -1304,19 +1424,19 @@ function PotDisplay({ pot, state, winner }: { pot: MatchState['pot'], state: Mat
 }
 
 // ── TCG HAND SECTION ─────────────────────────────────────────────────────────
-function TcgHandSection({ player, state, myActions, isMyTurn, uiMode, setUiMode, act, onExpandCard }: any) {
-  if (player.hand.length === 0) return null;
-
+function TcgHandSection({ player, state, myActions, isMyTurn, uiMode, setUiMode, act, onExpandCard, onHover }: any) {
   return (
     <div className="px-4 py-4 bg-gradient-to-t from-black/60 to-transparent">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-           <BookOpen className="w-4 h-4 text-amber-500" />
-           <p className="text-sm font-black uppercase text-amber-500 tracking-widest leading-none">Your Hand</p>
+           <BookOpen className="w-4 h-4 text-emerald-500" />
+           <p className="text-sm font-black uppercase text-emerald-500 tracking-widest leading-none">Your Strategy</p>
         </div>
         <span className="text-[10px] font-black text-gray-500 bg-white/5 px-3 py-1 rounded-full uppercase">{player.hand.length} Cards</span>
       </div>
-      <div className="flex gap-6 overflow-x-auto pb-4 px-2 no-scrollbar scroll-smooth">
+      
+      {player.hand.length > 0 ? (
+        <div className="flex gap-6 overflow-x-auto pb-4 px-2 no-scrollbar scroll-smooth">
         {player.hand.map((cardId: string) => {
           const def: CardDef = state.cardDefs[cardId];
           if (!def) return null;
@@ -1330,6 +1450,9 @@ function TcgHandSection({ player, state, myActions, isMyTurn, uiMode, setUiMode,
           const fuelAction = myActions.find((a: any) => a.type === 'fuel' && a.payload.kind === 'discard' && a.payload.cardId === cardId);
           const canFuel = !!fuelAction && isMyTurn;
 
+          const sellCardAction = myActions.find((a: any) => a.type === 'sell_card' && a.cardId === cardId);
+          const canSellCard = !!sellCardAction && isMyTurn;
+
           return (
             <motion.div
               key={cardId}
@@ -1337,15 +1460,17 @@ function TcgHandSection({ player, state, myActions, isMyTurn, uiMode, setUiMode,
               whileHover={{ y: -16, scale: 1.05, zIndex: 10 }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
+              onMouseEnter={() => { if (def) onHover?.(def); }}
+              onMouseLeave={() => onHover?.(null)}
             >
               <div
                 className={cn(
                   "w-full aspect-[2/3] rounded-2xl overflow-hidden border-2 cursor-pointer relative shadow-2xl transition-all duration-300",
-                  canCast || canFoldCast || canFuel ? "border-emerald-400 ring-2 ring-emerald-400/20 shadow-[0_0_30px_rgba(16,185,129,0.3)]" : "border-gray-800 opacity-80"
+                  canCast || canFoldCast || canFuel || canSellCard ? "border-emerald-400 ring-2 ring-emerald-400/20 shadow-[0_0_30px_rgba(16,185,129,0.3)]" : "border-gray-800 opacity-80"
                 )}
                 onClick={() => onExpandCard?.(def)}
               >
-                {(canCast || canFoldCast || canFuel) && (
+                {(canCast || canFoldCast || canFuel || canSellCard) && (
                   <div className="absolute inset-0 bg-emerald-400/5 animate-pulse pointer-events-none" />
                 )}
                 {def.image_url ? (
@@ -1370,6 +1495,14 @@ function TcgHandSection({ player, state, myActions, isMyTurn, uiMode, setUiMode,
                    <div className="bg-black/60 backdrop-blur-md px-1.5 py-0.5 rounded border border-white/10">
                       <p className="text-[10px] font-black text-white font-mono leading-none">{def.cast_cost}</p>
                    </div>
+                   {canSellCard && (
+                     <button
+                       onClick={(e) => { e.stopPropagation(); act(sellCardAction); }}
+                       className="bg-amber-600 hover:bg-amber-500 text-white text-[10px] uppercase font-black px-2 py-0.5 rounded shadow z-20 pointer-events-auto"
+                     >
+                       Sell
+                     </button>
+                   )}
                 </div>
 
                 <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black to-transparent">
@@ -1443,6 +1576,12 @@ function TcgHandSection({ player, state, myActions, isMyTurn, uiMode, setUiMode,
           );
         })}
       </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-gray-800 rounded-2xl bg-black/20">
+           <Ghost className="w-10 h-10 text-gray-800 mb-2" />
+           <p className="text-gray-600 text-xs font-black uppercase tracking-widest leading-none">Hand is Empty</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -1525,8 +1664,35 @@ function ActionBar({ state, myActions, isMyTurn, uiMode, setUiMode, act }: any) 
   const callAmount = Math.min(myStash, owed);
   const isAllInCall = callAmount === myStash && myStash > 0;
 
+  if (uiMode.kind !== 'default') {
+    let modeText = "Select Target";
+    if (uiMode.kind === 'pick_cast_seat') modeText = "Select Seat for Placement";
+    if (uiMode.kind === 'pick_assassinate_target') modeText = "Select Target to Assassinate";
+    if (uiMode.kind === 'pick_nomad_move') modeText = "Select Seat to Move To";
+    if (uiMode.kind === 'pick_seat_to_lock') modeText = "Choose Seat to Lock Next Hand";
+
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 py-3">
+        <span className="text-sm font-black uppercase text-amber-400 animate-pulse">{modeText}</span>
+        <button 
+          onClick={() => setUiMode({ kind: 'default' })}
+          className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-white font-bold uppercase rounded-lg text-sm border-2 border-gray-600 transition-colors"
+        >
+          ✕ Cancel
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-wrap justify-center gap-2 py-3">
+    <div className="flex flex-wrap justify-center gap-2 py-3 relative">
+      {state.players.A.assassinationUsedThisHand && (
+        <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-0.5 bg-gray-900/80 border border-gray-700/50 rounded-full backdrop-blur-sm shadow-sm transition-all animate-in fade-in slide-in-from-bottom-2">
+           <Skull className="w-3 h-3 text-red-500/60" />
+           <span className="text-[9px] font-black uppercase text-gray-500 tracking-tighter">Assassination Spent</span>
+        </div>
+      )}
+
       {checkAct && <ActionBtn label="Check" onClick={() => act(checkAct)} variant="white" />}
       {callAct  && <ActionBtn label={isAllInCall ? `CALL ALL IN (${callAmount})` : `Call ${callAmount}`} onClick={() => act(callAct)} variant="primary" />}
       {raiseActs.map((rAct: any, i: number) => {
@@ -1545,7 +1711,19 @@ function ActionBar({ state, myActions, isMyTurn, uiMode, setUiMode, act }: any) 
           />
         );
       })}
-      {foldAct  && <ActionBtn label="Fold" onClick={() => act(foldAct)} variant="danger" />}
+      {foldAct && (
+        <ActionBtn 
+          label="Fold" 
+          onClick={() => {
+            if (state.phase === 'preflop') {
+              setUiMode({ kind: 'pick_seat_to_lock', validActions: [foldAct] });
+            } else {
+              act(foldAct);
+            }
+          }} 
+          variant="danger" 
+        />
+      )}
       {desperadoAct && <ActionBtn label="Desperado Fold" onClick={() => act(desperadoAct)} variant="danger" icon={<Skull className="w-4 h-4" />} />}
       {igniteAct && <ActionBtn label="Ignite" onClick={() => act(igniteAct)} variant="rose" icon={<Flame className="w-4 h-4" />} />}
       {prophetAct && <ActionBtn label="Prophet: Peek" onClick={() => act(prophetAct)} variant="orange" icon={<BookOpen className="w-4 h-4" />} />}

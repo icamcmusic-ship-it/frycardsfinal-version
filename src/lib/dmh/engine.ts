@@ -144,9 +144,13 @@ function startNewHand(s: MatchState): MatchState {
   // §3 Fatigue: if graveyard has 10+ cards, bigBlind doubles additively
   for (const side of ["A", "B"] as const) {
     if (s.players[side].graveyard.length >= 10) {
-      s.bigBlind *= 2; // additive with other effects per §3
+      s.bigBlind += BASE_BIG_BLIND; // additive with other effects per §3
       break; // once is enough for the base rule
     }
+  }
+
+  if (s.location?.keyword === 'High Stakes') {
+    s.bigBlind *= 2;
   }
 
   // Build and shuffle poker deck, add old muck back
@@ -405,10 +409,13 @@ export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
   }
 
   // Assassination — once per hand, only during betting phases
+  const sanctuaryTier = s.location?.keyword === 'Sanctuary' ? (s.location.tier ?? 0) : 0;
   if (
     !p.assassinationUsedThisHand &&
     s.phase !== "showdown" &&
-    s.phase !== "cleanup"
+    s.phase !== "cleanup" &&
+    sanctuaryTier < 2 &&
+    !(sanctuaryTier >= 1 && s.phase === "preflop")
   ) {
     const oppSide = opp(actor);
     const oppHasEnforcer = s.players[oppSide].seats.some(se => se.unit?.keyword === "Enforcer" && !se.unit.silenced);
@@ -471,6 +478,15 @@ export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
     }
   }
 
+  // Black Market Sell
+  if (s.location?.keyword === "Black Market" && (s.location.tier ?? 0) >= 1) {
+    if (s.phase !== "showdown" && s.phase !== "cleanup") {
+      for (const cardId of p.hand) {
+        acts.push({ type: "sell_card", cardId });
+      }
+    }
+  }
+
   // Buyout — once per hand, destroy own unit to free a seat
   if (s.phase !== "showdown" && s.phase !== "cleanup") {
     for (let si = 0; si < 3; si++) {
@@ -482,11 +498,11 @@ export function listLegalActions(s: MatchState, actor: "A" | "B"): Action[] {
     }
   }
 
-  if (ldef?.keyword === "Prophet" && s.phase !== "ended" && s.phase !== "cleanup") {
+  if (ldef?.keyword === "Prophet" && s.phase !== "cleanup") {
     acts.push({ type: "prophet_peek" });
   }
 
-  if (ldef?.keyword === "Ultimatum" && s.phase !== "ended" && s.phase !== "showdown" && s.phase !== "cleanup") {
+  if (ldef?.keyword === "Ultimatum" && s.phase !== "showdown" && s.phase !== "cleanup") {
     acts.push({ type: "ultimatum" });
   }
 
@@ -563,7 +579,7 @@ export function step(state: MatchState, action: Action): MatchState {
     case "check":     s = handleCheck(s, actor); break;
     case "call":      s = handleCall(s, actor); break;
     case "raise":     s = handleRaise(s, actor, action.amount); break;
-    case "fold":      s = handleFold(s, actor); break;
+    case "fold":      s = handleFold(s, actor, action); break;
     case "cast":      s = handleCast(s, actor, action.cardId, action.seat, action.targets); break;
     case "foldcast":  s = handleFoldCast(s, actor, action.cardId, action.targets); break;
     case "parry":     s = handleParry(s, actor, action.cardId); break;
@@ -579,6 +595,7 @@ export function step(state: MatchState, action: Action): MatchState {
     case "ultimatum": s = handleUltimatum(s, actor); break;
     case "desperado_fold": s = handleDesperadoFold(s, actor); break;
     case "nomad_move": s = handleNomadMove(s, actor, action); break;
+    case "sell_card": s = handleSellCard(s, actor, action); break;
     default: break;
   }
 
@@ -670,7 +687,7 @@ function handleRaise(s: MatchState, actor: "A" | "B", amount: number): MatchStat
   return s;
 }
 
-function handleFold(s: MatchState, actor: "A" | "B"): MatchState {
+function handleFold(s: MatchState, actor: "A" | "B", action?: Extract<Action, { type: 'fold' }>): MatchState {
   const p = s.players[actor];
   p.hasFolded = true;
 
@@ -689,7 +706,7 @@ function handleFold(s: MatchState, actor: "A" | "B"): MatchState {
   // §8 Fold penalty
   if (s.phase === "preflop") {
     // Seat Lock: choose an empty seat first; else destroy a unit in chosen seat
-    applyPreFlopFoldPenalty(s, actor);
+    applyPreFlopFoldPenalty(s, actor, action?.seatToLock);
   } else {
     // Post-flop: Exhaustion on all occupied seats
     applyPostFlopFoldPenalty(s, actor);
@@ -701,8 +718,16 @@ function handleFold(s: MatchState, actor: "A" | "B"): MatchState {
   return s;
 }
 
-function applyPreFlopFoldPenalty(s: MatchState, actor: "A" | "B") {
+function applyPreFlopFoldPenalty(s: MatchState, actor: "A" | "B", seatToLock?: 0 | 1 | 2) {
   const p = s.players[actor];
+  
+  if (seatToLock !== undefined && seatToLock >= 0 && seatToLock < 3) {
+    const seat = p.seats[seatToLock];
+    seat._lockNextHand = true;
+    appendLog(s, s.phase, `[${p.name}] Pre-Flop Fold: Seat ${seat.index + 1} will be Locked next hand.`);
+    return;
+  }
+
   // §Golden Rule 17: Lock an empty seat first if possible
   let locked = false;
   for (const seat of p.seats) {
@@ -713,6 +738,7 @@ function applyPreFlopFoldPenalty(s: MatchState, actor: "A" | "B") {
       break;
     }
   }
+
   if (!locked) {
     // All seats occupied; player chooses — default to seat with lowest-tier unit
     const target = p.seats.find(se => se.unit) ?? p.seats[0];
@@ -1122,11 +1148,19 @@ function handleAssassinate(
   const effectiveDef = getEffectiveDefense(s, action.targetSide, action.seat);
 
   if (unit.keyword === "Bouncer" && unit.keywordTier === 1 && !unit.silenced) {
-    p.stash -= 25;
+    p.stash = Math.max(0, p.stash - 25);
   }
 
   if (usedCard.rank < effectiveDef) {
     appendLog(s, s.phase, `[${p.name}] assassination failed.`);
+    
+    // Consume hole card on failure
+    s.muck.push(usedCard);
+    p.holeCards.splice(action.holeCardIndex, 1);
+    const replFail = s.pokerDeck.pop();
+    if (replFail) p.holeCards.push(replFail);
+    p.assassinationUsedThisHand = true;
+
     return s;
   }
 
@@ -1138,6 +1172,10 @@ function handleAssassinate(
   if (repl) p.holeCards.push(repl);
 
   p.assassinationUsedThisHand = true;
+
+  if (s.location?.keyword === 'Blood Feud' && (s.location.tier ?? 0) >= 1) {
+    p.stash += 25;
+  }
 
   destroyUnit(s, action.targetSide, action.seat);
   checkBankruptcy(s);
@@ -1282,6 +1320,21 @@ function handleDesperadoFold(s: MatchState, actor: "A" | "B"): MatchState {
   return handleFold(s, actor);
 }
 
+function handleSellCard(s: MatchState, actor: "A" | "B", action: Extract<Action, { type: "sell_card" }>): MatchState {
+  const p = s.players[actor];
+  const idx = p.hand.indexOf(action.cardId);
+  if (idx !== -1) {
+    p.hand.splice(idx, 1);
+    p.graveyard.push(action.cardId);
+    
+    const amount = s.location?.tier === 1 ? 10 : 25;
+    p.stash += amount;
+    
+    appendLog(s, s.phase, `[${p.name}] sells a card for ${amount} chips (Black Market).`, actor);
+  }
+  return s;
+}
+
 function handleNomadMove(s: MatchState, actor: "A" | "B", action: Extract<Action, { type: "nomad_move" }>): MatchState {
   const p = s.players[actor];
   const from = p.seats[action.fromSeat];
@@ -1331,13 +1384,20 @@ function advancePhase(s: MatchState): MatchState {
     }
     case "flop": {
       const c = s.pokerDeck.pop();
-      if (c) { c.faceUp = true; s.community.push(c); }
+      if (c) {
+        c.faceUp = s.location?.keyword !== "Blind-River";
+        s.community.push(c);
+      }
       s.phase = "turn";
       break;
     }
     case "turn": {
       const c = s.pokerDeck.pop();
-      if (c) { c.faceUp = true; s.community.push(c); }
+      if (c) {
+        const isBlindRiver2 = s.location?.keyword === 'Blind-River' && (s.location.tier ?? 0) >= 2;
+        c.faceUp = !isBlindRiver2;
+        s.community.push(c);
+      }
       s.phase = "river";
       break;
     }
@@ -1363,6 +1423,7 @@ function advancePhase(s: MatchState): MatchState {
 // SECTION 11 — SHOWDOWN
 // ============================================================
 function resolveShowdown(s: MatchState): MatchState {
+  s.community.forEach(c => c.faceUp = true);
   const ctxA = buildEvalContext(s, "A");
   const ctxB = buildEvalContext(s, "B");
   const evalA = evaluateBest(s.players.A.holeCards, s.community.filter(c => c.ownedBy !== "B"), ctxA);
@@ -1370,8 +1431,16 @@ function resolveShowdown(s: MatchState): MatchState {
   const cmp = compareEval(evalA, evalB);
 
   let winner: "A" | "B" | "split";
-  if (cmp === 0) winner = "split";
-  else winner = cmp > 0 ? "A" : "B";
+  if (cmp === 0) {
+    if (s.location?.keyword === 'Standoff') {
+      winner = s.players.A.stash >= s.players.B.stash ? 'A' : 'B';
+      appendLog(s, 'showdown', `Standoff: tie broken by stash — ${s.players[winner].name} wins.`);
+    } else {
+      winner = "split";
+    }
+  } else {
+    winner = cmp > 0 ? "A" : "B";
+  }
 
   s.winnerThisHand = winner;
   const potWon = s.pot.main;
@@ -1384,6 +1453,18 @@ function resolveShowdown(s: MatchState): MatchState {
   }
 
   s.pot = { main: 0, phantom: 0 };
+
+  if (s.location?.keyword === 'Jackpot' && winner !== 'split') {
+    if (s.location.tier === 1) {
+      s.players[winner].stash += 50;
+      appendLog(s, 'showdown', `Jackpot I: ${s.players[winner].name} gains 50 chips!`);
+    } else if (s.location.tier === 2) {
+      const loser = opp(winner);
+      s.players[loser].stash = Math.max(0, s.players[loser].stash - 50);
+      appendLog(s, 'showdown', `Jackpot II: ${s.players[loser].name} takes 50 damage!`);
+    }
+  }
+
   checkBankruptcy(s);
   if (!s.winner) s = startCleanup(s);
   return s;

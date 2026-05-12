@@ -371,6 +371,11 @@ export function PackOpeningFan({ isOpen, onClose, cards, summary }: PackOpeningF
                   style={{ contain: 'layout paint' }}
                 >
                   <CardDisplay card={card} showQuantity={false} showNewBadge={card.is_new} />
+                  {card.is_foil && (
+                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 via-amber-200 to-yellow-400 text-black px-2 py-0.5 rounded-full text-[10px] font-black uppercase shadow-lg shadow-amber-500/20 border border-amber-200 z-50">
+                      ✨ Foil
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
